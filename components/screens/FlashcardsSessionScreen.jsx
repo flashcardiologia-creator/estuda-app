@@ -4,7 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag } from "@/components/ui/Primitives";
 
-export function FlashcardsSessionScreen({ session, setSession, onNavigate }) {
+export function FlashcardsSessionScreen({ session, setSession, onNavigate, onFinish }) {
   const t = useT();
   const total = session.ids.length;
   const idx = session.index;
@@ -95,7 +95,7 @@ export function FlashcardsSessionScreen({ session, setSession, onNavigate }) {
               Próximo
             </PrimaryButton>
           ) : (
-            <PrimaryButton disabled={!viewed} color="#21512E" onClick={() => onNavigate("home")}>
+            <PrimaryButton disabled={!viewed} color="#21512E" onClick={onFinish}>
               Concluir
             </PrimaryButton>
           )}

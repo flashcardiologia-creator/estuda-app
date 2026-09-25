@@ -129,7 +129,9 @@ export function QuestionsFilterScreen({
         </ExpandBox>
 
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center" }}>{previewCount} questões encontradas</div>
+          <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center" }}>
+            {filters.temas.length === 0 ? "Selecione ao menos um tema" : `${previewCount} questões encontradas`}
+          </div>
           {hasSavedSession && (
             <PrimaryButton full variant="ghost" onClick={onContinue}>
               <RotateCw size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
@@ -139,9 +141,6 @@ export function QuestionsFilterScreen({
           <PrimaryButton full disabled={filters.temas.length === 0 || previewCount === 0} onClick={onStart}>
             Iniciar Questões
           </PrimaryButton>
-          {filters.temas.length === 0 && (
-            <div style={{ fontSize: 12, color: t.textMuted, textAlign: "center" }}>Selecione ao menos um tema</div>
-          )}
         </div>
       </div>
     </div>

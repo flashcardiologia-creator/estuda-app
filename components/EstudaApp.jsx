@@ -235,6 +235,11 @@ export function EstudaApp({ userId, userEmail }) {
     setScreen("flashcards-session");
   };
 
+  const finishFlashcards = () => {
+    setFlashSession(null);
+    setScreen("home");
+  };
+
   /* ---- Missão diária ---- */
   const startDaily = async () => {
     if (missionDone) {
@@ -378,11 +383,17 @@ export function EstudaApp({ userId, userEmail }) {
       )}
 
       {screen === "flashcards-select" && (
-        <FlashcardsSelectScreen themeCounts={themeCounts} onStart={startFlashcards} onNavigate={setScreen} />
+        <FlashcardsSelectScreen
+          themeCounts={themeCounts}
+          onStart={startFlashcards}
+          onNavigate={setScreen}
+          hasSavedFlashSession={!!flashSession}
+          onContinueFlashcards={() => setScreen("flashcards-session")}
+        />
       )}
 
       {screen === "flashcards-session" && flashSession && (
-        <FlashcardsSessionScreen session={flashSession} setSession={setFlashSession} onNavigate={setScreen} />
+        <FlashcardsSessionScreen session={flashSession} setSession={setFlashSession} onNavigate={setScreen} onFinish={finishFlashcards} />
       )}
 
       {screen === "daily-session" && dailyItems && dailySession && (

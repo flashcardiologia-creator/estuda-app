@@ -202,11 +202,6 @@ function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate,
         </div>
       </div>
       <MissionNav canNext={viewed} idx={idx} total={total} color="#21512E" finishing={finishing} onNext={onNext} onFinish={onFinish} />
-      {!viewed && (
-        <div style={{ textAlign: "center", fontSize: 12, color: t.textMuted, marginTop: 10 }}>
-          Veja a resposta para liberar o próximo cartão.
-        </div>
-      )}
     </MissionShell>
   );
 }
