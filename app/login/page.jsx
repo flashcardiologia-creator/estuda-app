@@ -57,10 +57,15 @@ function LoginForm() {
         router.push("/");
         router.refresh();
       } else if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        setInfo("Conta criada! Se a confirmação por e-mail estiver ativa, verifique sua caixa de entrada antes de entrar.");
-        setMode("login");
+        if (data.session) {
+          router.push("/");
+          router.refresh();
+        } else {
+          setInfo("Conta criada! Verifique sua caixa de entrada para confirmar o e-mail antes de entrar.");
+          setMode("login");
+        }
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
