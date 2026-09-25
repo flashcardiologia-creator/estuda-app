@@ -23,7 +23,7 @@ export function Header({ streak, onNavigate, missionDone }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "10px 24px 6px",
+        padding: "6px 24px 6px",
         background: "transparent",
       }}
     >
