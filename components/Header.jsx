@@ -1,21 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Sun, Moon, User } from "lucide-react";
 import { useT, useThemeControl } from "@/components/theme/ThemeProvider";
 import { Flame_ } from "@/components/ui/Primitives";
-import { msUntilNextDayBoundary, formatCountdownClock } from "@/lib/util";
 
 export function Header({ streak, onNavigate, missionDone }) {
   const t = useT();
   const { theme, setTheme } = useThemeControl();
-  const [remaining, setRemaining] = useState(msUntilNextDayBoundary);
-
-  useEffect(() => {
-    if (missionDone) return;
-    const interval = setInterval(() => setRemaining(msUntilNextDayBoundary()), 1000);
-    return () => clearInterval(interval);
-  }, [missionDone]);
 
   return (
     <div
@@ -33,20 +24,6 @@ export function Header({ streak, onNavigate, missionDone }) {
       >
         <Flame_ done={missionDone} size={26} />
         <span style={{ fontWeight: 700, fontSize: 19, color: t.text }}>{streak}</span>
-        {!missionDone && (
-          <div style={{ display: "flex", alignItems: "center", marginLeft: 2 }}>
-            <span
-              style={{
-                fontSize: 12.5,
-                fontWeight: 700,
-                color: t.textMuted,
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {formatCountdownClock(remaining)}
-            </span>
-          </div>
-        )}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

@@ -6,17 +6,35 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag, Flame_ } from "@/components/ui/Primitives";
 import { QuestionCard } from "@/components/screens/QuestionCard";
 import { fetchFriendsMissionStatus } from "@/lib/data/friends";
+import { msUntilNextDayBoundary, formatCountdownClock } from "@/lib/util";
 
 const dailyFilters = { fontSize: "md", modoProva: false, mostrarAntigas: false };
+
+function MissionCountdown() {
+  const [remaining, setRemaining] = useState(msUntilNextDayBoundary);
+
+  useEffect(() => {
+    const interval = setInterval(() => setRemaining(msUntilNextDayBoundary()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const t = useT();
+  return (
+    <span style={{ fontSize: 13, fontWeight: 700, color: t.textMuted, fontVariantNumeric: "tabular-nums" }}>
+      {formatCountdownClock(remaining)}
+    </span>
+  );
+}
 
 export function MissionShell({ idx, total, onNavigate, children }) {
   const t = useT();
   return (
     <div style={{ maxWidth: 620, margin: "0 auto", paddingBottom: 90 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px 0" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", padding: "18px 22px 0" }}>
         <button
           onClick={() => onNavigate("home")}
           style={{
+            justifySelf: "start",
             display: "flex",
             alignItems: "center",
             gap: 4,
@@ -30,9 +48,20 @@ export function MissionShell({ idx, total, onNavigate, children }) {
             fontWeight: 600,
           }}
         >
-          <ChevronLeft size={16} /> Sair
+          <ChevronLeft size={16} /> Voltar
         </button>
-        <span style={{ fontSize: 15, fontWeight: 700, color: t.text, display: "flex", alignItems: "center", gap: 6 }}>
+        <MissionCountdown />
+        <span
+          style={{
+            justifySelf: "end",
+            fontSize: 15,
+            fontWeight: 700,
+            color: t.text,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
           <Target size={14} color={t.amber} /> Missão {idx + 1} de {total}
         </span>
       </div>
