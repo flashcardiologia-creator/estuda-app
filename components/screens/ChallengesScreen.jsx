@@ -21,6 +21,7 @@ export function ChallengesScreen({
   temas,
   onRefreshChallenges,
   onNavigate,
+  onGoToAccountFriends,
   onAnsweringChange,
 }) {
   const t = useT();
@@ -274,7 +275,7 @@ export function ChallengesScreen({
       </div>
 
       {showNew && <NewChallengeModal friends={friends} temas={temas} onCreate={criarDesafio} onClose={() => setShowNew(false)} />}
-      {showNoFriends && <NoFriendsModal onClose={() => setShowNoFriends(false)} onGoToAccount={() => onNavigate("account")} />}
+      {showNoFriends && <NoFriendsModal onClose={() => setShowNoFriends(false)} onGoToAccount={onGoToAccountFriends} />}
     </div>
   );
 }
@@ -293,7 +294,7 @@ function NoFriendsModal({ onClose, onGoToAccount }) {
           nome de exibição de outra conta já cadastrada e clica em &quot;+&quot;. Só funciona com o nome exato de
           exibição de outro usuário que já existe no app (não é e-mail).
         </p>
-        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 20 }}>
           <PrimaryButton variant="ghost" onClick={onClose}>
             Fechar
           </PrimaryButton>

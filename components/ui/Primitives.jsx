@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ChevronDown, ChevronLeft, Flame, Lock } from "lucide-react";
+import { ChevronDown, ChevronLeft, Flame, Lock, Loader2 } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 
 const FONT_BODY = "inherit";
@@ -262,13 +262,14 @@ export function ScreenHeader({ title, onBack, label = "Voltar" }) {
   );
 }
 
-export function HomeBox({ icon, title, onClick, accentColor, locked, heroBg, statusText, statusColor }) {
+export function HomeBox({ icon, title, onClick, accentColor, locked, loading, heroBg, statusText, statusColor }) {
   const t = useT();
   const grayBorder = t.name === "light" && !heroBg;
   const darkTitleOnHero = heroBg && t.name === "light";
+  const disabled = locked || loading;
   return (
     <button
-      onClick={locked ? undefined : onClick}
+      onClick={disabled ? undefined : onClick}
       style={{
         width: "100%",
         minHeight: 118,
@@ -277,9 +278,9 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, heroBg, sta
         border: grayBorder ? "1px solid #D6D6DC" : locked ? `1px dashed ${t.border}` : "none",
         borderRadius: 20,
         padding: "20px 18px",
-        cursor: locked ? "default" : "pointer",
+        cursor: disabled ? "default" : "pointer",
         background: heroBg || t.surface,
-        opacity: locked ? 0.6 : 1,
+        opacity: locked ? 0.6 : loading ? 0.85 : 1,
         position: "relative",
         overflow: "hidden",
         display: "flex",
@@ -289,7 +290,7 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, heroBg, sta
         gap: 10,
         transition: "filter .15s ease",
       }}
-      onMouseEnter={(e) => !locked && (e.currentTarget.style.filter = "brightness(1.08)")}
+      onMouseEnter={(e) => !disabled && (e.currentTarget.style.filter = "brightness(1.08)")}
       onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
     >
       {locked && (
@@ -297,7 +298,11 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, heroBg, sta
           <Lock size={14} color={t.textMuted} />
         </div>
       )}
-      {React.cloneElement(icon, { color: accentColor, size: 26, strokeWidth: 2 })}
+      {loading ? (
+        <Loader2 className="spin" color={accentColor} size={26} strokeWidth={2} />
+      ) : (
+        React.cloneElement(icon, { color: accentColor, size: 26, strokeWidth: 2 })
+      )}
       <span
         style={{
           fontFamily: FONT_DISPLAY,
@@ -308,8 +313,12 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, heroBg, sta
       >
         {title}
       </span>
-      {statusText && (
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: statusColor }}>{statusText}</span>
+      {loading ? (
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: statusColor }}>Carregando…</span>
+      ) : (
+        statusText && (
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: statusColor }}>{statusText}</span>
+        )
       )}
     </button>
   );

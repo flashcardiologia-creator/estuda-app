@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/components/theme/ThemeProvider";
@@ -68,6 +68,7 @@ export function EstudaApp({ userId, userEmail }) {
   const [themeCounts, setThemeCounts] = useState({});
   const [challenges, setChallenges] = useState([]);
   const [challengeAnswering, setChallengeAnswering] = useState(false);
+  const [accountFocus, setAccountFocus] = useState(null);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
@@ -81,26 +82,53 @@ export function EstudaApp({ userId, userEmail }) {
   const [dailyItems, setDailyItems] = useState(null);
   const [dailyOptionsByQuestion, setDailyOptionsByQuestion] = useState({});
   const [dailySession, setDailySession] = useState(null);
+  const dailyPrefetchRef = useRef(null);
 
   const missionDone = profile ? profile.last_mission_date === todayStr() : false;
+
+  // Monta a missão de hoje (questões + flashcards) assim que o app carrega, em segundo
+  // plano — assim, ao clicar em "Missão Diária" ela já está pronta na hora. O mesmo
+  // conjunto é reaproveitado se o usuário sair e voltar, sem sortear de novo.
+  const prefetchDaily = useCallback(() => {
+    if (dailyPrefetchRef.current) return dailyPrefetchRef.current;
+    const p = fetchDailyMissionItems(supabase, userId).then(({ questions, flashcards, options }) => {
+      const items = [
+        ...questions.map((q) => ({ type: "question", data: q })),
+        ...flashcards.map((f) => ({ type: "flashcard", data: f })),
+      ];
+      setDailyItems(items);
+      setDailyOptionsByQuestion(options);
+      return items;
+    });
+    dailyPrefetchRef.current = p;
+    return p;
+  }, [supabase, userId]);
+
+  useEffect(() => {
+    if (profile && !missionDone) {
+      prefetchDaily();
+    }
+  }, [profile, missionDone, prefetchDaily]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [profileData, questions, favIds, friendsData, challengesData] = await Promise.all([
+      const [profileData, questions, favIds, friendsData] = await Promise.all([
         fetchProfile(supabase, userId),
         fetchAllQuestions(supabase),
         fetchFavoriteIds(supabase, userId),
         fetchFriends(supabase),
-        fetchChallenges(supabase, userId),
       ]);
       if (cancelled) return;
       setProfile(profileData);
       setAllQuestions(questions);
       setFavorites(favIds);
       setFriends(friendsData);
-      setChallenges(challengesData);
       setLoading(false);
+      // Não bloqueia o app: o balão de pendentes só precisa aparecer assim que chegar.
+      fetchChallenges(supabase, userId).then((data) => {
+        if (!cancelled) setChallenges(data);
+      });
     })();
     return () => {
       cancelled = true;
@@ -108,9 +136,6 @@ export function EstudaApp({ userId, userEmail }) {
   }, [supabase, userId]);
 
   useEffect(() => {
-    if (screen === "home") {
-      fetchChallenges(supabase, userId).then(setChallenges);
-    }
     if (screen === "account") {
       fetchStats(supabase, userId).then(setStats);
       fetchFriends(supabase).then(setFriends);
@@ -246,15 +271,12 @@ export function EstudaApp({ userId, userEmail }) {
       setScreen("daily-done");
       return;
     }
-    const { questions, flashcards } = await fetchDailyMissionItems(supabase, userId);
-    const options = await fetchOptionsForQuestions(supabase, questions.map((q) => q.id));
-    const items = [
-      ...questions.map((q) => ({ type: "question", data: q })),
-      ...flashcards.map((f) => ({ type: "flashcard", data: f })),
-    ];
-    setDailyItems(items);
-    setDailyOptionsByQuestion(options);
-    setDailySession({ index: 0, selected: {}, answers: {}, flipped: {}, viewed: {} });
+    // Reaproveita o que já foi pré-carregado em segundo plano; só espera se o
+    // usuário clicou antes desse carregamento terminar.
+    if (!dailyItems) {
+      await prefetchDaily();
+    }
+    setDailySession((s) => s || { index: 0, selected: {}, answers: {}, flipped: {}, viewed: {} });
     setScreen("daily-session");
   };
 
@@ -291,6 +313,11 @@ export function EstudaApp({ userId, userEmail }) {
   const respondRequest = async (requesterId, accept) => {
     await respondToFriendRequest(supabase, requesterId, accept);
     await refreshFriends();
+  };
+
+  const goToAccountFriends = () => {
+    setAccountFocus("friends");
+    setScreen("account");
   };
 
   const signOut = async () => {
@@ -331,6 +358,8 @@ export function EstudaApp({ userId, userEmail }) {
           stats={stats}
           friends={friends}
           incomingRequests={incomingRequests}
+          initialFocus={accountFocus}
+          onFocusConsumed={() => setAccountFocus(null)}
           onNavigate={setScreen}
           onSaveName={saveDisplayName}
           onSaveStatsVisibility={saveStatsVisibility}
@@ -423,6 +452,7 @@ export function EstudaApp({ userId, userEmail }) {
           temas={temas}
           onRefreshChallenges={refreshChallenges}
           onNavigate={setScreen}
+          onGoToAccountFriends={goToAccountFriends}
           onAnsweringChange={setChallengeAnswering}
         />
       )}

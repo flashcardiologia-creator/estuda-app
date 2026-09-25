@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2 } from "lucide-react";
+import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, Save } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle } from "@/components/ui/Primitives";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
@@ -14,6 +14,8 @@ export function AccountScreen({
   stats,
   friends,
   incomingRequests,
+  initialFocus,
+  onFocusConsumed,
   onNavigate,
   onSaveName,
   onSaveStatsVisibility,
@@ -32,9 +34,15 @@ export function AccountScreen({
   const [addingFriend, setAddingFriend] = useState(false);
   const [respondingId, setRespondingId] = useState(null);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
   const [viewingFriend, setViewingFriend] = useState(null);
-  const [profileOpen, setProfileOpen] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(initialFocus !== "friends");
   const [friendsOpen, setFriendsOpen] = useState(true);
+
+  useEffect(() => {
+    if (initialFocus) onFocusConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const copyCode = async () => {
     try {
@@ -61,6 +69,8 @@ export function AccountScreen({
     setSavingName(true);
     try {
       await onSaveName(v);
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 1500);
     } finally {
       setSavingName(false);
     }
@@ -135,9 +145,29 @@ export function AccountScreen({
                 boxSizing: "border-box",
               }}
             />
-            <PrimaryButton small disabled={!name.trim() || savingName} onClick={saveName}>
-              Salvar
-            </PrimaryButton>
+            <button
+              onClick={saveName}
+              disabled={!name.trim() || savingName}
+              title="Salvar nome"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: "transparent",
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                padding: "6px 10px",
+                color: nameSaved ? t.green : t.textMuted,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: !name.trim() || savingName ? "default" : "pointer",
+                opacity: !name.trim() || savingName ? 0.6 : 1,
+                flexShrink: 0,
+              }}
+            >
+              {nameSaved ? <Check size={13} /> : <Save size={13} />}
+              {nameSaved ? "Salvo" : "Salvar"}
+            </button>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
