@@ -3,6 +3,15 @@
 -- Não recria tabelas nem políticas de RLS já existentes.
 
 -- ============================================================
+-- -1) Realtime para a tela de Desafios: liga a replicação dessas duas
+--     tabelas para que o app receba updates ao vivo (WebSocket) quando o
+--     amigo responde uma questão do desafio ou quando ele é concluído,
+--     sem precisar recarregar a página.
+-- ============================================================
+alter publication supabase_realtime add table public.challenges;
+alter publication supabase_realtime add table public.challenge_answers;
+
+-- ============================================================
 -- 0) "Dia" da missão vira às 18h de Brasília (21h UTC), não à meia-noite
 --    UTC — por isso soma 3h antes de extrair a data. Toda lógica baseada
 --    em "hoje" usa essas duas funções em vez de current_date/::date direto,

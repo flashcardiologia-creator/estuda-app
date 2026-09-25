@@ -44,6 +44,25 @@ export function ChallengesScreen({
     };
   }, [responding, onAnsweringChange]);
 
+  // Escuta em tempo real quando o amigo responde uma questão do desafio (challenge_answers)
+  // ou quando o desafio muda de status (challenges vira "completed") — assim a lista
+  // migra de Pendentes pra Concluídos sozinha, sem precisar recarregar a página.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`challenges-updates-${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "challenges" }, () => {
+        onRefreshChallenges();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "challenge_answers" }, () => {
+        onRefreshChallenges();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, userId, onRefreshChallenges]);
+
   const criarDesafio = async (friendId, tema, qtd) => {
     const id = await createChallenge(supabase, friendId, tema, qtd);
     await onRefreshChallenges();

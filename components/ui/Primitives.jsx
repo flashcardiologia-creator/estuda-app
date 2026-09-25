@@ -262,7 +262,7 @@ export function ScreenHeader({ title, onBack, label = "Voltar" }) {
   );
 }
 
-export function HomeBox({ icon, title, onClick, accentColor, locked, heroBg, statusText, statusColor }) {
+export function HomeBox({ icon, title, onClick, accentColor, locked, heroBg, statusText, statusColor, cornerBadge }) {
   const t = useT();
   const grayBorder = t.name === "light" && !heroBg;
   const darkTitleOnHero = heroBg && t.name === "light";
@@ -297,6 +297,7 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, heroBg, sta
           <Lock size={14} color={t.textMuted} />
         </div>
       )}
+      {!locked && cornerBadge && <div style={{ position: "absolute", top: 14, right: 16 }}>{cornerBadge}</div>}
       {React.cloneElement(icon, { color: accentColor, size: 26, strokeWidth: 2 })}
       <span
         style={{

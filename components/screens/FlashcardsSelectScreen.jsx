@@ -3,13 +3,12 @@
 import { useMemo, useState } from "react";
 import { BookOpen } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { ScreenHeader, ExpandBox, Toggle, PrimaryButton, SectionLabel } from "@/components/ui/Primitives";
+import { ScreenHeader, Toggle, PrimaryButton, SectionLabel } from "@/components/ui/Primitives";
 
 export function FlashcardsSelectScreen({ themeCounts, onStart, onNavigate }) {
   const t = useT();
   const temas = useMemo(() => Object.keys(themeCounts).sort(), [themeCounts]);
   const [tema, setTema] = useState(null);
-  const [open, setOpen] = useState(true);
   const [qtd, setQtd] = useState(10);
   const [aleatorio, setAleatorio] = useState(true);
   const options = [5, 10, 15, 20, 25, "Todos"];
@@ -20,8 +19,12 @@ export function FlashcardsSelectScreen({ themeCounts, onStart, onNavigate }) {
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
       <ScreenHeader title="Flashcards" onBack={() => onNavigate("home")} />
       <div style={{ padding: "18px 22px" }}>
-        <ExpandBox title="Tema" icon={<BookOpen size={17} color={t.primary} />} open={open} onToggle={() => setOpen(!open)}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 16, padding: 18, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <BookOpen size={17} color={t.primary} />
+            <span style={{ fontWeight: 700, fontSize: 15, color: t.text }}>Tema</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 260, overflowY: "auto", paddingRight: 4 }}>
             {temas.map((tm) => {
               const active = tema === tm;
               return (
@@ -61,7 +64,7 @@ export function FlashcardsSelectScreen({ themeCounts, onStart, onNavigate }) {
               );
             })}
           </div>
-        </ExpandBox>
+        </div>
 
         <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 16, padding: 18 }}>
           <div style={{ marginBottom: 18 }}>
