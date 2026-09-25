@@ -87,17 +87,19 @@ export function EstudaApp({ userId, userEmail }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [profileData, questions, favIds, friendsData] = await Promise.all([
+      const [profileData, questions, favIds, friendsData, challengesData] = await Promise.all([
         fetchProfile(supabase, userId),
         fetchAllQuestions(supabase),
         fetchFavoriteIds(supabase, userId),
         fetchFriends(supabase),
+        fetchChallenges(supabase, userId),
       ]);
       if (cancelled) return;
       setProfile(profileData);
       setAllQuestions(questions);
       setFavorites(favIds);
       setFriends(friendsData);
+      setChallenges(challengesData);
       setLoading(false);
     })();
     return () => {
@@ -106,6 +108,9 @@ export function EstudaApp({ userId, userEmail }) {
   }, [supabase, userId]);
 
   useEffect(() => {
+    if (screen === "home") {
+      fetchChallenges(supabase, userId).then(setChallenges);
+    }
     if (screen === "account") {
       fetchStats(supabase, userId).then(setStats);
       fetchFriends(supabase).then(setFriends);
@@ -309,6 +314,7 @@ export function EstudaApp({ userId, userEmail }) {
           onNavigate={setScreen}
           missionDone={missionDone}
           onOpenDaily={() => (missionDone ? setScreen("daily-done") : startDaily())}
+          pendingChallengesCount={challenges.filter((c) => c.status === "pending").length}
         />
       )}
 

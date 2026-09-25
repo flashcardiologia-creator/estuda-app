@@ -1,47 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Flame, BookOpen, Rocket, Trophy, Swords, Clock } from "lucide-react";
+import { Flame, BookOpen, Rocket, Trophy, Swords } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { HomeBox } from "@/components/ui/Primitives";
 
-// Missão vira às 18h de Brasília (21h UTC) — mesma regra de app_today()/todayStr().
-const DAY_BOUNDARY_UTC_HOUR = 21;
-
-function msUntilNextBoundary() {
-  const now = new Date();
-  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), DAY_BOUNDARY_UTC_HOUR, 0, 0, 0));
-  if (next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
-  return next.getTime() - now.getTime();
-}
-
-function formatCountdown(ms) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
-function DailyMissionCountdown() {
-  const [remaining, setRemaining] = useState(msUntilNextBoundary);
-
-  useEffect(() => {
-    const interval = setInterval(() => setRemaining(msUntilNextBoundary()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
+function PendingChallengesBadge({ count, bg }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-      <Clock size={11} color="#fff" />
-      <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", fontVariantNumeric: "tabular-nums" }}>
-        {formatCountdown(remaining)}
-      </span>
+    <div
+      style={{
+        position: "absolute",
+        top: -7,
+        right: -7,
+        minWidth: 24,
+        height: 24,
+        borderRadius: "50%",
+        background: "#E5484D",
+        color: "#fff",
+        fontSize: 11.5,
+        fontWeight: 700,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "0 5px",
+        border: `2px solid ${bg}`,
+        boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+      }}
+    >
+      {count > 99 ? "99+" : count}
     </div>
   );
 }
 
-export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily }) {
+export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily, pendingChallengesCount = 0 }) {
   const t = useT();
   return (
     <div style={{ padding: "8px 20px 60px", maxWidth: 620, margin: "0 auto" }}>
@@ -68,12 +58,14 @@ export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily }) {
           accentColor={missionDone ? (t.name === "dark" ? "#22C55E" : "#16A34A") : t.name === "dark" ? t.red : "#DC2626"}
           statusText={missionDone ? (t.name === "dark" ? "✓ Concluída" : "Concluída") : "Não realizada"}
           statusColor={missionDone ? (t.name === "dark" ? "#22C55E" : "#16A34A") : t.name === "dark" ? t.red : "#DC2626"}
-          cornerBadge={!missionDone && <DailyMissionCountdown />}
         />
         <HomeBox icon={<BookOpen />} title="Questões" onClick={() => onNavigate("questions-filters")} accentColor="#3B82F6" />
         <HomeBox icon={<Rocket />} title="Flashcards" onClick={() => onNavigate("flashcards-select")} accentColor={t.amber} />
         <HomeBox icon={<Trophy />} title="Trials" locked accentColor="#C1443A" />
-        <HomeBox icon={<Swords />} title="Desafios" onClick={() => onNavigate("challenges")} accentColor="#9B6BFF" />
+        <div style={{ position: "relative" }}>
+          <HomeBox icon={<Swords />} title="Desafios" onClick={() => onNavigate("challenges")} accentColor="#9B6BFF" />
+          {pendingChallengesCount > 0 && <PendingChallengesBadge count={pendingChallengesCount} bg={t.bg} />}
+        </div>
       </div>
     </div>
   );
