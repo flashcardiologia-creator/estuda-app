@@ -11,6 +11,15 @@ const inter = Inter({
 export const metadata = {
   title: "FlashCardio",
   description: "Flashcards e questões para estudar todos os dias.",
+  appleWebApp: {
+    capable: true,
+    title: "FlashCardio",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport = {
+  themeColor: "#050B1E",
 };
 
 export default function RootLayout({ children }) {

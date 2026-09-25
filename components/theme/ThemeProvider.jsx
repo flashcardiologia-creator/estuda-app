@@ -34,6 +34,11 @@ export function ThemeProvider({ children }) {
 
   const t = THEMES[theme];
 
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", t.bg);
+  }, [t.bg]);
+
   return (
     <ThemeControlCtx.Provider value={{ theme, setTheme }}>
       <ThemeCtx.Provider value={t}>
