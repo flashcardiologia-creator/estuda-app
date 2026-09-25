@@ -80,12 +80,13 @@ function LoginForm() {
       <div style={{ width: "100%", maxWidth: 380, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: 30 }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
           <Flame size={34} color={t.amber} fill={t.amber} />
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: t.text, marginTop: 10 }}>estuda+</h1>
-          <p style={{ fontSize: 13, color: t.textMuted, marginTop: 4, textAlign: "center" }}>
-            {mode === "login" && "Entre para continuar seus estudos"}
-            {mode === "signup" && "Crie sua conta gratuita"}
-            {mode === "forgot" && "Informe seu e-mail para receber o link de redefinição"}
-          </p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: t.text, marginTop: 10 }}>FlashCardio</h1>
+          {mode !== "login" && (
+            <p style={{ fontSize: 13, color: t.textMuted, marginTop: 4, textAlign: "center" }}>
+              {mode === "signup" && "Crie sua conta gratuita"}
+              {mode === "forgot" && "Informe seu e-mail para receber o link de redefinição"}
+            </p>
+          )}
         </div>
 
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>

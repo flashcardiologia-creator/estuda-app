@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, Target } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag, Flame_ } from "@/components/ui/Primitives";
 import { QuestionCard } from "@/components/screens/QuestionCard";
+import { fetchFriendsMissionStatus } from "@/lib/data/friends";
 
 const dailyFilters = { fontSize: "md", modoProva: false, mostrarAntigas: false };
 
@@ -70,7 +71,6 @@ export function DailyMissionScreen({
   onNavigate,
   favorites,
   onToggleFav,
-  history,
 }) {
   const [responding, setResponding] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -116,7 +116,6 @@ export function DailyMissionScreen({
           answerResult={answerResult}
           onResponder={responder}
           responding={responding}
-          history={history[q.id]}
           isFav={favorites.includes(q.id)}
           onToggleFav={onToggleFav}
         />
@@ -212,18 +211,79 @@ function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate,
   );
 }
 
-export function DailyDoneScreen({ streak, onNavigate }) {
+export function DailyDoneScreen({ supabase, streak, friends, onNavigate }) {
   const t = useT();
+  const [friendsStatus, setFriendsStatus] = useState(null);
+
+  useEffect(() => {
+    if (!friends || !friends.length) {
+      setFriendsStatus([]);
+      return;
+    }
+    fetchFriendsMissionStatus(
+      supabase,
+      friends.map((f) => f.id)
+    )
+      .then(setFriendsStatus)
+      .catch(() => setFriendsStatus([]));
+  }, [supabase, friends]);
+
   return (
     <div style={{ maxWidth: 480, margin: "80px auto", textAlign: "center", padding: 22 }}>
       <Flame_ done size={54} />
       <h2 style={{ fontSize: 24, color: t.text, marginTop: 16 }}>Missão concluída!</h2>
-      <p style={{ color: t.textMuted, fontSize: 14 }}>
-        Você está numa sequência de <b style={{ color: t.green }}>{streak} dias</b>. Volte amanhã para manter a chama acesa.
+      <p style={{ color: t.textMuted, fontSize: 14, marginTop: 14, lineHeight: 1.6 }}>
+        Você está numa sequência de <b style={{ color: t.green }}>{streak} {streak === 1 ? "dia" : "dias"}</b>.
+        <br />
+        Volte amanhã para manter a chama acesa.
       </p>
       <div style={{ marginTop: 20 }}>
         <PrimaryButton onClick={() => onNavigate("home")}>Voltar ao início</PrimaryButton>
       </div>
+
+      {friendsStatus && friendsStatus.length > 0 && (
+        <div style={{ marginTop: 32, textAlign: "left" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: t.textMuted, marginBottom: 10, textAlign: "center" }}>
+            SEUS AMIGOS
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {friendsStatus.map((f) => {
+              const shownStreak = f.done_today ? f.streak : 0;
+              return (
+                <div
+                  key={f.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    background: t.surface,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 12,
+                    padding: "10px 14px",
+                  }}
+                >
+                  <Flame_ done={f.done_today} size={18} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: t.text }}>{f.name}</div>
+                    <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 1 }}>
+                      Sequência de {shownStreak} {shownStreak === 1 ? "dia" : "dias"}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: f.done_today ? t.green : t.red,
+                    }}
+                  >
+                    {f.done_today ? "Concluída" : "Pendente"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

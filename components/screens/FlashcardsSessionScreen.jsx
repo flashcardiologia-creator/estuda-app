@@ -100,11 +100,6 @@ export function FlashcardsSessionScreen({ session, setSession, onNavigate }) {
             </PrimaryButton>
           )}
         </div>
-        {!viewed && (
-          <div style={{ textAlign: "center", fontSize: 12, color: t.textMuted, marginTop: 10 }}>
-            Veja a resposta para liberar o próximo cartão.
-          </div>
-        )}
       </div>
     </div>
   );

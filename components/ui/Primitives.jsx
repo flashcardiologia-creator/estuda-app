@@ -97,12 +97,12 @@ export function ExpandBox({ title, icon, open, onToggle, children, badge }) {
   );
 }
 
-export function Toggle({ checked, onChange, label, sub }) {
+export function Toggle({ checked, onChange, label, sub, labelStyle, style }) {
   const t = useT();
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", ...style }}>
       <div>
-        <div style={{ fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: t.text }}>{label}</div>
+        <div style={{ fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: t.text, ...labelStyle }}>{label}</div>
         {sub && <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: t.textMuted, marginTop: 2 }}>{sub}</div>}
       </div>
       <button
@@ -312,6 +312,16 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, heroBg, sta
         <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: statusColor }}>{statusText}</span>
       )}
     </button>
+  );
+}
+
+export function SectionLabel({ icon, children }) {
+  const t = useT();
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: t.textMuted, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>
+      {icon}
+      {children}
+    </div>
   );
 }
 

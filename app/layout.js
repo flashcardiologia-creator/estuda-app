@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "estuda+",
+  title: "FlashCardio",
   description: "Flashcards e questões para estudar todos os dias.",
 };
 

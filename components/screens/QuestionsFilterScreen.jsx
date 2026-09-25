@@ -117,7 +117,7 @@ export function QuestionsFilterScreen({
             checked={filters.mostrarAntigas}
             onChange={(v) => setFilters((f) => ({ ...f, mostrarAntigas: v }))}
             label="Mostrar Respostas Antigas"
-            sub="Exibe suas tentativas anteriores em cada questão"
+            sub="Questões já respondidas abrem resolvidas, com sua resposta e o gabarito"
           />
         </ExpandBox>
 

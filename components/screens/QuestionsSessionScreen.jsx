@@ -21,7 +21,6 @@ export function QuestionsSessionScreen({
   filters,
   favorites,
   onToggleFav,
-  history,
   onAnswer,
   onFinish,
   onBack,
@@ -58,6 +57,7 @@ export function QuestionsSessionScreen({
   const answered = !!session.answers[qid];
   const answerResult = session.answers[qid];
   const selected = session.selected[qid] || null;
+  const prefilled = !!session.prefilled?.[qid];
   const isLast = idx === total - 1;
 
   if (!q) return null;
@@ -71,10 +71,24 @@ export function QuestionsSessionScreen({
     setResponding(true);
     try {
       const result = await onAnswer(qid, selected);
-      setSession((s) => ({ ...s, answers: { ...s.answers, [qid]: result } }));
+      setSession((s) => ({
+        ...s,
+        answers: { ...s.answers, [qid]: result },
+        prefilled: { ...s.prefilled, [qid]: false },
+      }));
     } finally {
       setResponding(false);
     }
+  };
+
+  const retry = () => {
+    setSession((s) => {
+      const selectedMap = { ...s.selected };
+      const answersMap = { ...s.answers };
+      delete selectedMap[qid];
+      delete answersMap[qid];
+      return { ...s, selected: selectedMap, answers: answersMap, prefilled: { ...s.prefilled, [qid]: false } };
+    });
   };
 
   const go = (dir) => setSession((s) => ({ ...s, index: Math.min(total - 1, Math.max(0, s.index + dir)) }));
@@ -148,7 +162,8 @@ export function QuestionsSessionScreen({
           answerResult={answerResult}
           onResponder={responder}
           responding={responding}
-          history={history[qid]}
+          prefilled={prefilled}
+          onRetry={retry}
           isFav={favorites.includes(qid)}
           onToggleFav={onToggleFav}
         />

@@ -7,7 +7,7 @@ import { ScreenHeader, Chip, PrimaryButton, Tag, EmptyState } from "@/components
 import { NewChallengeModal } from "@/components/screens/NewChallengeModal";
 import { ChallengeAnswerFlow } from "@/components/screens/ChallengeAnswerFlow";
 import { createChallenge } from "@/lib/data/challenges";
-import { todayStr } from "@/lib/util";
+import { todayStr, dateStrAt } from "@/lib/util";
 
 function challengeDone(answered, qtd) {
   return answered >= qtd;
@@ -26,12 +26,13 @@ export function ChallengesScreen({
   const t = useT();
   const [tab, setTab] = useState("pendentes");
   const [showNew, setShowNew] = useState(false);
+  const [showNoFriends, setShowNoFriends] = useState(false);
   const [respondingId, setRespondingId] = useState(null);
 
   const pendentes = challenges.filter((c) => c.status === "pending");
   const concluidos = challenges.filter((c) => c.status === "completed");
   const dailyCount = useMemo(
-    () => challenges.filter((c) => c.isMine && c.created_at.slice(0, 10) === todayStr()).length,
+    () => challenges.filter((c) => c.isMine && dateStrAt(new Date(c.created_at)) === todayStr()).length,
     [challenges]
   );
   const responding = challenges.find((c) => c.id === respondingId) || null;
@@ -84,7 +85,11 @@ export function ChallengesScreen({
               Concluídos ({concluidos.length})
             </Chip>
           </div>
-          <PrimaryButton small disabled={dailyCount >= 5 || friends.length === 0} onClick={() => setShowNew(true)}>
+          <PrimaryButton
+            small
+            disabled={dailyCount >= 5}
+            onClick={() => (friends.length === 0 ? setShowNoFriends(true) : setShowNew(true))}
+          >
             <Plus size={14} style={{ marginRight: 4 }} />
             Novo
           </PrimaryButton>
@@ -96,6 +101,11 @@ export function ChallengesScreen({
             const myDone = challengeDone(c.myAnswered, c.qtd);
             const theirDone = challengeDone(c.theirAnswered, c.qtd);
             const myPct = myDone ? Math.round((c.myCorrect / c.qtd) * 100) : null;
+            const theirName = c.isMine ? c.toName : c.fromName;
+            const participants = [
+              { name: "Você", done: myDone, answered: c.myAnswered },
+              { name: theirName, done: theirDone, answered: c.theirAnswered },
+            ];
             return (
               <div key={c.id} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16, marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -118,26 +128,51 @@ export function ChallengesScreen({
                     <Tag>expira 48h</Tag>
                   )}
                 </div>
-                <div style={{ marginTop: 12, display: "flex", gap: 8, fontSize: 12 }}>
-                  <span style={{ color: myDone ? t.green : t.textMuted }}>
-                    Você: {myDone ? "respondido" : c.myAnswered > 0 ? `${c.myAnswered}/${c.qtd}` : "aguardando"}
-                  </span>
-                  <span style={{ color: theirDone ? t.green : t.textMuted }}>
-                    {c.isMine ? c.toName : c.fromName}: {theirDone ? "respondido" : "aguardando"}
-                  </span>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>
+                  {participants.map((p) => (
+                    <div
+                      key={p.name}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        background: t.surfaceAlt,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 10,
+                        padding: "6px 10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          background: p.done ? "rgba(47,179,128,0.18)" : t.primarySoft,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 9.5,
+                          fontWeight: 700,
+                          color: p.done ? t.green : t.primary,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {p.name[0]}
+                      </div>
+                      <span style={{ flex: 1, fontSize: 12.5, color: t.text, fontWeight: 600 }}>{p.name}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: p.done ? t.green : t.textMuted }}>
+                        {p.done ? "Respondido" : p.answered > 0 ? `${p.answered}/${c.qtd}` : "Aguardando"}
+                      </span>
+                    </div>
+                  ))}
                 </div>
+
                 {!myDone && (
                   <div style={{ marginTop: 12 }}>
-                    <PrimaryButton small onClick={() => setRespondingId(c.id)}>
+                    <PrimaryButton small full onClick={() => setRespondingId(c.id)}>
                       {c.myAnswered > 0 ? "Continuar desafio" : "Responder desafio"}
                     </PrimaryButton>
-                  </div>
-                )}
-                {myDone && !theirDone && (
-                  <div style={{ marginTop: 12 }}>
-                    <span style={{ fontSize: 12, color: t.textMuted, fontStyle: "italic" }}>
-                      Aguardando {c.isMine ? c.toName : c.fromName} responder…
-                    </span>
                   </div>
                 )}
               </div>
@@ -149,28 +184,70 @@ export function ChallengesScreen({
           concluidos.map((c) => {
             const sMine = c.myCorrect,
               sTheirs = c.theirCorrect;
-            const vencedor = sMine === sTheirs ? "Empate" : sMine > sTheirs ? "Você" : c.isMine ? c.toName : c.fromName;
+            const theirName = c.isMine ? c.toName : c.fromName;
+            const myPct = Math.round((sMine / c.qtd) * 100);
+            const theirPct = Math.round((sTheirs / c.qtd) * 100);
+            const vencedor = sMine === sTheirs ? "Empate" : sMine > sTheirs ? "Você" : theirName;
+            const participants = [
+              { name: "Você", pct: myPct, correct: sMine, winner: vencedor === "Você" },
+              { name: theirName, pct: theirPct, correct: sTheirs, winner: vencedor === theirName },
+            ];
             return (
               <div key={c.id} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16, marginBottom: 10 }}>
-                <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>
-                  {c.fromName} vs {c.toName}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>
+                      {c.fromName} vs {c.toName}
+                    </div>
+                    <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3 }}>
+                      {c.tema} · {c.qtd} questões
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Trophy size={16} color={t.amber} />
+                    <span style={{ fontWeight: 700, fontSize: 13, color: t.amber }}>
+                      {vencedor === "Empate" ? "Empate" : vencedor}
+                    </span>
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3 }}>
-                  {c.tema} · {c.qtd} questões
-                </div>
-                <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 13 }}>
-                  <span style={{ color: t.text }}>
-                    Você: {sMine}/{c.qtd}
-                  </span>
-                  <span style={{ color: t.text }}>
-                    {c.isMine ? c.toName : c.fromName}: {sTheirs}/{c.qtd}
-                  </span>
-                </div>
-                <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                  <Trophy size={14} color={t.amber} />
-                  <span style={{ fontWeight: 700, fontSize: 13, color: t.amber }}>
-                    {vencedor === "Empate" ? "Empate" : `${vencedor} venceu`}
-                  </span>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>
+                  {participants.map((p) => (
+                    <div
+                      key={p.name}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        background: t.surfaceAlt,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 10,
+                        padding: "6px 10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          background: p.winner ? "rgba(47,179,128,0.18)" : t.primarySoft,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 9.5,
+                          fontWeight: 700,
+                          color: p.winner ? t.green : t.primary,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {p.name[0]}
+                      </div>
+                      <span style={{ flex: 1, fontSize: 12.5, color: t.text, fontWeight: 600 }}>{p.name}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: p.winner ? t.green : t.textMuted }}>
+                        {p.pct}% ({p.correct}/{c.qtd})
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             );
@@ -178,6 +255,32 @@ export function ChallengesScreen({
       </div>
 
       {showNew && <NewChallengeModal friends={friends} temas={temas} onCreate={criarDesafio} onClose={() => setShowNew(false)} />}
+      {showNoFriends && <NoFriendsModal onClose={() => setShowNoFriends(false)} onGoToAccount={() => onNavigate("account")} />}
+    </div>
+  );
+}
+
+function NoFriendsModal({ onClose, onGoToAccount }) {
+  const t = useT();
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
+      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 380, width: "100%" }}>
+        <h3 style={{ fontSize: 17, color: t.text, margin: "0 0 12px" }}>Você ainda não tem amigos</h3>
+        <p style={{ fontSize: 13.5, color: t.textMuted, lineHeight: 1.6, margin: "0 0 10px" }}>
+          Por design, só dá pra criar um desafio depois de ter pelo menos um amigo.
+        </p>
+        <p style={{ fontSize: 13.5, color: t.textMuted, lineHeight: 1.6, margin: 0 }}>
+          <b style={{ color: t.text }}>Como resolver:</b> vai em Minha Conta → seção &quot;Amigos&quot; → digita o
+          nome de exibição de outra conta já cadastrada e clica em &quot;+&quot;. Só funciona com o nome exato de
+          exibição de outro usuário que já existe no app (não é e-mail).
+        </p>
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+          <PrimaryButton variant="ghost" onClick={onClose}>
+            Fechar
+          </PrimaryButton>
+          <PrimaryButton onClick={onGoToAccount}>Ir para Minha Conta</PrimaryButton>
+        </div>
+      </div>
     </div>
   );
 }

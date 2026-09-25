@@ -10,5 +10,5 @@ export default async function Page() {
 
   if (!user) redirect("/login");
 
-  return <EstudaApp userId={user.id} />;
+  return <EstudaApp userId={user.id} userEmail={user.email} />;
 }

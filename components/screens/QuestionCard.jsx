@@ -16,12 +16,12 @@ export function QuestionCard({
   answerResult,
   onResponder,
   responding,
-  history,
+  prefilled,
+  onRetry,
   isFav,
   onToggleFav,
 }) {
   const t = useT();
-  const pastAttempts = filters.mostrarAntigas ? history || [] : [];
   const fontSize = FONT_SIZES[filters.fontSize] || FONT_SIZES.md;
 
   return (
@@ -40,17 +40,6 @@ export function QuestionCard({
           </button>
         )}
       </div>
-
-      {pastAttempts.length > 0 && (
-        <div style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", marginBottom: 14, fontSize: 12, color: t.textMuted }}>
-          Tentativas anteriores:
-          {pastAttempts.map((a, i) => (
-            <span key={i} style={{ color: a.correct ? t.green : t.red, fontWeight: 700, marginLeft: 4 }}>
-              {a.correct ? "✓" : "✗"}
-            </span>
-          ))}
-        </div>
-      )}
 
       <div style={{ fontSize, fontWeight: 600, color: t.text, lineHeight: 1.5, marginBottom: 20 }}>{q.enunciado}</div>
 
@@ -128,6 +117,14 @@ export function QuestionCard({
         <div style={{ marginTop: 16, padding: 14, borderRadius: 12, background: t.surfaceAlt, border: `1px solid ${t.border}` }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: t.primary, marginBottom: 4 }}>Comentário</div>
           <div style={{ fontSize: 13, color: t.textMuted, lineHeight: 1.5 }}>{answerResult.comentario || q.comentario}</div>
+        </div>
+      )}
+
+      {answered && prefilled && onRetry && (
+        <div style={{ marginTop: 14 }}>
+          <PrimaryButton full variant="ghost" onClick={onRetry}>
+            Responder novamente
+          </PrimaryButton>
         </div>
       )}
 

@@ -15,7 +15,7 @@ import { FlashcardsSessionScreen } from "@/components/screens/FlashcardsSessionS
 import { DailyMissionScreen, DailyDoneScreen } from "@/components/screens/DailyMissionScreen";
 import { ChallengesScreen } from "@/components/screens/ChallengesScreen";
 
-import { fetchProfile, updateDisplayName, fetchStats } from "@/lib/data/profile";
+import { fetchProfile, updateDisplayName, updateStatsVisibility, fetchStats } from "@/lib/data/profile";
 import {
   fetchAllQuestions,
   applyQuestionFilters,
@@ -29,7 +29,12 @@ import {
 } from "@/lib/data/questions";
 import { fetchFlashcardThemeCounts, fetchFlashcardsByTheme } from "@/lib/data/flashcards";
 import { fetchDailyMissionItems, completeDailyMission } from "@/lib/data/mission";
-import { fetchFriends, addFriendByName } from "@/lib/data/friends";
+import {
+  fetchFriends,
+  addFriendByName,
+  fetchIncomingFriendRequests,
+  respondToFriendRequest,
+} from "@/lib/data/friends";
 import { fetchChallenges } from "@/lib/data/challenges";
 import { shuffle, todayStr } from "@/lib/util";
 
@@ -47,7 +52,7 @@ const DEFAULT_FILTERS = {
   fontSize: "md",
 };
 
-export function EstudaApp({ userId }) {
+export function EstudaApp({ userId, userEmail }) {
   const t = useT();
   const router = useRouter();
   const [supabase] = useState(() => createClient());
@@ -58,11 +63,11 @@ export function EstudaApp({ userId }) {
   const [allQuestions, setAllQuestions] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [friends, setFriends] = useState([]);
+  const [incomingRequests, setIncomingRequests] = useState([]);
   const [stats, setStats] = useState({ answered: 0, accuracy: 0 });
   const [themeCounts, setThemeCounts] = useState({});
   const [challenges, setChallenges] = useState([]);
   const [challengeAnswering, setChallengeAnswering] = useState(false);
-  const [history, setHistory] = useState({});
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
@@ -86,7 +91,7 @@ export function EstudaApp({ userId }) {
         fetchProfile(supabase, userId),
         fetchAllQuestions(supabase),
         fetchFavoriteIds(supabase, userId),
-        fetchFriends(supabase, userId),
+        fetchFriends(supabase),
       ]);
       if (cancelled) return;
       setProfile(profileData);
@@ -103,7 +108,8 @@ export function EstudaApp({ userId }) {
   useEffect(() => {
     if (screen === "account") {
       fetchStats(supabase, userId).then(setStats);
-      fetchFriends(supabase, userId).then(setFriends);
+      fetchFriends(supabase).then(setFriends);
+      fetchIncomingFriendRequests(supabase).then(setIncomingRequests);
     }
     if (screen === "challenges") {
       fetchChallenges(supabase, userId).then(setChallenges);
@@ -117,6 +123,15 @@ export function EstudaApp({ userId }) {
     const data = await fetchChallenges(supabase, userId);
     setChallenges(data);
   }, [supabase, userId]);
+
+  const refreshFriends = useCallback(async () => {
+    const [friendsData, requestsData] = await Promise.all([
+      fetchFriends(supabase),
+      fetchIncomingFriendRequests(supabase),
+    ]);
+    setFriends(friendsData);
+    setIncomingRequests(requestsData);
+  }, [supabase]);
 
   const toggleFav = useCallback(
     (qid) => {
@@ -137,14 +152,34 @@ export function EstudaApp({ userId }) {
       fetchOptionsForQuestions(supabase, ids),
       fetchAttemptHistory(supabase, userId, ids),
     ]);
+
+    let initialSelected = {};
+    let initialAnswers = {};
+    let initialPrefilled = {};
+    if (filters.mostrarAntigas) {
+      const attemptedIds = ids.filter((id) => hist[id]?.length);
+      if (attemptedIds.length) {
+        const answerKeyOptions = await fetchOptionsWithAnswerKey(supabase, attemptedIds);
+        for (const id of attemptedIds) {
+          const correctOption = answerKeyOptions[id]?.find((o) => o.correta)?.letra;
+          const lastAttempt = hist[id][hist[id].length - 1];
+          if (correctOption && lastAttempt) {
+            initialSelected[id] = lastAttempt.selected;
+            initialAnswers[id] = { selected: lastAttempt.selected, correct: lastAttempt.correct, correct_option: correctOption };
+            initialPrefilled[id] = true;
+          }
+        }
+      }
+    }
+
     setSessionQuestionsById(Object.fromEntries(pool.map((q) => [q.id, q])));
     setSessionOptionsByQuestion(options);
-    setHistory((h) => ({ ...h, ...hist }));
     setSession({
       ids,
       index: 0,
-      selected: {},
-      answers: {},
+      selected: initialSelected,
+      answers: initialAnswers,
+      prefilled: initialPrefilled,
       startedAt: filters.cronometro ? Date.now() : null,
       durationMs: filters.cronometro ? filters.minutos * 60 * 1000 : null,
     });
@@ -229,9 +264,22 @@ export function EstudaApp({ userId }) {
     setProfile((p) => ({ ...p, name }));
   };
 
+  const saveStatsVisibility = async (visible) => {
+    await updateStatsVisibility(supabase, userId, visible);
+    setProfile((p) => ({ ...p, stats_visible_to_friends: visible }));
+  };
+
   const addFriend = async (name) => {
-    const friend = await addFriendByName(supabase, userId, name);
-    setFriends((f) => [...f, friend]);
+    const result = await addFriendByName(supabase, name);
+    if (result.status === "accepted") {
+      setFriends((f) => [...f, result.friend]);
+    }
+    return result;
+  };
+
+  const respondRequest = async (requesterId, accept) => {
+    await respondToFriendRequest(supabase, requesterId, accept);
+    await refreshFriends();
   };
 
   const signOut = async () => {
@@ -265,12 +313,18 @@ export function EstudaApp({ userId }) {
 
       {screen === "account" && (
         <AccountScreen
+          supabase={supabase}
+          userEmail={userEmail}
           profile={profile}
           stats={stats}
           friends={friends}
+          incomingRequests={incomingRequests}
           onNavigate={setScreen}
           onSaveName={saveDisplayName}
+          onSaveStatsVisibility={saveStatsVisibility}
           onAddFriend={addFriend}
+          onRespondRequest={respondRequest}
+          onRefreshFriends={refreshFriends}
           onSignOut={signOut}
         />
       )}
@@ -297,7 +351,6 @@ export function EstudaApp({ userId }) {
           filters={filters}
           favorites={favorites}
           onToggleFav={toggleFav}
-          history={history}
           onAnswer={answerQuestion}
           onFinish={finishQuestions}
           onBack={backFromSession}
@@ -336,11 +389,12 @@ export function EstudaApp({ userId }) {
           onNavigate={setScreen}
           favorites={favorites}
           onToggleFav={toggleFav}
-          history={history}
         />
       )}
 
-      {screen === "daily-done" && <DailyDoneScreen streak={profile.streak} onNavigate={setScreen} />}
+      {screen === "daily-done" && (
+        <DailyDoneScreen supabase={supabase} streak={profile.streak} friends={friends} onNavigate={setScreen} />
+      )}
 
       {screen === "challenges" && (
         <ChallengesScreen

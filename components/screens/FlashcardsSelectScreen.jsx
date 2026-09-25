@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton } from "@/components/ui/Primitives";
+import { ScreenHeader, ExpandBox, Toggle, PrimaryButton, SectionLabel } from "@/components/ui/Primitives";
 
 export function FlashcardsSelectScreen({ themeCounts, onStart, onNavigate }) {
   const t = useT();
@@ -14,6 +14,7 @@ export function FlashcardsSelectScreen({ themeCounts, onStart, onNavigate }) {
   const [aleatorio, setAleatorio] = useState(true);
   const options = [5, 10, 15, 20, 25, "Todos"];
   const availableCount = tema ? themeCounts[tema] || 0 : 0;
+  const sessionCount = tema ? Math.min(qtd === "Todos" ? availableCount : qtd, availableCount) : 0;
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
@@ -21,50 +22,87 @@ export function FlashcardsSelectScreen({ themeCounts, onStart, onNavigate }) {
       <div style={{ padding: "18px 22px" }}>
         <ExpandBox title="Tema" icon={<BookOpen size={17} color={t.primary} />} open={open} onToggle={() => setOpen(!open)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {temas.map((tm) => (
-              <button
-                key={tm}
-                onClick={() => setTema(tm)}
-                style={{
-                  textAlign: "left",
-                  padding: "11px 14px",
-                  borderRadius: 10,
-                  cursor: "pointer",
-                  border: `1.5px solid ${tema === tm ? t.primary : t.border}`,
-                  background: tema === tm ? t.primarySoft : "transparent",
-                  fontWeight: 600,
-                  fontSize: 13.5,
-                  color: tema === tm ? t.primary : t.text,
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                {tm} <span style={{ fontSize: 12, color: t.textMuted }}>{themeCounts[tm]}</span>
-              </button>
-            ))}
+            {temas.map((tm) => {
+              const active = tema === tm;
+              return (
+                <button
+                  key={tm}
+                  onClick={() => setTema(tm)}
+                  style={{
+                    textAlign: "left",
+                    padding: "11px 14px",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    border: `1.5px solid ${active ? t.primary : t.border}`,
+                    background: active ? t.primarySoft : "transparent",
+                    fontWeight: 600,
+                    fontSize: 13.5,
+                    color: active ? t.primary : t.text,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    transition: "all .15s ease",
+                  }}
+                >
+                  {tm}
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: active ? t.primary : t.textMuted,
+                      background: active ? "rgba(255,255,255,0.14)" : t.surfaceAlt,
+                      padding: "2px 9px",
+                      borderRadius: 999,
+                    }}
+                  >
+                    {themeCounts[tm]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </ExpandBox>
 
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 10 }}>Quantidade</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {options.map((o) => (
-              <Chip key={o} active={qtd === o} onClick={() => setQtd(o)}>
-                {o}
-              </Chip>
-            ))}
+        <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 16, padding: 18 }}>
+          <div style={{ marginBottom: 18 }}>
+            <SectionLabel>Quantidade</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {options.map((o) => {
+                const active = qtd === o;
+                return (
+                  <button
+                    key={o}
+                    onClick={() => setQtd(o)}
+                    style={{
+                      padding: "10px 6px",
+                      borderRadius: 12,
+                      border: `1.5px solid ${active ? t.primary : t.border}`,
+                      background: active ? t.primarySoft : t.surfaceAlt,
+                      color: active ? t.primary : t.text,
+                      fontSize: 14,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      textAlign: "center",
+                      transition: "all .15s ease",
+                    }}
+                  >
+                    {o}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          <Toggle checked={aleatorio} onChange={setAleatorio} label="Aleatorizar ordem" sub="Embaralha os cartões antes de iniciar" />
         </div>
 
-        <Toggle checked={aleatorio} onChange={setAleatorio} label="Aleatorizar ordem" sub="Embaralha os cartões antes de iniciar" />
-
-        <div style={{ marginTop: 20 }}>
+        <div style={{ marginTop: 18 }}>
           <PrimaryButton full disabled={!tema} onClick={() => onStart(tema, qtd, aleatorio)}>
             Iniciar Flashcards
           </PrimaryButton>
           {tema && (
             <div style={{ textAlign: "center", fontSize: 12, color: t.textMuted, marginTop: 8 }}>
-              {Math.min(qtd === "Todos" ? availableCount : qtd, availableCount)} cartões nesta sessão
+              {sessionCount} cartões nesta sessão
             </div>
           )}
         </div>
