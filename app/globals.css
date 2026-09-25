@@ -33,3 +33,7 @@ button {
 input {
   font: inherit;
 }
+
+.friend-search-input::placeholder {
+  font-size: 13.5px;
+}

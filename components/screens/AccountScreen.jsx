@@ -222,6 +222,7 @@ export function AccountScreen({
               maxLength={MAX_NAME_LEN}
               onChange={(e) => setNewFriend(sanitizeName(e.target.value))}
               placeholder="Nome exato ou código do amigo"
+              className="friend-search-input"
               style={{
                 flex: 1,
                 padding: "9px 12px",
