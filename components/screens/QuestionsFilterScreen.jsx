@@ -81,7 +81,7 @@ export function QuestionsFilterScreen({
                 min={1}
                 value={filters.minutos}
                 onChange={(e) => setFilters((f) => ({ ...f, minutos: Math.max(1, Number(e.target.value) || 1) }))}
-                style={{ width: 70, padding: "6px 8px", borderRadius: 8, border: `1px solid ${t.border}`, background: t.surfaceAlt, color: t.text }}
+                style={{ width: 70, padding: "6px 8px", borderRadius: 8, border: `1px solid ${t.border}`, background: t.surfaceAlt, color: t.text, fontSize: 16 }}
               />
             </div>
           )}

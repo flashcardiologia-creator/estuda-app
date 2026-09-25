@@ -27,6 +27,7 @@ export function QuestionsSessionScreen({
 }) {
   const t = useT();
   const [responding, setResponding] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   const timerActive = !!(session.startedAt && session.durationMs);
   const [remainingMs, setRemainingMs] = useState(
     timerActive ? session.startedAt + session.durationMs - Date.now() : null
@@ -92,6 +93,15 @@ export function QuestionsSessionScreen({
   };
 
   const go = (dir) => setSession((s) => ({ ...s, index: Math.min(total - 1, Math.max(0, s.index + dir)) }));
+
+  const finish = async () => {
+    setFinishing(true);
+    try {
+      await onFinish();
+    } finally {
+      setFinishing(false);
+    }
+  };
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
@@ -177,11 +187,11 @@ export function QuestionsSessionScreen({
           </div>
           <div style={{ flex: 1 }}>
             {isLast ? (
-              <PrimaryButton full onClick={onFinish}>
+              <PrimaryButton full onClick={finish} disabled={responding || finishing}>
                 Finalizar
               </PrimaryButton>
             ) : (
-              <PrimaryButton full onClick={() => go(1)}>
+              <PrimaryButton full onClick={() => go(1)} disabled={responding}>
                 Próxima
                 <ChevronRight size={16} style={{ marginLeft: 4 }} />
               </PrimaryButton>

@@ -37,7 +37,7 @@ export default function ResetPasswordPage() {
     border: `1px solid ${t.border}`,
     background: t.surfaceAlt,
     color: t.text,
-    fontSize: 14,
+    fontSize: 16,
     boxSizing: "border-box",
   };
 

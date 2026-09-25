@@ -6,6 +6,8 @@ import { Flame } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
+import { updateDisplayName } from "@/lib/data/profile";
+import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 
 export default function LoginPage() {
   return (
@@ -22,8 +24,10 @@ function LoginForm() {
   const supabase = createClient();
 
   const [mode, setMode] = useState("login");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
@@ -41,7 +45,7 @@ function LoginForm() {
     border: `1px solid ${t.border}`,
     background: t.surfaceAlt,
     color: t.text,
-    fontSize: 14,
+    fontSize: 16,
     boxSizing: "border-box",
   };
 
@@ -57,9 +61,23 @@ function LoginForm() {
         router.push("/");
         router.refresh();
       } else if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+          setError("Informe um nome de usuário.");
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError("As senhas não coincidem.");
+          return;
+        }
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name: trimmedName } },
+        });
         if (error) throw error;
         if (data.session) {
+          await updateDisplayName(supabase, data.user.id, trimmedName);
           router.push("/");
           router.refresh();
         } else {
@@ -95,6 +113,20 @@ function LoginForm() {
         </div>
 
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {mode === "signup" && (
+            <div>
+              <label style={{ fontSize: 12.5, color: t.textMuted, fontWeight: 600 }}>Nome de usuário</label>
+              <input
+                type="text"
+                required
+                maxLength={MAX_NAME_LEN}
+                autoComplete="nickname"
+                value={name}
+                onChange={(e) => setName(sanitizeName(e.target.value))}
+                style={{ ...inputStyle, marginTop: 6 }}
+              />
+            </div>
+          )}
           <div>
             <label style={{ fontSize: 12.5, color: t.textMuted, fontWeight: 600 }}>E-mail</label>
             <input
@@ -116,6 +148,20 @@ function LoginForm() {
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                style={{ ...inputStyle, marginTop: 6 }}
+              />
+            </div>
+          )}
+          {mode === "signup" && (
+            <div>
+              <label style={{ fontSize: 12.5, color: t.textMuted, fontWeight: 600 }}>Confirmar senha</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 style={{ ...inputStyle, marginTop: 6 }}
               />
             </div>
@@ -165,6 +211,7 @@ function LoginForm() {
                 setMode(mode === "login" ? "signup" : "login");
                 setError("");
                 setInfo("");
+                setConfirmPassword("");
               }}
               style={{ background: "transparent", border: "none", color: t.primary, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
             >

@@ -113,6 +113,7 @@ export function EstudaApp({ userId, userEmail }) {
     }
     if (screen === "challenges") {
       fetchChallenges(supabase, userId).then(setChallenges);
+      fetchFriends(supabase).then(setFriends);
     }
     if (screen === "flashcards-select") {
       fetchFlashcardThemeCounts(supabase).then(setThemeCounts);
