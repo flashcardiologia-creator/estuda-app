@@ -3,6 +3,30 @@
 -- Não recria tabelas nem políticas de RLS já existentes.
 
 -- ============================================================
+-- -2) Fixa o sorteio da missão diária (questões + flashcards) por usuário
+--     e por dia, para que fechar e reabrir o app (ou trocar de aparelho)
+--     mostre sempre o mesmo conjunto até a virada do dia.
+-- ============================================================
+create table if not exists public.daily_mission_picks (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  mission_date date not null,
+  question_ids uuid[] not null,
+  flashcard_ids uuid[] not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, mission_date)
+);
+
+alter table public.daily_mission_picks enable row level security;
+
+drop policy if exists "select own daily mission picks" on public.daily_mission_picks;
+create policy "select own daily mission picks" on public.daily_mission_picks
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "insert own daily mission picks" on public.daily_mission_picks;
+create policy "insert own daily mission picks" on public.daily_mission_picks
+  for insert with check (auth.uid() = user_id);
+
+-- ============================================================
 -- -1) Realtime para a tela de Desafios: liga a replicação dessas duas
 --     tabelas para que o app receba updates ao vivo (WebSocket) quando o
 --     amigo responde uma questão do desafio ou quando ele é concluído,
