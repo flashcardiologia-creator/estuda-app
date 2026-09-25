@@ -11,10 +11,14 @@ const inter = Inter({
 export const metadata = {
   title: "FlashCardio",
   description: "Flashcards e questões para estudar todos os dias.",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     title: "FlashCardio",
     statusBarStyle: "black-translucent",
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
   },
 };
 

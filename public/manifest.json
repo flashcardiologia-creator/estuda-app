@@ -1,0 +1,15 @@
+{
+  "name": "FlashCardio",
+  "short_name": "FlashCardio",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050B1E",
+  "theme_color": "#050B1E",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
