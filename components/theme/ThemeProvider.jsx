@@ -46,6 +46,8 @@ export function ThemeProvider({ children }) {
           style={{
             minHeight: "100vh",
             background: `radial-gradient(circle, ${t.border}55 1px, transparent 1px) 0 0/22px 22px, ${t.bg}`,
+            paddingTop: "env(safe-area-inset-top)",
+            paddingBottom: "env(safe-area-inset-bottom)",
           }}
         >
           {children}
