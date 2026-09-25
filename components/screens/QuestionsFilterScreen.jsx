@@ -17,7 +17,7 @@ export function QuestionsFilterScreen({
   onNavigate,
 }) {
   const t = useT();
-  const [open, setOpen] = useState({ temas: true });
+  const [open, setOpen] = useState({ temas: false });
   const { temas: TEMAS, anos, instituicoes } = useMemo(() => deriveFilterOptions(allQuestions), [allQuestions]);
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
@@ -26,6 +26,10 @@ export function QuestionsFilterScreen({
       ...f,
       [key]: f[key].includes(val) ? f[key].filter((x) => x !== val) : [...f[key], val],
     }));
+
+  const allTemasSelected = TEMAS.length > 0 && filters.temas.length === TEMAS.length;
+  const toggleTodosTemas = () =>
+    setFilters((f) => ({ ...f, temas: allTemasSelected ? [] : [...TEMAS] }));
 
   const previewCount = useMemo(
     () => applyQuestionFilters(allQuestions, filters, favorites).length,
@@ -43,6 +47,9 @@ export function QuestionsFilterScreen({
                 {tm}
               </Chip>
             ))}
+            <Chip active={allTemasSelected} onClick={toggleTodosTemas}>
+              Todos
+            </Chip>
           </div>
         </ExpandBox>
 
@@ -129,9 +136,12 @@ export function QuestionsFilterScreen({
               Continuar Sessão
             </PrimaryButton>
           )}
-          <PrimaryButton full disabled={previewCount === 0} onClick={onStart}>
+          <PrimaryButton full disabled={filters.temas.length === 0 || previewCount === 0} onClick={onStart}>
             Iniciar Questões
           </PrimaryButton>
+          {filters.temas.length === 0 && (
+            <div style={{ fontSize: 12, color: t.textMuted, textAlign: "center" }}>Selecione ao menos um tema</div>
+          )}
         </div>
       </div>
     </div>
