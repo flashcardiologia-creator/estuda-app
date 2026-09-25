@@ -39,7 +39,7 @@ export function Header({ streak, onNavigate, missionDone }) {
               style={{
                 fontSize: 12.5,
                 fontWeight: 700,
-                color: t.red,
+                color: t.textMuted,
                 fontVariantNumeric: "tabular-nums",
               }}
             >
