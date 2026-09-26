@@ -27,8 +27,8 @@ import {
   fetchFavoriteIds,
   setFavorite,
 } from "@/lib/data/questions";
-import { fetchFlashcardThemeCounts, fetchFlashcardsByTheme } from "@/lib/data/flashcards";
-import { fetchDailyMissionItems, completeDailyMission } from "@/lib/data/mission";
+import { fetchFlashcardThemeCounts, fetchFlashcardsByTheme, recordFlashcardView } from "@/lib/data/flashcards";
+import { fetchDailyMissionItems, completeDailyMission, expireDailyMission } from "@/lib/data/mission";
 import {
   fetchFriends,
   addFriendByName,
@@ -36,7 +36,7 @@ import {
   respondToFriendRequest,
 } from "@/lib/data/friends";
 import { fetchChallenges } from "@/lib/data/challenges";
-import { shuffle, todayStr } from "@/lib/util";
+import { shuffle, todayStr, msUntilNextDayBoundary } from "@/lib/util";
 
 const HIDDEN_HEADER_SCREENS = ["questions-session", "flashcards-session", "daily-session", "questions-results"];
 
@@ -265,6 +265,13 @@ export function EstudaApp({ userId, userEmail }) {
     setScreen("home");
   };
 
+  const viewFlashcard = useCallback(
+    (flashcardId) => {
+      recordFlashcardView(supabase, userId, flashcardId).catch(() => {});
+    },
+    [supabase, userId]
+  );
+
   /* ---- Missão diária ---- */
   const startDaily = async () => {
     if (missionDone) {
@@ -290,6 +297,29 @@ export function EstudaApp({ userId, userEmail }) {
     setProfile((p) => ({ ...p, streak, last_mission_date }));
     setScreen("daily-done");
   };
+
+  // Se a virada do dia acontece com a pessoa ainda dentro da missão (sem ter
+  // concluído), fecha a missão, zera a streak e volta pra tela inicial —
+  // perder o prazo quebra a sequência.
+  const expireDaily = useCallback(async () => {
+    try {
+      const { streak } = await expireDailyMission(supabase);
+      setProfile((p) => ({ ...p, streak }));
+    } catch {
+      // melhor deixar a streak como está do que travar o usuário na missão vencida
+    }
+    setDailySession(null);
+    setDailyItems(null);
+    setDailyOptionsByQuestion({});
+    dailyPrefetchRef.current = null;
+    setScreen("home");
+  }, [supabase]);
+
+  useEffect(() => {
+    if (screen !== "daily-session") return;
+    const timer = setTimeout(expireDaily, msUntilNextDayBoundary());
+    return () => clearTimeout(timer);
+  }, [screen, expireDaily]);
 
   /* ---- Conta ---- */
   const saveDisplayName = async (name) => {
@@ -353,9 +383,11 @@ export function EstudaApp({ userId, userEmail }) {
       {screen === "account" && (
         <AccountScreen
           supabase={supabase}
+          userId={userId}
           userEmail={userEmail}
           profile={profile}
           stats={stats}
+          allQuestions={allQuestions}
           friends={friends}
           incomingRequests={incomingRequests}
           initialFocus={accountFocus}
@@ -422,7 +454,13 @@ export function EstudaApp({ userId, userEmail }) {
       )}
 
       {screen === "flashcards-session" && flashSession && (
-        <FlashcardsSessionScreen session={flashSession} setSession={setFlashSession} onNavigate={setScreen} onFinish={finishFlashcards} />
+        <FlashcardsSessionScreen
+          session={flashSession}
+          setSession={setFlashSession}
+          onNavigate={setScreen}
+          onFinish={finishFlashcards}
+          onView={viewFlashcard}
+        />
       )}
 
       {screen === "daily-session" && dailyItems && dailySession && (
@@ -436,6 +474,7 @@ export function EstudaApp({ userId, userEmail }) {
           onNavigate={setScreen}
           favorites={favorites}
           onToggleFav={toggleFav}
+          onView={viewFlashcard}
         />
       )}
 

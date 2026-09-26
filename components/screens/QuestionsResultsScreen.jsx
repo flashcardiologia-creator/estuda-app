@@ -48,7 +48,14 @@ export function QuestionsResultsScreen({ session, questionsById, optionsByQuesti
                       <Tag>{q.instituicao}</Tag>
                       <Tag>{q.tema}</Tag>
                     </div>
-                    <div style={{ fontWeight: 600, fontSize: 14.5, color: t.text, marginBottom: 10 }}>{q.enunciado}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14.5, color: t.text, marginBottom: q.imagem_url ? 8 : 10 }}>{q.enunciado}</div>
+                    {q.imagem_url && (
+                      <img
+                        src={q.imagem_url}
+                        alt="Imagem da questão"
+                        style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: 10, border: `1px solid ${t.border}` }}
+                      />
+                    )}
                     {options.map((op) => {
                       const isSel = a?.selected === op.letra;
                       const isCorrect = op.correta === true || (a && op.letra === a.correct_option);

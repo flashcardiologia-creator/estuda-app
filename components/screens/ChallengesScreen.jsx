@@ -286,13 +286,10 @@ function NoFriendsModal({ onClose, onGoToAccount }) {
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
       <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 380, width: "100%" }}>
         <h3 style={{ fontSize: 17, color: t.text, margin: "0 0 12px" }}>Você ainda não tem amigos</h3>
-        <p style={{ fontSize: 13.5, color: t.textMuted, lineHeight: 1.6, margin: "0 0 10px" }}>
-          Por design, só dá pra criar um desafio depois de ter pelo menos um amigo.
-        </p>
         <p style={{ fontSize: 13.5, color: t.textMuted, lineHeight: 1.6, margin: 0 }}>
           <b style={{ color: t.text }}>Como resolver:</b> vai em Minha Conta → seção &quot;Amigos&quot; → digita o
           nome de exibição de outra conta já cadastrada e clica em &quot;+&quot;. Só funciona com o nome exato de
-          exibição de outro usuário que já existe no app (não é e-mail).
+          exibição de outro usuário que já existe no app.
         </p>
         <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 20 }}>
           <PrimaryButton variant="ghost" onClick={onClose}>

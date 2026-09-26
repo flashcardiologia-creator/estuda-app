@@ -4,7 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag } from "@/components/ui/Primitives";
 
-export function FlashcardsSessionScreen({ session, setSession, onNavigate, onFinish }) {
+export function FlashcardsSessionScreen({ session, setSession, onNavigate, onFinish, onView }) {
   const t = useT();
   const total = session.ids.length;
   const idx = session.index;
@@ -12,15 +12,15 @@ export function FlashcardsSessionScreen({ session, setSession, onNavigate, onFin
   const flipped = session.flipped[card.id] || false;
   const viewed = !!(session.viewed && session.viewed[card.id]);
 
-  const flip = () =>
-    setSession((s) => {
-      const nextFlipped = !s.flipped[card.id];
-      return {
-        ...s,
-        flipped: { ...s.flipped, [card.id]: nextFlipped },
-        viewed: nextFlipped ? { ...s.viewed, [card.id]: true } : s.viewed,
-      };
-    });
+  const flip = () => {
+    const nextFlipped = !flipped;
+    if (nextFlipped) onView?.(card.id);
+    setSession((s) => ({
+      ...s,
+      flipped: { ...s.flipped, [card.id]: nextFlipped },
+      viewed: nextFlipped ? { ...s.viewed, [card.id]: true } : s.viewed,
+    }));
+  };
   const go = (dir) =>
     setSession((s) => {
       const newIndex = Math.min(total - 1, Math.max(0, s.index + dir));

@@ -102,7 +102,15 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
           <Tag>{q.instituicao}</Tag>
           <Tag>{q.tema}</Tag>
         </div>
-        <div style={{ fontWeight: 600, fontSize: 16, color: t.text, marginBottom: 20, lineHeight: 1.5 }}>{q.enunciado}</div>
+        <div style={{ fontWeight: 600, fontSize: 16, color: t.text, marginBottom: q.imagem_url ? 14 : 20, lineHeight: 1.5 }}>{q.enunciado}</div>
+
+        {q.imagem_url && (
+          <img
+            src={q.imagem_url}
+            alt="Imagem da questão"
+            style={{ display: "block", maxWidth: "100%", borderRadius: 12, marginBottom: 20, border: `1px solid ${t.border}` }}
+          />
+        )}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {options.map((op) => {
             const isSelected = effectiveSelected === op.letra;

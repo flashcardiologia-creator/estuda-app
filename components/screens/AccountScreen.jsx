@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, Save } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3 } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle } from "@/components/ui/Primitives";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { fetchFriendStats, removeFriend } from "@/lib/data/friends";
+import { fetchAllFlashcards } from "@/lib/data/flashcards";
+import { fetchFullStats } from "@/lib/data/stats";
 
 export function AccountScreen({
   supabase,
+  userId,
   userEmail,
   profile,
   stats,
+  allQuestions,
   friends,
   incomingRequests,
   initialFocus,
@@ -38,6 +42,7 @@ export function AccountScreen({
   const [viewingFriend, setViewingFriend] = useState(null);
   const [profileOpen, setProfileOpen] = useState(initialFocus !== "friends");
   const [friendsOpen, setFriendsOpen] = useState(true);
+  const [showFullStats, setShowFullStats] = useState(false);
 
   useEffect(() => {
     if (initialFocus) onFocusConsumed?.();
@@ -126,6 +131,29 @@ export function AccountScreen({
           ))}
         </div>
 
+        <button
+          onClick={() => setShowFullStats(true)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            width: "100%",
+            background: "transparent",
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: "9px 12px",
+            marginBottom: 20,
+            marginTop: -10,
+            cursor: "pointer",
+            color: t.primary,
+            fontSize: 12.5,
+            fontWeight: 600,
+          }}
+        >
+          <BarChart3 size={14} /> Ver estatísticas completas
+        </button>
+
         <ExpandBox title="Perfil" icon={<User size={17} color={t.primary} />} open={profileOpen} onToggle={() => setProfileOpen((o) => !o)}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <label style={{ width: 48, flexShrink: 0, fontSize: 12.5, color: t.textMuted, fontWeight: 600 }}>Nome</label>
@@ -141,33 +169,18 @@ export function AccountScreen({
                 border: `1px solid ${t.border}`,
                 background: t.surfaceAlt,
                 color: t.text,
-                fontSize: 16,
+                fontSize: 13,
                 boxSizing: "border-box",
               }}
             />
-            <button
+            <PrimaryButton
+              small
               onClick={saveName}
               disabled={!name.trim() || savingName}
-              title="Salvar nome"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                background: "transparent",
-                border: `1px solid ${t.border}`,
-                borderRadius: 8,
-                padding: "6px 10px",
-                color: nameSaved ? t.green : t.textMuted,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: !name.trim() || savingName ? "default" : "pointer",
-                opacity: !name.trim() || savingName ? 0.6 : 1,
-                flexShrink: 0,
-              }}
+              color={nameSaved ? t.green : undefined}
             >
-              {nameSaved ? <Check size={13} /> : <Save size={13} />}
               {nameSaved ? "Salvo" : "Salvar"}
-            </button>
+            </PrimaryButton>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
@@ -408,6 +421,132 @@ export function AccountScreen({
           }}
         />
       )}
+
+      {showFullStats && (
+        <FullStatsModal
+          supabase={supabase}
+          userId={userId}
+          allQuestions={allQuestions}
+          onClose={() => setShowFullStats(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function StatBar({ label, sublabel, pct, color, barBg }) {
+  const t = useT();
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+        <span style={{ fontSize: 12.5, color: t.text, fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 11.5, color: t.textMuted }}>{sublabel}</span>
+      </div>
+      <div style={{ height: 8, background: barBg || t.border, borderRadius: 999, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${Math.max(0, Math.min(100, pct))}%`, background: color, borderRadius: 999 }} />
+      </div>
+    </div>
+  );
+}
+
+function FullStatsModal({ supabase, userId, allQuestions, onClose }) {
+  const t = useT();
+  const [fullStats, setFullStats] = useState(null);
+  const [loadError, setLoadError] = useState("");
+
+  const questionsById = useMemo(() => Object.fromEntries(allQuestions.map((q) => [q.id, q])), [allQuestions]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const allFlashcards = await fetchAllFlashcards(supabase);
+        const flashcardsById = Object.fromEntries(allFlashcards.map((f) => [f.id, f]));
+        const data = await fetchFullStats(supabase, userId, questionsById, flashcardsById);
+        if (!cancelled) setFullStats(data);
+      } catch (err) {
+        if (!cancelled) setLoadError(err.message || "Não foi possível carregar as estatísticas.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, userId]);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
+      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 460, width: "100%", maxHeight: "82vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <h3 style={{ fontSize: 17, color: t.text, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <BarChart3 size={17} color={t.primary} /> Estatísticas completas
+          </h3>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4 }}>
+            <X size={18} color={t.textMuted} />
+          </button>
+        </div>
+
+        {loadError && <div style={{ fontSize: 13, color: t.red }}>{loadError}</div>}
+
+        {!loadError && !fullStats && (
+          <div style={{ fontSize: 13, color: t.textMuted }}>Carregando…</div>
+        )}
+
+        {fullStats && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 22 }}>
+              {[
+                { label: "Dias ativos", value: fullStats.activeDays },
+                { label: "% de dias ativos", value: `${fullStats.activeDaysPct}%` },
+                { label: "Questões respondidas", value: fullStats.totalQuestions },
+                { label: "Média de questões/dia", value: fullStats.avgQuestionsPerDay },
+                { label: "Flashcards vistos", value: fullStats.totalFlashcards },
+                { label: "Média de flashcards/dia", value: fullStats.avgFlashcardsPerDay },
+              ].map((s) => (
+                <div key={s.label} style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 12, padding: 12 }}>
+                  <div style={{ fontSize: 10.5, color: t.textMuted, fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: t.text }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 10 }}>ACERTOS POR TEMA</div>
+            {fullStats.temaQuestionStats.length === 0 && (
+              <div style={{ fontSize: 12.5, color: t.textMuted, marginBottom: 20 }}>Nenhuma questão respondida ainda.</div>
+            )}
+            <div style={{ marginBottom: 22 }}>
+              {fullStats.temaQuestionStats.map((s) => (
+                <StatBar
+                  key={s.tema}
+                  label={s.tema}
+                  sublabel={`${s.accuracy}% (${s.correct}/${s.total})`}
+                  pct={s.accuracy}
+                  color={s.accuracy >= 70 ? t.green : s.accuracy >= 40 ? t.amber : t.red}
+                />
+              ))}
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 10 }}>FLASHCARDS VISTOS POR TEMA</div>
+            {fullStats.temaFlashcardStats.length === 0 && (
+              <div style={{ fontSize: 12.5, color: t.textMuted }}>Nenhum flashcard visto ainda.</div>
+            )}
+            <div>
+              {fullStats.temaFlashcardStats.map((s) => {
+                const max = fullStats.temaFlashcardStats[0].count;
+                return (
+                  <StatBar
+                    key={s.tema}
+                    label={s.tema}
+                    sublabel={`${s.count}`}
+                    pct={(s.count / max) * 100}
+                    color={t.primary}
+                  />
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -100,6 +100,7 @@ export function DailyMissionScreen({
   onNavigate,
   favorites,
   onToggleFav,
+  onView,
 }) {
   const [responding, setResponding] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -165,15 +166,15 @@ export function DailyMissionScreen({
   const card = item.data;
   const flipped = session.flipped[card.id] || false;
   const viewed = !!(session.viewed && session.viewed[card.id]);
-  const flip = () =>
-    setSession((s) => {
-      const nextFlipped = !s.flipped[card.id];
-      return {
-        ...s,
-        flipped: { ...s.flipped, [card.id]: nextFlipped },
-        viewed: nextFlipped ? { ...s.viewed, [card.id]: true } : s.viewed,
-      };
-    });
+  const flip = () => {
+    const nextFlipped = !flipped;
+    if (nextFlipped) onView?.(card.id);
+    setSession((s) => ({
+      ...s,
+      flipped: { ...s.flipped, [card.id]: nextFlipped },
+      viewed: nextFlipped ? { ...s.viewed, [card.id]: true } : s.viewed,
+    }));
+  };
   const finishFlash = async () => {
     setFinishing(true);
     try {

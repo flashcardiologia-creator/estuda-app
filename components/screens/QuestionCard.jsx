@@ -41,7 +41,15 @@ export function QuestionCard({
         )}
       </div>
 
-      <div style={{ fontSize, fontWeight: 600, color: t.text, lineHeight: 1.5, marginBottom: 20 }}>{q.enunciado}</div>
+      <div style={{ fontSize, fontWeight: 600, color: t.text, lineHeight: 1.5, marginBottom: q.imagem_url ? 14 : 20 }}>{q.enunciado}</div>
+
+      {q.imagem_url && (
+        <img
+          src={q.imagem_url}
+          alt="Imagem da questão"
+          style={{ display: "block", maxWidth: "100%", borderRadius: 12, marginBottom: 20, border: `1px solid ${t.border}` }}
+        />
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {options.map((op) => {

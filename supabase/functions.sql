@@ -36,17 +36,18 @@ alter publication supabase_realtime add table public.challenges;
 alter publication supabase_realtime add table public.challenge_answers;
 
 -- ============================================================
--- 0) "Dia" da missão vira às 18h de Brasília (21h UTC), não à meia-noite
---    UTC — por isso soma 3h antes de extrair a data. Toda lógica baseada
---    em "hoje" usa essas duas funções em vez de current_date/::date direto,
---    para manter a mesma definição de dia em todo lugar.
+-- 0) "Dia" da missão vira à meia-noite de Brasília (3h UTC), não à meia-
+--    noite UTC — por isso subtrai 3h antes de extrair a data (Brasília =
+--    UTC-3). Toda lógica baseada em "hoje" usa essas duas funções em vez
+--    de current_date/::date direto, para manter a mesma definição de dia
+--    em todo lugar.
 -- ============================================================
 create or replace function public.app_date(p_ts timestamptz)
 returns date
 language sql
 stable
 as $$
-  select (p_ts + interval '3 hours')::date;
+  select (p_ts - interval '3 hours')::date;
 $$;
 
 create or replace function public.app_today()
@@ -141,6 +142,12 @@ grant execute on function public.record_answer(uuid, text, boolean) to authentic
 
 -- ============================================================
 -- 2) Concluir a missão diária (valida progresso e atualiza streak)
+--
+--    Amarrado ao sorteio (daily_mission_picks) em vez de recalcular "hoje"
+--    na hora de concluir: se a pessoa começa a missão antes da virada do
+--    dia e termina depois, as respostas continuam contando normalmente —
+--    antes, recontar "hoje" no momento do Concluir podia jogar fora
+--    respostas dadas minutos antes da virada e travar com missao_incompleta.
 -- ============================================================
 create or replace function public.complete_daily_mission()
 returns table(streak integer, last_mission_date date)
@@ -150,8 +157,8 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
-  v_today date := public.app_today();
-  v_answered_today integer;
+  v_pick record;
+  v_answered_count integer;
   v_profile record;
   v_new_streak integer;
 begin
@@ -159,32 +166,70 @@ begin
     raise exception 'not_authenticated';
   end if;
 
-  select count(*) into v_answered_today from public.user_question_attempts
-    where user_id = v_user_id and is_daily_mission = true and public.app_date(answered_at) = v_today;
+  select * into v_pick from public.daily_mission_picks
+    where user_id = v_user_id
+    order by mission_date desc
+    limit 1;
 
-  if v_answered_today < 5 then
+  if v_pick.mission_date is null then
+    raise exception 'missao_nao_encontrada';
+  end if;
+
+  select count(*) into v_answered_count from public.user_question_attempts
+    where user_id = v_user_id
+      and is_daily_mission = true
+      and question_id = any(v_pick.question_ids)
+      and answered_at >= v_pick.created_at;
+
+  if v_answered_count < array_length(v_pick.question_ids, 1) then
     raise exception 'missao_incompleta';
   end if;
 
   select p.streak, p.last_mission_date into v_profile
     from public.profiles p where p.id = v_user_id;
 
-  if v_profile.last_mission_date = v_today then
+  if v_profile.last_mission_date = v_pick.mission_date then
     v_new_streak := v_profile.streak;
-  elsif v_profile.last_mission_date = v_today - 1 then
+  elsif v_profile.last_mission_date = v_pick.mission_date - 1 then
     v_new_streak := v_profile.streak + 1;
   else
     v_new_streak := 1;
   end if;
 
-  update public.profiles set streak = v_new_streak, last_mission_date = v_today
+  update public.profiles set streak = v_new_streak, last_mission_date = v_pick.mission_date
     where id = v_user_id;
 
-  return query select v_new_streak, v_today;
+  return query select v_new_streak, v_pick.mission_date;
 end;
 $$;
 
 grant execute on function public.complete_daily_mission() to authenticated;
+
+-- ============================================================
+-- 2b) Expirar a missão diária (chamada pelo cliente quando a virada do dia
+--     acontece com a pessoa ainda no meio da missão, sem ter concluído).
+--     Zera a streak — perder o prazo quebra a sequência.
+-- ============================================================
+create or replace function public.expire_daily_mission()
+returns table(streak integer)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then
+    raise exception 'not_authenticated';
+  end if;
+
+  update public.profiles set streak = 0 where id = v_user_id;
+
+  return query select 0;
+end;
+$$;
+
+grant execute on function public.expire_daily_mission() to authenticated;
 
 -- ============================================================
 -- 3) Criar desafio (limite de 5/dia + seleção aleatória de questões)
