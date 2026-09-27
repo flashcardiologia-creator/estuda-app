@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag } from "@/components/ui/Primitives";
+import { ReportButton, ReportIssueModal } from "@/components/ui/ReportIssue";
 
-export function FlashcardsSessionScreen({ session, setSession, onNavigate, onFinish, onView }) {
+export function FlashcardsSessionScreen({ supabase, userId, session, setSession, onNavigate, onFinish, onView }) {
   const t = useT();
+  const [showReport, setShowReport] = useState(false);
   const total = session.ids.length;
   const idx = session.index;
   const card = session.cardsById[session.ids[idx]];
@@ -53,9 +56,12 @@ export function FlashcardsSessionScreen({ session, setSession, onNavigate, onFin
         >
           <ChevronLeft size={16} /> Voltar
         </button>
-        <span style={{ fontSize: 15, fontWeight: 700, color: t.text }}>
-          Flashcard {idx + 1} de {total}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: t.text }}>
+            Flashcard {idx + 1} de {total}
+          </span>
+          <ReportButton onClick={() => setShowReport(true)} />
+        </div>
       </div>
 
       <div style={{ padding: "26px 22px 0" }}>
@@ -101,6 +107,16 @@ export function FlashcardsSessionScreen({ session, setSession, onNavigate, onFin
           )}
         </div>
       </div>
+
+      {showReport && (
+        <ReportIssueModal
+          supabase={supabase}
+          userId={userId}
+          itemType="flashcard"
+          itemId={card.id}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   );
 }

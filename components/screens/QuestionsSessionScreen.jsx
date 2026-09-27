@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Timer } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
 import { QuestionCard } from "@/components/screens/QuestionCard";
+import { ReportButton, ReportIssueModal } from "@/components/ui/ReportIssue";
 
 function formatClock(ms) {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
@@ -14,6 +15,8 @@ function formatClock(ms) {
 }
 
 export function QuestionsSessionScreen({
+  supabase,
+  userId,
   session,
   setSession,
   questionsById,
@@ -28,6 +31,7 @@ export function QuestionsSessionScreen({
   const t = useT();
   const [responding, setResponding] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const timerActive = !!(session.startedAt && session.durationMs);
   const [remainingMs, setRemainingMs] = useState(
     timerActive ? session.startedAt + session.durationMs - Date.now() : null
@@ -124,9 +128,12 @@ export function QuestionsSessionScreen({
         >
           <ChevronLeft size={16} /> Voltar
         </button>
-        <span style={{ fontSize: 15, fontWeight: 700, color: t.text }}>
-          Questão {idx + 1} de {total}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: t.text }}>
+            Questão {idx + 1} de {total}
+          </span>
+          <ReportButton onClick={() => setShowReport(true)} />
+        </div>
       </div>
 
       {timerActive && (
@@ -199,6 +206,16 @@ export function QuestionsSessionScreen({
           </div>
         </div>
       </div>
+
+      {showReport && (
+        <ReportIssueModal
+          supabase={supabase}
+          userId={userId}
+          itemType="question"
+          itemId={qid}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   );
 }

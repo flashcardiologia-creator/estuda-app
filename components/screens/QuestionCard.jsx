@@ -1,6 +1,7 @@
 "use client";
 
-import { Star, Check, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Star, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { Tag, PrimaryButton } from "@/components/ui/Primitives";
 
@@ -23,6 +24,14 @@ export function QuestionCard({
 }) {
   const t = useT();
   const fontSize = FONT_SIZES[filters.fontSize] || FONT_SIZES.md;
+  const [showFull, setShowFull] = useState(false);
+  // Não reseta por questão de propósito: se a pessoa minimizar o comentário,
+  // essa preferência continua valendo ao responder as próximas questões.
+  const [commentOpen, setCommentOpen] = useState(true);
+
+  useEffect(() => {
+    setShowFull(false);
+  }, [q.id]);
 
   return (
     <div>
@@ -110,11 +119,16 @@ export function QuestionCard({
                 {op.letra.toUpperCase()}
               </span>
               {op.texto}
-              {answered && !filters.modoProva && answerResult && op.letra === answerResult.correct_option && (
-                <Check size={16} style={{ marginLeft: "auto" }} />
-              )}
-              {answered && !filters.modoProva && answerResult && isSelected && op.letra !== answerResult.correct_option && (
-                <X size={16} style={{ marginLeft: "auto" }} />
+              {answered && !filters.modoProva && answerResult && (
+                <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  {answerResult.optionStats?.[op.letra] && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted }}>
+                      {answerResult.optionStats[op.letra].pct}%
+                    </span>
+                  )}
+                  {op.letra === answerResult.correct_option && <Check size={16} />}
+                  {isSelected && op.letra !== answerResult.correct_option && <X size={16} />}
+                </span>
               )}
             </button>
           );
@@ -122,9 +136,66 @@ export function QuestionCard({
       </div>
 
       {answered && !filters.modoProva && answerResult && (
-        <div style={{ marginTop: 16, padding: 14, borderRadius: 12, background: t.surfaceAlt, border: `1px solid ${t.border}` }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: t.primary, marginBottom: 4 }}>Comentário</div>
-          <div style={{ fontSize: 13, color: t.textMuted, lineHeight: 1.5 }}>{answerResult.comentario || q.comentario}</div>
+        <div
+          onClick={() => setCommentOpen((o) => !o)}
+          style={{
+            marginTop: 16,
+            padding: 14,
+            borderRadius: 12,
+            background: t.surfaceAlt,
+            border: `1px solid ${t.border}`,
+            cursor: "pointer",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: commentOpen ? 4 : 0,
+              gap: 8,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 700, color: t.primary }}>
+              {commentOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              Comentário
+            </div>
+            {commentOpen && q.comentario_completo && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowFull((s) => !s);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: t.surfaceAlt,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 8,
+                  padding: "5px 10px",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  transition: "transform .1s, filter .15s",
+                }}
+                onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.95)")}
+                onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                {showFull ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                {showFull ? "Resposta resumida" : "Resposta completa"}
+              </button>
+            )}
+          </div>
+          {commentOpen && (
+            <div style={{ fontSize, color: t.textMuted, lineHeight: 1.5, whiteSpace: "pre-line" }}>
+              {showFull && q.comentario_completo ? q.comentario_completo : answerResult.comentario || q.comentario}
+            </div>
+          )}
         </div>
       )}
 

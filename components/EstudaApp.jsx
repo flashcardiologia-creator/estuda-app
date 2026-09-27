@@ -295,6 +295,13 @@ export function EstudaApp({ userId, userEmail }) {
   const finishDaily = async () => {
     const { streak, last_mission_date } = await completeDailyMission(supabase);
     setProfile((p) => ({ ...p, streak, last_mission_date }));
+    // Limpa a sessão concluída — se não, um eventual desalinhamento no cálculo
+    // de "hoje" (ex.: logo após mudar a virada do dia) deixaria a próxima
+    // entrada na Missão Diária caindo de volta no último item já respondido.
+    setDailySession(null);
+    setDailyItems(null);
+    setDailyOptionsByQuestion({});
+    dailyPrefetchRef.current = null;
     setScreen("daily-done");
   };
 
@@ -417,6 +424,8 @@ export function EstudaApp({ userId, userEmail }) {
 
       {screen === "questions-session" && session && (
         <QuestionsSessionScreen
+          supabase={supabase}
+          userId={userId}
           session={session}
           setSession={setSession}
           questionsById={sessionQuestionsById}
@@ -455,6 +464,8 @@ export function EstudaApp({ userId, userEmail }) {
 
       {screen === "flashcards-session" && flashSession && (
         <FlashcardsSessionScreen
+          supabase={supabase}
+          userId={userId}
           session={flashSession}
           setSession={setFlashSession}
           onNavigate={setScreen}
