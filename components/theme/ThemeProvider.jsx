@@ -37,6 +37,10 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", t.bg);
+    // Sem isso, o "bounce" de overscroll (PWA/iOS) mostra o branco padrão do
+    // documento por trás do app, mesmo no tema escuro.
+    document.documentElement.style.backgroundColor = t.bg;
+    document.body.style.backgroundColor = t.bg;
   }, [t.bg]);
 
   return (
