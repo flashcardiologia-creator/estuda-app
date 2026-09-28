@@ -258,6 +258,7 @@ export function EstudaApp({ userId, userEmail }) {
       selected: initialSelected,
       answers: initialAnswers,
       prefilled: initialPrefilled,
+      struck: {},
       startedAt: filters.cronometro ? Date.now() : null,
       durationMs: filters.cronometro ? filters.minutos * 60 * 1000 : null,
     });

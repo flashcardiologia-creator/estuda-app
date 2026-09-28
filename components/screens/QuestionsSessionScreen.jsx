@@ -32,6 +32,8 @@ export function QuestionsSessionScreen({
   const [responding, setResponding] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [dragNum, setDragNum] = useState(null);
+  const barTrackRef = useRef(null);
   const timerActive = !!(session.startedAt && session.durationMs);
   const [remainingMs, setRemainingMs] = useState(
     timerActive ? session.startedAt + session.durationMs - Date.now() : null
@@ -63,6 +65,7 @@ export function QuestionsSessionScreen({
   const answerResult = session.answers[qid];
   const selected = session.selected[qid] || null;
   const prefilled = !!session.prefilled?.[qid];
+  const struckLetras = session.struck?.[qid] || [];
   const isLast = idx === total - 1;
 
   if (!q) return null;
@@ -70,6 +73,16 @@ export function QuestionsSessionScreen({
   const selectOption = (letra) => {
     if (answered) return;
     setSession((s) => ({ ...s, selected: { ...s.selected, [qid]: letra } }));
+  };
+
+  const toggleStruck = (letra) => {
+    if (answered) return;
+    setSession((s) => {
+      const current = s.struck?.[qid] || [];
+      const next = current.includes(letra) ? current.filter((l) => l !== letra) : [...current, letra];
+      const nextSelected = next.includes(s.selected[qid]) ? { ...s.selected, [qid]: null } : s.selected;
+      return { ...s, struck: { ...s.struck, [qid]: next }, selected: nextSelected };
+    });
   };
 
   const responder = async () => {
@@ -97,6 +110,27 @@ export function QuestionsSessionScreen({
   };
 
   const go = (dir) => setSession((s) => ({ ...s, index: Math.min(total - 1, Math.max(0, s.index + dir)) }));
+
+  const numberFromClientX = (clientX) => {
+    const rect = barTrackRef.current.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    return Math.min(total, Math.max(1, Math.round(ratio * total) || 1));
+  };
+
+  const handleBarPointerDown = (e) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragNum(numberFromClientX(e.clientX));
+  };
+  const handleBarPointerMove = (e) => {
+    if (dragNum === null) return;
+    setDragNum(numberFromClientX(e.clientX));
+  };
+  const handleBarPointerUp = () => {
+    if (dragNum === null) return;
+    const target = dragNum;
+    setDragNum(null);
+    setSession((s) => ({ ...s, index: target - 1 }));
+  };
 
   const finish = async () => {
     setFinishing(true);
@@ -164,8 +198,73 @@ export function QuestionsSessionScreen({
         </div>
       )}
 
-      <div style={{ height: 4, background: t.border, margin: "14px 22px 0", borderRadius: 999 }}>
-        <div style={{ height: 4, width: `${((idx + 1) / total) * 100}%`, background: t.primary, borderRadius: 999, transition: "width .2s" }} />
+      <div
+        ref={barTrackRef}
+        onPointerDown={handleBarPointerDown}
+        onPointerMove={handleBarPointerMove}
+        onPointerUp={handleBarPointerUp}
+        onPointerCancel={handleBarPointerUp}
+        style={{ position: "relative", margin: "14px 22px 0", padding: "13px 0", cursor: "pointer", touchAction: "none" }}
+      >
+        <div style={{ height: 4, background: t.border, borderRadius: 999 }}>
+          <div
+            style={{
+              height: 4,
+              width: `${((dragNum ?? idx + 1) / total) * 100}%`,
+              background: t.primary,
+              borderRadius: 999,
+              transition: dragNum === null ? "width .2s" : "none",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: `${((dragNum ?? idx + 1) / total) * 100}%`,
+            transform: "translate(-50%, -50%)",
+            width: 16,
+            height: 16,
+            borderRadius: "50%",
+            background: t.primary,
+            border: `2px solid ${t.bg}`,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.35)",
+          }}
+        />
+        {dragNum !== null && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: "100%",
+              left: `${(dragNum / total) * 100}%`,
+              transform: "translateX(-50%)",
+              marginBottom: 6,
+              background: t.primary,
+              color: "#fff",
+              fontSize: 12.5,
+              fontWeight: 800,
+              padding: "4px 10px",
+              borderRadius: 8,
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
+            }}
+          >
+            {dragNum}
+            <div
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: 0,
+                height: 0,
+                borderLeft: "5px solid transparent",
+                borderRight: "5px solid transparent",
+                borderTop: `5px solid ${t.primary}`,
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <div style={{ padding: "22px" }}>
@@ -183,6 +282,8 @@ export function QuestionsSessionScreen({
           onRetry={retry}
           isFav={favorites.includes(qid)}
           onToggleFav={onToggleFav}
+          struckLetras={struckLetras}
+          onToggleStruck={toggleStruck}
         />
 
         <div style={{ display: "flex", gap: 10, marginTop: 26 }}>
