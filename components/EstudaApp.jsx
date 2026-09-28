@@ -446,7 +446,7 @@ export function EstudaApp({ userId, userEmail }) {
           onNavigate={setScreen}
           missionDone={missionDone}
           onOpenDaily={() => (missionDone ? setScreen("daily-done") : startDaily())}
-          pendingChallengesCount={challenges.filter((c) => c.status === "pending").length}
+          pendingChallengesCount={challenges.filter((c) => c.status === "pending" && c.myAnswered < c.qtd).length}
         />
       )}
 

@@ -24,8 +24,8 @@ export function FlashcardsSelectScreen({
   const t = useT();
   const temas = useMemo(() => Object.keys(themeCounts).sort(), [themeCounts]);
   const [tema, setTema] = useState(null);
-  const [qtd, setQtd] = useState(10);
-  const [aleatorio, setAleatorio] = useState(true);
+  const [qtd, setQtd] = useState("Todos");
+  const [aleatorio, setAleatorio] = useState(false);
   const [open, setOpen] = useState({});
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 

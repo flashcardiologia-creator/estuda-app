@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy, Shield, KeyRound, Eye, EyeOff, ChevronRight } from "lucide-react";
+import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy, Shield, KeyRound, Eye, EyeOff, ChevronRight, Swords, Rocket } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
-import { fetchFriendStats, removeFriend } from "@/lib/data/friends";
+import { fetchFriendComparison, removeFriend } from "@/lib/data/friends";
 
 function PasswordField({ value, onChange, placeholder, visible, onToggleVisible }) {
   const t = useT();
@@ -225,7 +225,7 @@ export function AccountScreen({
       <div style={{ padding: "18px 22px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 24, marginTop: 20 }}>
           {[
-            { label: "Sequência", value: profile.streak, icon: <Flame size={16} color={t.amber} /> },
+            { label: "Maior Sequência", value: profile.best_streak, icon: <Trophy size={16} color={t.amber} /> },
             { label: "Respondidas", value: stats.answered, icon: <BookOpen size={16} color={t.primary} /> },
             { label: "Acerto", value: `${stats.accuracy}%`, icon: <Award size={16} color={t.green} /> },
           ].map((s) => (
@@ -753,14 +753,14 @@ export function AccountScreen({
 
 function FriendDetailModal({ supabase, friend, onClose, onRemoved }) {
   const t = useT();
-  const [friendStats, setFriendStats] = useState(null);
+  const [comparison, setComparison] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
-    fetchFriendStats(supabase, friend.id)
-      .then(setFriendStats)
+    fetchFriendComparison(supabase, friend.id)
+      .then(setComparison)
       .catch((err) => setLoadError(err.message || "Não foi possível carregar as estatísticas."));
   }, [supabase, friend.id]);
 
@@ -776,7 +776,7 @@ function FriendDetailModal({ supabase, friend, onClose, onRemoved }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
-      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 380, width: "100%" }}>
+      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 420, width: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div
@@ -804,29 +804,96 @@ function FriendDetailModal({ supabase, friend, onClose, onRemoved }) {
 
         {loadError && <div style={{ fontSize: 13, color: t.red, marginBottom: 16 }}>{loadError}</div>}
 
-        {!loadError && !friendStats && (
+        {!loadError && !comparison && (
           <div style={{ fontSize: 13, color: t.textMuted, marginBottom: 16 }}>Carregando…</div>
         )}
 
-        {friendStats && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
-            {[
-              { label: "Sequência", value: friendStats.streak, icon: <Flame size={15} color={t.amber} /> },
-              { label: "Respondidas", value: friendStats.answered, icon: <BookOpen size={15} color={t.primary} /> },
-              { label: "Acerto", value: `${friendStats.accuracy}%`, icon: <Award size={15} color={t.green} /> },
-            ].map((s) => (
-              <div key={s.label} style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 12, padding: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
-                  {s.icon}
-                  <span style={{ fontSize: 10.5, color: t.textMuted, fontWeight: 600 }}>{s.label}</span>
-                </div>
-                {friendStats.authorized ? (
-                  <div style={{ fontSize: 17, fontWeight: 700, color: t.text }}>{s.value}</div>
-                ) : (
-                  <div style={{ fontSize: 8.5, fontWeight: 700, color: t.red, whiteSpace: "nowrap" }}>Não autorizado</div>
-                )}
+        {comparison && (
+          <div style={{ marginBottom: 20 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 60px 60px",
+                gap: 8,
+                marginBottom: 8,
+                paddingBottom: 8,
+                borderBottom: `1px solid ${t.border}`,
+              }}
+            >
+              <div />
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: t.textMuted, textAlign: "center" }}>Você</div>
+              <div
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  textAlign: "center",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {comparison.friend_name}
               </div>
-            ))}
+            </div>
+
+            {[
+              { key: "streak", label: "Sequência", icon: <Flame size={14} color={t.amber} />, my: comparison.my_streak, friend: comparison.friend_streak, format: (v) => v },
+              { key: "bestStreak", label: "Maior Sequência", icon: <Trophy size={14} color={t.amber} />, my: comparison.my_best_streak, friend: comparison.friend_best_streak, format: (v) => v },
+              { key: "answered", label: "Respondidas", icon: <BookOpen size={14} color={t.primary} />, my: comparison.my_answered, friend: comparison.friend_answered, format: (v) => v },
+              { key: "accuracy", label: "Acerto", icon: <Award size={14} color={t.primary} />, my: comparison.my_accuracy, friend: comparison.friend_accuracy, format: (v) => `${v}%` },
+              { key: "flashcards", label: "Flashcards vistos", icon: <Rocket size={14} color={t.green} />, my: comparison.my_flashcards_viewed, friend: comparison.friend_flashcards_viewed, format: (v) => v },
+              { key: "challenges", label: "Desafios", icon: <Swords size={14} color={t.text} />, my: comparison.my_challenge_total, friend: comparison.friend_challenge_total, format: (v) => v },
+              { key: "winPct", label: "Vitórias em desafios", icon: <Trophy size={14} color={t.text} />, my: comparison.my_challenge_win_pct, friend: comparison.friend_challenge_win_pct, format: (v) => `${v}%` },
+            ].map((s) => {
+              const friendKnown = comparison.friend_authorized && s.friend !== null;
+              const myWins = friendKnown && s.my > s.friend;
+              const friendWins = friendKnown && s.friend > s.my;
+              return (
+                <div
+                  key={s.key}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 60px 60px",
+                    gap: 8,
+                    alignItems: "center",
+                    padding: "8px 0",
+                    borderBottom: `1px solid ${t.border}`,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: t.textMuted, fontWeight: 600 }}>
+                    {s.icon}
+                    {s.label}
+                  </div>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      fontSize: 14,
+                      fontWeight: myWins ? 800 : 600,
+                      color: myWins ? t.primary : t.text,
+                    }}
+                  >
+                    {s.format(s.my)}
+                  </div>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      fontSize: friendKnown ? 14 : 10,
+                      fontWeight: friendWins ? 800 : 600,
+                      color: friendKnown ? (friendWins ? t.primary : t.text) : t.red,
+                    }}
+                  >
+                    {friendKnown ? s.format(s.friend) : "—"}
+                  </div>
+                </div>
+              );
+            })}
+
+            {!comparison.friend_authorized && (
+              <div style={{ fontSize: 11.5, color: t.textMuted, textAlign: "center", marginTop: 10 }}>
+                {friend.name} não autorizou compartilhar estatísticas com amigos.
+              </div>
+            )}
           </div>
         )}
 

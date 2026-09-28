@@ -40,12 +40,13 @@ function RankRow({ r, rank, tab, config, t }) {
       <div
         style={{
           display: "flex",
-          flexWrap: "wrap",
-          gap: 14,
+          flexWrap: "nowrap",
+          justifyContent: "space-between",
+          gap: 8,
           marginTop: 10,
           paddingTop: 10,
           borderTop: `1px solid ${t.border}`,
-          marginLeft: 40,
+          overflowX: "auto",
         }}
       >
         {TABS.map((tb) => {
@@ -61,9 +62,11 @@ function RankRow({ r, rank, tab, config, t }) {
                 fontSize: 11.5,
                 fontWeight: active ? 800 : 600,
                 color: active ? t.primary : t.textMuted,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
-              <Icon size={12} />
+              <Icon size={12} style={{ flexShrink: 0 }} />
               {tb.format(r[tb.field])}
             </div>
           );

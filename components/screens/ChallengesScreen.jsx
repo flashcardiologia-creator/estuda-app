@@ -118,7 +118,7 @@ export function ChallengesScreen({
                   textTransform: "uppercase",
                 }}
               >
-                Desafios hoje
+                Desafios criados hoje
               </span>
               <span style={{ fontSize: 11.5, color: t.primary, fontWeight: 800 }}>{dailyCount}/5</span>
             </div>
