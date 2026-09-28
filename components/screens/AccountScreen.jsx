@@ -532,15 +532,15 @@ function FullStatsModal({ supabase, userId, allQuestions, challenges, onClose })
               ))}
             </div>
 
-            <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 16 }}>
-              <Chip active={temaTab === "questoes"} onClick={() => setTemaTab("questoes")}>
-                Questões por Tema
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <Chip active={temaTab === "questoes"} onClick={() => setTemaTab("questoes")} style={{ flex: 1, textAlign: "center" }}>
+                Questões
               </Chip>
-              <Chip active={temaTab === "acertos"} onClick={() => setTemaTab("acertos")}>
-                Acertos por Tema
+              <Chip active={temaTab === "acertos"} onClick={() => setTemaTab("acertos")} style={{ flex: 1, textAlign: "center" }}>
+                Acertos
               </Chip>
-              <Chip active={temaTab === "flashcards"} onClick={() => setTemaTab("flashcards")}>
-                Flashcards por Tema
+              <Chip active={temaTab === "flashcards"} onClick={() => setTemaTab("flashcards")} style={{ flex: 1, textAlign: "center" }}>
+                Flashcards
               </Chip>
             </div>
 
@@ -549,18 +549,17 @@ function FullStatsModal({ supabase, userId, allQuestions, challenges, onClose })
                 {fullStats.temaQuestionStats.length === 0 && (
                   <div style={{ fontSize: 12.5, color: t.textMuted }}>Nenhuma questão respondida ainda.</div>
                 )}
-                {fullStats.temaQuestionStats.map((s) => {
-                  const max = fullStats.temaQuestionStats[0].total;
-                  return (
+                {[...fullStats.temaQuestionStats]
+                  .sort((a, b) => b.pctAnswered - a.pctAnswered)
+                  .map((s) => (
                     <StatBar
                       key={s.tema}
                       label={s.tema}
-                      sublabel={`${s.total}`}
-                      pct={(s.total / max) * 100}
+                      sublabel={`${s.distinctAnswered}/${s.available}`}
+                      pct={s.pctAnswered}
                       color={t.primary}
                     />
-                  );
-                })}
+                  ))}
               </div>
             )}
 
@@ -569,15 +568,17 @@ function FullStatsModal({ supabase, userId, allQuestions, challenges, onClose })
                 {fullStats.temaQuestionStats.length === 0 && (
                   <div style={{ fontSize: 12.5, color: t.textMuted }}>Nenhuma questão respondida ainda.</div>
                 )}
-                {fullStats.temaQuestionStats.map((s) => (
-                  <StatBar
-                    key={s.tema}
-                    label={s.tema}
-                    sublabel={`${s.accuracy}% (${s.correct}/${s.total})`}
-                    pct={s.accuracy}
-                    color={s.accuracy >= 70 ? t.green : s.accuracy >= 40 ? t.amber : t.red}
-                  />
-                ))}
+                {[...fullStats.temaQuestionStats]
+                  .sort((a, b) => b.accuracy - a.accuracy)
+                  .map((s) => (
+                    <StatBar
+                      key={s.tema}
+                      label={s.tema}
+                      sublabel={`${s.accuracy}% (${s.correct}/${s.total})`}
+                      pct={s.accuracy}
+                      color={s.accuracy >= 70 ? t.green : s.accuracy >= 40 ? t.amber : t.red}
+                    />
+                  ))}
               </div>
             )}
 

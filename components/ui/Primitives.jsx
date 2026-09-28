@@ -8,7 +8,7 @@ const FONT_BODY = "inherit";
 const FONT_DISPLAY = "inherit";
 const FONT_MONO = "inherit";
 
-export function Chip({ active, onClick, children, disabled }) {
+export function Chip({ active, onClick, children, disabled, style }) {
   const t = useT();
   return (
     <button
@@ -26,6 +26,7 @@ export function Chip({ active, onClick, children, disabled }) {
         opacity: disabled ? 0.5 : 1,
         transition: "all .15s ease",
         whiteSpace: "nowrap",
+        ...style,
       }}
     >
       {children}

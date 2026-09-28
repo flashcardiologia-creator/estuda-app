@@ -150,6 +150,29 @@ export function EstudaApp({ userId, userEmail }) {
     }
   }, [screen, supabase, userId]);
 
+  // Dificulta a cópia do conteúdo das questões/flashcards (proteção básica,
+  // não é à prova de usuários avançados). Campos de formulário continuam
+  // funcionando normalmente.
+  useEffect(() => {
+    const isFormField = (el) => el?.closest?.("input, textarea, [contenteditable='true']");
+    const blockCopy = (e) => {
+      if (isFormField(e.target)) return;
+      e.preventDefault();
+    };
+    const blockContextMenu = (e) => {
+      if (isFormField(e.target)) return;
+      e.preventDefault();
+    };
+    document.addEventListener("copy", blockCopy);
+    document.addEventListener("cut", blockCopy);
+    document.addEventListener("contextmenu", blockContextMenu);
+    return () => {
+      document.removeEventListener("copy", blockCopy);
+      document.removeEventListener("cut", blockCopy);
+      document.removeEventListener("contextmenu", blockContextMenu);
+    };
+  }, []);
+
   const refreshChallenges = useCallback(async () => {
     const data = await fetchChallenges(supabase, userId);
     setChallenges(data);
