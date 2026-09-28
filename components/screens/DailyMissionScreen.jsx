@@ -6,22 +6,37 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag, Flame_ } from "@/components/ui/Primitives";
 import { QuestionCard } from "@/components/screens/QuestionCard";
 import { fetchFriendsMissionStatus } from "@/lib/data/friends";
-import { msUntilNextDayBoundary, formatCountdownClock } from "@/lib/util";
+import { msUntilNextDayBoundary, msSincePreviousDayBoundary, MISSION_GRACE_MS, formatCountdownClock } from "@/lib/util";
 
 const FLASHCARD_FONT_SIZES = { sm: 16, md: 20, lg: 24 };
 
+function formatGraceClock(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 function MissionCountdown() {
-  const [remaining, setRemaining] = useState(msUntilNextDayBoundary);
+  const t = useT();
+  // Só serve pra forçar um re-render por segundo — os valores em si vêm
+  // sempre do relógio real a cada render, não de um estado acumulado.
+  const [, forceTick] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => setRemaining(msUntilNextDayBoundary()), 1000);
+    const interval = setInterval(() => forceTick((n) => n + 1), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const t = useT();
+  const sincePrev = msSincePreviousDayBoundary();
+  const inGrace = sincePrev < MISSION_GRACE_MS;
+  const remaining = inGrace ? 0 : msUntilNextDayBoundary();
+  const graceRemaining = inGrace ? MISSION_GRACE_MS - sincePrev : 0;
+
   return (
-    <span style={{ fontSize: 13, fontWeight: 700, color: t.textMuted, fontVariantNumeric: "tabular-nums" }}>
-      {formatCountdownClock(remaining)}
+    <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+      <span style={{ color: t.textMuted }}>{formatCountdownClock(remaining)}</span>
+      {inGrace && <span style={{ color: t.red, marginLeft: 5 }}>(+{formatGraceClock(graceRemaining)})</span>}
     </span>
   );
 }

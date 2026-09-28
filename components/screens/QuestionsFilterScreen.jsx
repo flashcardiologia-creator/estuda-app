@@ -32,6 +32,11 @@ export function QuestionsFilterScreen({
   const toggleTodosTemas = () =>
     setFilters((f) => ({ ...f, temas: allTemasSelected ? [] : [...TEMAS] }));
 
+  const allAnosSelected = anos.length > 0 && filters.anos.length === anos.length;
+  const anosTodosActive = filters.anos.length === 0 || allAnosSelected;
+  const toggleTodosAnos = () =>
+    setFilters((f) => ({ ...f, anos: allAnosSelected ? [] : [...anos] }));
+
   const previewCount = useMemo(
     () => applyQuestionFilters(allQuestions, filters, favorites).length,
     [allQuestions, filters, favorites]
@@ -61,6 +66,9 @@ export function QuestionsFilterScreen({
                 {a}
               </Chip>
             ))}
+            <Chip active={anosTodosActive} onClick={toggleTodosAnos}>
+              Todos
+            </Chip>
           </div>
         </ExpandBox>
 

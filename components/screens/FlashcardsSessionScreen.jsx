@@ -8,7 +8,7 @@ import { ReportButton, ReportIssueModal } from "@/components/ui/ReportIssue";
 
 const FLASHCARD_FONT_SIZES = { sm: 16, md: 20, lg: 24 };
 
-export function FlashcardsSessionScreen({ supabase, userId, session, setSession, onNavigate, onFinish, onView }) {
+export function FlashcardsSessionScreen({ supabase, userId, session, setSession, onNavigate, onFinish, onView, fontSize }) {
   const t = useT();
   const [showReport, setShowReport] = useState(false);
   const total = session.ids.length;
@@ -16,7 +16,7 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
   const card = session.cardsById[session.ids[idx]];
   const flipped = session.flipped[card.id] || false;
   const viewed = !!(session.viewed && session.viewed[card.id]);
-  const cardFontSize = FLASHCARD_FONT_SIZES[session.fontSize] || FLASHCARD_FONT_SIZES.md;
+  const cardFontSize = FLASHCARD_FONT_SIZES[fontSize || session.fontSize] || FLASHCARD_FONT_SIZES.md;
 
   const flip = () => {
     const nextFlipped = !flipped;

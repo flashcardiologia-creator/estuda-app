@@ -52,8 +52,8 @@ export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily, pending
                 ? "rgba(34,197,94,0.13)"
                 : "rgba(180,32,38,0.28)"
               : missionDone
-              ? "linear-gradient(135deg, #A9DDBD 0%, #C7C7CE 100%)"
-              : "linear-gradient(135deg, #E9AFB6 0%, #C7C7CE 100%)"
+              ? "#A9DDBD"
+              : "#E9AFB6"
           }
           accentColor={missionDone ? (t.name === "dark" ? "#22C55E" : "#16A34A") : t.name === "dark" ? t.red : "#DC2626"}
           statusText={missionDone ? (t.name === "dark" ? "✓ Concluída" : "Concluída") : "Não realizada"}

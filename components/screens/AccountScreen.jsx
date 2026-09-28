@@ -483,7 +483,7 @@ export function AccountScreen({
             <Toggle
               checked={!!profile.stats_visible_to_friends}
               onChange={toggleStatsVisibility}
-              label="Amigos compararem estatísticas com você"
+              label="Comparem estatísticas com você"
               labelStyle={{ fontSize: 13.5, color: t.text, fontWeight: 700 }}
               sub={
                 savingVisibility
@@ -505,7 +505,7 @@ export function AccountScreen({
             <Toggle
               checked={!!profile.ranking_visible}
               onChange={toggleRankingVisibility}
-              label="Aparecer no ranking global"
+              label="Aparecer no ranking"
               labelStyle={{ fontSize: 13.5, color: t.text, fontWeight: 700 }}
               sub={
                 savingRankingVisibility

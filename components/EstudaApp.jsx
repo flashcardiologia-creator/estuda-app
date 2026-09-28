@@ -46,7 +46,7 @@ import {
   respondToFriendRequest,
 } from "@/lib/data/friends";
 import { fetchChallenges } from "@/lib/data/challenges";
-import { shuffle, todayStr, msUntilNextDayBoundary } from "@/lib/util";
+import { shuffle, todayStr, msUntilNextDayBoundary, MISSION_GRACE_MS } from "@/lib/util";
 
 const HIDDEN_HEADER_SCREENS = [
   "questions-session",
@@ -373,7 +373,10 @@ export function EstudaApp({ userId, userEmail }) {
 
   useEffect(() => {
     if (screen !== "daily-session") return;
-    const timer = setTimeout(expireDaily, msUntilNextDayBoundary());
+    // Dá alguns minutos de tolerância após a virada do dia: se a pessoa já
+    // estava respondendo a missão, ela pode terminar dentro desse prazo
+    // sem perder a sequência. Só expira se passar desse tempo.
+    const timer = setTimeout(expireDaily, msUntilNextDayBoundary() + MISSION_GRACE_MS);
     return () => clearTimeout(timer);
   }, [screen, expireDaily]);
 
@@ -551,6 +554,7 @@ export function EstudaApp({ userId, userEmail }) {
           onNavigate={setScreen}
           onFinish={finishFlashcards}
           onView={viewFlashcard}
+          fontSize={flashcardFontSize}
         />
       )}
 
