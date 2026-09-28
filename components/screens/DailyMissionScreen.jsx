@@ -8,7 +8,7 @@ import { QuestionCard } from "@/components/screens/QuestionCard";
 import { fetchFriendsMissionStatus } from "@/lib/data/friends";
 import { msUntilNextDayBoundary, formatCountdownClock } from "@/lib/util";
 
-const dailyFilters = { fontSize: "md", modoProva: false, mostrarAntigas: false };
+const FLASHCARD_FONT_SIZES = { sm: 16, md: 20, lg: 24 };
 
 function MissionCountdown() {
   const [remaining, setRemaining] = useState(msUntilNextDayBoundary);
@@ -101,12 +101,15 @@ export function DailyMissionScreen({
   favorites,
   onToggleFav,
   onView,
+  questionFontSize,
+  flashcardFontSize,
 }) {
   const [responding, setResponding] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const idx = session.index;
   const item = items[idx];
   const total = items.length;
+  const dailyFilters = { fontSize: questionFontSize || "md", modoProva: false, mostrarAntigas: false };
 
   if (item.type === "question") {
     const q = item.data;
@@ -196,12 +199,14 @@ export function DailyMissionScreen({
       onNext={() => setSession((s) => ({ ...s, index: s.index + 1 }))}
       onFinish={finishFlash}
       finishing={finishing}
+      fontSize={flashcardFontSize}
     />
   );
 }
 
-function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate, onNext, onFinish, finishing }) {
+function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate, onNext, onFinish, finishing, fontSize }) {
   const t = useT();
+  const cardFontSize = FLASHCARD_FONT_SIZES[fontSize] || FLASHCARD_FONT_SIZES.md;
   const answerBg = t.name === "light" ? "linear-gradient(135deg, #A9DDBD 0%, #C7C7CE 100%)" : "rgba(19,46,36,0.5)";
   const answerBorder = t.name === "light" ? "#16A34A" : "#2FB380";
   return (
@@ -224,7 +229,7 @@ function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate,
       >
         {flipped && <div style={{ fontWeight: 700, fontSize: 14, color: answerBorder, marginBottom: 12 }}>Resposta</div>}
         {!flipped && <Tag>{card.tema}</Tag>}
-        <div style={{ fontWeight: 700, fontSize: 18, color: t.text, marginTop: flipped ? 0 : 16 }}>
+        <div style={{ fontWeight: 700, fontSize: cardFontSize, color: t.text, marginTop: flipped ? 0 : 16 }}>
           {flipped ? card.resposta : card.pergunta}
         </div>
         <div style={{ fontSize: 12.5, color: flipped ? answerBorder : t.primary, marginTop: 18, fontWeight: 600 }}>

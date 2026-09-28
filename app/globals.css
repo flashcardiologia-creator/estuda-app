@@ -52,6 +52,10 @@ input {
   font-size: 13.5px;
 }
 
+.password-field-input::placeholder {
+  font-size: 13px;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);

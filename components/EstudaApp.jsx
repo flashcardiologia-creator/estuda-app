@@ -17,7 +17,15 @@ import { ChallengesScreen } from "@/components/screens/ChallengesScreen";
 import { RankingScreen } from "@/components/screens/RankingScreen";
 import { StatsScreen } from "@/components/screens/StatsScreen";
 
-import { fetchProfile, updateDisplayName, updateStatsVisibility, updateRankingVisibility, fetchStats } from "@/lib/data/profile";
+import {
+  fetchProfile,
+  updateDisplayName,
+  updateStatsVisibility,
+  updateRankingVisibility,
+  updateQuestionFontSize,
+  updateFlashcardFontSize,
+  fetchStats,
+} from "@/lib/data/profile";
 import {
   fetchAllQuestions,
   applyQuestionFilters,
@@ -84,6 +92,7 @@ export function EstudaApp({ userId, userEmail }) {
   const [accountFocus, setAccountFocus] = useState(null);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [flashcardFontSize, setFlashcardFontSize] = useState("md");
 
   const [session, setSession] = useState(null);
   const [sessionQuestionsById, setSessionQuestionsById] = useState({});
@@ -134,6 +143,8 @@ export function EstudaApp({ userId, userEmail }) {
       ]);
       if (cancelled) return;
       setProfile(profileData);
+      setFilters((f) => ({ ...f, fontSize: profileData.question_font_size || "md" }));
+      setFlashcardFontSize(profileData.flashcard_font_size || "md");
       setAllQuestions(questions);
       setFavorites(favIds);
       setFriends(friendsData);
@@ -381,6 +392,16 @@ export function EstudaApp({ userId, userEmail }) {
     setProfile((p) => ({ ...p, ranking_visible: visible }));
   };
 
+  const saveQuestionFontSize = (size) => {
+    setFilters((f) => ({ ...f, fontSize: size }));
+    updateQuestionFontSize(supabase, userId, size).catch(() => {});
+  };
+
+  const saveFlashcardFontSize = (size) => {
+    setFlashcardFontSize(size);
+    updateFlashcardFontSize(supabase, userId, size).catch(() => {});
+  };
+
   const addFriend = async (name) => {
     const result = await addFriendByName(supabase, name);
     if (result.status === "accepted") {
@@ -470,6 +491,7 @@ export function EstudaApp({ userId, userEmail }) {
           favorites={favorites}
           filters={filters}
           setFilters={setFilters}
+          onSetFontSize={saveQuestionFontSize}
           onStart={startQuestions}
           onContinue={continueQuestions}
           hasSavedSession={!!savedSession}
@@ -510,6 +532,8 @@ export function EstudaApp({ userId, userEmail }) {
       {screen === "flashcards-select" && (
         <FlashcardsSelectScreen
           themeCounts={themeCounts}
+          tamanho={flashcardFontSize}
+          onSetTamanho={saveFlashcardFontSize}
           onStart={startFlashcards}
           onNavigate={setScreen}
           hasSavedFlashSession={!!flashSession}
@@ -541,6 +565,8 @@ export function EstudaApp({ userId, userEmail }) {
           favorites={favorites}
           onToggleFav={toggleFav}
           onView={viewFlashcard}
+          questionFontSize={filters.fontSize}
+          flashcardFontSize={flashcardFontSize}
         />
       )}
 
@@ -559,6 +585,7 @@ export function EstudaApp({ userId, userEmail }) {
           onNavigate={setScreen}
           onGoToAccountFriends={goToAccountFriends}
           onAnsweringChange={setChallengeAnswering}
+          fontSize={filters.fontSize}
         />
       )}
     </div>

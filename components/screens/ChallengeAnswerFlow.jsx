@@ -7,8 +7,11 @@ import { PrimaryButton, Tag } from "@/components/ui/Primitives";
 import { fetchChallengeQuestions, fetchMyChallengeAnswers, recordChallengeAnswer } from "@/lib/data/challenges";
 import { fetchOptionsForQuestions } from "@/lib/data/questions";
 
-export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onCancel }) {
+const FONT_SIZES = { sm: 14, md: 16.5, lg: 19 };
+
+export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onCancel, fontSize }) {
   const t = useT();
+  const questionFontSize = FONT_SIZES[fontSize] || FONT_SIZES.md;
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState([]);
   const [optionsByQuestion, setOptionsByQuestion] = useState({});
@@ -107,7 +110,7 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
           <Tag>{q.instituicao}</Tag>
           <Tag>{q.tema}</Tag>
         </div>
-        <div style={{ fontWeight: 600, fontSize: 16, color: t.text, marginBottom: q.imagem_url ? 14 : 20, lineHeight: 1.5 }}>{q.enunciado}</div>
+        <div style={{ fontWeight: 600, fontSize: questionFontSize, color: t.text, marginBottom: q.imagem_url ? 14 : 20, lineHeight: 1.5 }}>{q.enunciado}</div>
 
         {q.imagem_url && (
           <img
@@ -150,7 +153,7 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
                   border: `1.5px solid ${border}`,
                   background: bg,
                   color,
-                  fontSize: 14,
+                  fontSize: questionFontSize - 2.5,
                   display: "flex",
                   alignItems: "center",
                   gap: 10,

@@ -15,6 +15,64 @@ const TABS = [
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
+function RankRow({ r, rank, tab, config, t }) {
+  return (
+    <div
+      style={{
+        padding: "12px 14px",
+        borderRadius: 14,
+        marginBottom: 8,
+        background: r.is_me ? t.primarySoft : t.surface,
+        border: `1.5px solid ${r.is_me ? t.primary : t.border}`,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ width: 28, textAlign: "center", fontSize: 16, fontWeight: 800, color: t.textMuted, flexShrink: 0 }}>
+          {MEDALS[rank - 1] || rank}
+        </div>
+        <div style={{ flex: 1, fontSize: 14, fontWeight: 700, color: t.text }}>
+          {r.name}
+          {r.is_me ? " (você)" : ""}
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: t.primary }}>{config.format(r[config.field])}</div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 14,
+          marginTop: 10,
+          paddingTop: 10,
+          borderTop: `1px solid ${t.border}`,
+          marginLeft: 40,
+        }}
+      >
+        {TABS.map((tb) => {
+          const Icon = tb.icon;
+          const active = tb.key === tab;
+          return (
+            <div
+              key={tb.key}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 11.5,
+                fontWeight: active ? 800 : 600,
+                color: active ? t.primary : t.textMuted,
+              }}
+            >
+              <Icon size={12} />
+              {tb.format(r[tb.field])}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function RankingScreen({ supabase, onNavigate }) {
   const t = useT();
   const [tab, setTab] = useState("acertos");
@@ -37,9 +95,14 @@ export function RankingScreen({ supabase, onNavigate }) {
 
   const config = TABS.find((tb) => tb.key === tab);
 
-  const ranked = useMemo(() => {
-    if (!rows) return [];
-    return [...rows].sort((a, b) => b[config.field] - a[config.field]);
+  const { top10, mePosition } = useMemo(() => {
+    if (!rows) return { top10: [], mePosition: null };
+    const sorted = [...rows].sort((a, b) => b[config.field] - a[config.field]);
+    const meIndex = sorted.findIndex((r) => r.is_me);
+    return {
+      top10: sorted.slice(0, 10),
+      mePosition: meIndex >= 10 ? { rank: meIndex + 1, row: sorted[meIndex] } : null,
+    };
   }, [rows, config.field]);
 
   return (
@@ -57,68 +120,22 @@ export function RankingScreen({ supabase, onNavigate }) {
         {loadError && <EmptyState text={loadError} />}
         {!loadError && !rows && <EmptyState text="Carregando…" />}
 
-        {!loadError && rows && ranked.length === 0 && (
+        {!loadError && rows && top10.length === 0 && (
           <EmptyState text="Ninguém compartilhou estatísticas ainda." />
         )}
 
         {!loadError &&
           rows &&
-          ranked.map((r, i) => (
-            <div
-              key={r.id}
-              style={{
-                padding: "12px 14px",
-                borderRadius: 14,
-                marginBottom: 8,
-                background: r.is_me ? t.primarySoft : t.surface,
-                border: `1.5px solid ${r.is_me ? t.primary : t.border}`,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 28, textAlign: "center", fontSize: 16, fontWeight: 800, color: t.textMuted, flexShrink: 0 }}>
-                  {MEDALS[i] || i + 1}
-                </div>
-                <div style={{ flex: 1, fontSize: 14, fontWeight: 700, color: t.text }}>
-                  {r.name}
-                  {r.is_me ? " (você)" : ""}
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: t.primary }}>{config.format(r[config.field])}</div>
-              </div>
+          top10.map((r, i) => <RankRow key={r.id} r={r} rank={i + 1} tab={tab} config={config} t={t} />)}
 
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 14,
-                  marginTop: 10,
-                  paddingTop: 10,
-                  borderTop: `1px solid ${t.border}`,
-                  marginLeft: 40,
-                }}
-              >
-                {TABS.map((tb) => {
-                  const Icon = tb.icon;
-                  const active = tb.key === tab;
-                  return (
-                    <div
-                      key={tb.key}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                        fontSize: 11.5,
-                        fontWeight: active ? 800 : 600,
-                        color: active ? t.primary : t.textMuted,
-                      }}
-                    >
-                      <Icon size={12} />
-                      {tb.format(r[tb.field])}
-                    </div>
-                  );
-                })}
-              </div>
+        {mePosition && (
+          <>
+            <div style={{ textAlign: "center", color: t.textMuted, fontSize: 13, fontWeight: 700, margin: "10px 0" }}>
+              ···
             </div>
-          ))}
+            <RankRow r={mePosition.row} rank={mePosition.rank} tab={tab} config={config} t={t} />
+          </>
+        )}
       </div>
     </div>
   );

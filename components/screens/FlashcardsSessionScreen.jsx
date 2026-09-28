@@ -72,26 +72,51 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
           onClick={flip}
           style={{
             cursor: "pointer",
-            minHeight: 260,
-            borderRadius: 20,
-            border: `1.5px solid ${t.border}`,
-            background: flipped ? answerBg : t.surface,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            textAlign: "center",
-            padding: 30,
-            transition: "background .2s, border-color .2s",
+            borderRadius: 16,
+            border: `1px solid ${t.border}`,
+            background: t.surface,
+            overflow: "hidden",
+            transition: "border-color .2s",
           }}
         >
-          {flipped && <div style={{ fontWeight: 700, fontSize: 15, color: answerBorder, marginBottom: 14 }}>Resposta</div>}
-          {!flipped && <Tag>{card.tema}</Tag>}
-          <div style={{ fontWeight: 700, fontSize: cardFontSize, color: t.text, marginTop: flipped ? 0 : 18, lineHeight: 1.4 }}>
-            {flipped ? card.resposta : card.pergunta}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "16px 18px",
+              borderBottom: `1px solid ${t.border}`,
+              background: flipped ? answerBg : "transparent",
+              transition: "background .2s",
+            }}
+          >
+            {flipped ? (
+              <span style={{ fontWeight: 700, fontSize: 12.5, color: answerBorder, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Resposta
+              </span>
+            ) : (
+              <Tag>{card.tema}</Tag>
+            )}
           </div>
-          <div style={{ fontSize: 13, color: flipped ? answerBorder : t.primary, marginTop: 22, fontWeight: 600 }}>
-            {flipped ? "Clique para ver a pergunta" : "Clique para ver a resposta"}
+          <div
+            style={{
+              minHeight: 220,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              padding: 30,
+              background: flipped ? answerBg : "transparent",
+              transition: "background .2s",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: cardFontSize, color: t.text, lineHeight: 1.4 }}>
+              {flipped ? card.resposta : card.pergunta}
+            </div>
+            <div style={{ fontSize: 13, color: flipped ? answerBorder : t.primary, marginTop: 22, fontWeight: 600 }}>
+              {flipped ? "Clique para ver a pergunta" : "Clique para ver a resposta"}
+            </div>
           </div>
         </div>
 

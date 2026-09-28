@@ -103,8 +103,8 @@ export function Toggle({ checked, onChange, label, sub, labelStyle, style }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", ...style }}>
       <div>
-        <div style={{ fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: t.text, ...labelStyle }}>{label}</div>
-        {sub && <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: t.textMuted, marginTop: 2 }}>{sub}</div>}
+        {label && <div style={{ fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: t.text, ...labelStyle }}>{label}</div>}
+        {sub && <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: t.textMuted, marginTop: label ? 2 : 0 }}>{sub}</div>}
       </div>
       <button
         onClick={() => onChange(!checked)}

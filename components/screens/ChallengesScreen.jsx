@@ -23,6 +23,7 @@ export function ChallengesScreen({
   onNavigate,
   onGoToAccountFriends,
   onAnsweringChange,
+  fontSize,
 }) {
   const t = useT();
   const [tab, setTab] = useState("pendentes");
@@ -84,6 +85,7 @@ export function ChallengesScreen({
         challenge={responding}
         onFinish={finishResponding}
         onCancel={finishResponding}
+        fontSize={fontSize}
       />
     );
   }
@@ -92,27 +94,68 @@ export function ChallengesScreen({
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 80 }}>
       <ScreenHeader title="Desafios" onBack={() => onNavigate("home")} />
       <div style={{ padding: "18px 22px" }}>
-        <div style={{ fontSize: 11.5, color: t.textMuted, marginBottom: 16, textAlign: "center" }}>
-          {dailyCount}/5 desafios criados hoje
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 18 }}>
-          <div style={{ display: "flex", gap: 8, overflowX: "auto", minWidth: 0 }}>
-            <Chip active={tab === "pendentes"} onClick={() => setTab("pendentes")}>
-              Pendentes ({pendentes.length})
-            </Chip>
-            <Chip active={tab === "concluidos"} onClick={() => setTab("concluidos")}>
-              Concluídos ({concluidos.length})
-            </Chip>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 14,
+            background: t.surface,
+            border: `1px solid ${t.border}`,
+            borderRadius: 16,
+            padding: "14px 16px",
+            marginBottom: 18,
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 9 }}>
+              <span
+                style={{
+                  fontSize: 10.5,
+                  color: t.textMuted,
+                  fontWeight: 700,
+                  letterSpacing: 0.5,
+                  textTransform: "uppercase",
+                }}
+              >
+                Desafios hoje
+              </span>
+              <span style={{ fontSize: 11.5, color: t.primary, fontWeight: 800 }}>{dailyCount}/5</span>
+            </div>
+            <div style={{ display: "flex", gap: 5 }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 24,
+                    height: 9,
+                    borderRadius: 999,
+                    background: i < dailyCount ? t.primary : t.surfaceAlt,
+                    border: `1px solid ${i < dailyCount ? t.primary : t.border}`,
+                    boxShadow: i < dailyCount ? `0 0 8px ${t.primary}88` : "none",
+                    transition: "background .15s, box-shadow .15s",
+                  }}
+                />
+              ))}
+            </div>
           </div>
           <PrimaryButton
             small
             disabled={dailyCount >= 5}
             onClick={() => (friends.length === 0 ? setShowNoFriends(true) : setShowNew(true))}
           >
-            <Plus size={14} style={{ marginRight: 4 }} />
-            Novo
+            <Plus size={14} style={{ marginRight: 5, verticalAlign: -2 }} />
+            Novo Desafio
           </PrimaryButton>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+          <Chip active={tab === "pendentes"} onClick={() => setTab("pendentes")} style={{ flex: 1, textAlign: "center" }}>
+            Pendentes ({pendentes.length})
+          </Chip>
+          <Chip active={tab === "concluidos"} onClick={() => setTab("concluidos")} style={{ flex: 1, textAlign: "center" }}>
+            Concluídos ({concluidos.length})
+          </Chip>
         </div>
 
         {tab === "pendentes" && pendentes.length === 0 && <EmptyState text="Nenhum desafio pendente. Chame um amigo para jogar!" />}

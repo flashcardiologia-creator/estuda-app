@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy, Shield, KeyRound, Eye, EyeOff } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
@@ -17,6 +17,7 @@ function PasswordField({ value, onChange, placeholder, visible, onToggleVisible 
         autoComplete="new-password"
         value={value}
         onChange={onChange}
+        className="password-field-input"
         style={{
           width: "100%",
           padding: "10px 40px 10px 12px",
@@ -73,9 +74,12 @@ export function AccountScreen({
 }) {
   const t = useT();
   const [name, setName] = useState(profile.name);
+  const [nameEditing, setNameEditing] = useState(false);
+  const nameInputRef = useRef(null);
   const [savingName, setSavingName] = useState(false);
   const [savingVisibility, setSavingVisibility] = useState(false);
   const [savingRankingVisibility, setSavingRankingVisibility] = useState(false);
+  const [passwordFormOpen, setPasswordFormOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -101,6 +105,10 @@ export function AccountScreen({
     if (initialFocus) onFocusConsumed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (nameEditing) nameInputRef.current?.focus();
+  }, [nameEditing]);
 
   const copyCode = async () => {
     try {
@@ -250,7 +258,7 @@ export function AccountScreen({
               fontWeight: 600,
             }}
           >
-            <BarChart3 size={14} /> Ver estatísticas
+            <BarChart3 size={14} /> Estatísticas
           </button>
           <button
             onClick={() => onNavigate("ranking")}
@@ -270,7 +278,7 @@ export function AccountScreen({
               fontWeight: 600,
             }}
           >
-            <Trophy size={14} /> Ver ranking
+            <Trophy size={14} /> Ranking
           </button>
         </div>
 
@@ -290,23 +298,66 @@ export function AccountScreen({
               Nome
             </label>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input
-                value={name}
-                maxLength={MAX_NAME_LEN}
-                onChange={(e) => setName(sanitizeName(e.target.value))}
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  padding: "11px 13px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.border}`,
-                  background: t.surfaceAlt,
-                  color: t.text,
-                  fontSize: 16,
-                  fontWeight: 600,
-                  boxSizing: "border-box",
-                }}
-              />
+              {nameEditing ? (
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "11px 13px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.border}`,
+                    background: t.surfaceAlt,
+                    boxSizing: "border-box",
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* font-size stays 16px (iOS auto-zooms focus below that); scale() shrinks it visually instead */}
+                  <input
+                    ref={nameInputRef}
+                    value={name}
+                    maxLength={MAX_NAME_LEN}
+                    onChange={(e) => setName(sanitizeName(e.target.value))}
+                    onBlur={() => setNameEditing(false)}
+                    style={{
+                      width: "114.29%",
+                      border: "none",
+                      outline: "none",
+                      padding: 0,
+                      margin: 0,
+                      background: "transparent",
+                      color: t.text,
+                      fontSize: 16,
+                      fontWeight: 600,
+                      boxSizing: "border-box",
+                      transform: "scale(0.875)",
+                      transformOrigin: "left center",
+                    }}
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setNameEditing(true)}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    textAlign: "left",
+                    padding: "11px 13px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.border}`,
+                    background: t.surfaceAlt,
+                    color: t.text,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    boxSizing: "border-box",
+                    cursor: "text",
+                  }}
+                >
+                  {name}
+                </button>
+              )}
               <PrimaryButton
                 small
                 onClick={saveName}
@@ -372,33 +423,40 @@ export function AccountScreen({
                 gap: 8,
               }}
             >
-              <PasswordField
-                placeholder="Senha atual"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                visible={showCurrentPassword}
-                onToggleVisible={() => setShowCurrentPassword((v) => !v)}
-              />
-              <PasswordField
-                placeholder="Nova senha"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                visible={showNewPassword}
-                onToggleVisible={() => setShowNewPassword((v) => !v)}
-              />
-              <PasswordField
-                placeholder="Confirmar nova senha"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                visible={showConfirmPassword}
-                onToggleVisible={() => setShowConfirmPassword((v) => !v)}
-              />
-              {passwordError && <div style={{ fontSize: 12, color: t.red }}>{passwordError}</div>}
-              {passwordSuccess && <div style={{ fontSize: 12, color: t.green }}>Senha alterada com sucesso.</div>}
+              {passwordFormOpen && (
+                <>
+                  <PasswordField
+                    placeholder="Senha atual"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    visible={showCurrentPassword}
+                    onToggleVisible={() => setShowCurrentPassword((v) => !v)}
+                  />
+                  <PasswordField
+                    placeholder="Nova senha"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    visible={showNewPassword}
+                    onToggleVisible={() => setShowNewPassword((v) => !v)}
+                  />
+                  <PasswordField
+                    placeholder="Confirmar nova senha"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    visible={showConfirmPassword}
+                    onToggleVisible={() => setShowConfirmPassword((v) => !v)}
+                  />
+                  {passwordError && <div style={{ fontSize: 12, color: t.red }}>{passwordError}</div>}
+                  {passwordSuccess && <div style={{ fontSize: 12, color: t.green }}>Senha alterada com sucesso.</div>}
+                </>
+              )}
               <PrimaryButton
                 small
-                onClick={changePassword}
-                disabled={!currentPassword || !newPassword || !confirmPassword || changingPassword}
+                onClick={() => (passwordFormOpen ? changePassword() : setPasswordFormOpen(true))}
+                disabled={
+                  passwordFormOpen &&
+                  (!currentPassword || newPassword.length < 6 || newPassword !== confirmPassword || changingPassword)
+                }
               >
                 <KeyRound size={13} style={{ marginRight: 6, verticalAlign: -2 }} />
                 Trocar senha

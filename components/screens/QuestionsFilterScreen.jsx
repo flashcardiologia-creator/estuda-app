@@ -11,6 +11,7 @@ export function QuestionsFilterScreen({
   favorites,
   filters,
   setFilters,
+  onSetFontSize,
   onStart,
   onContinue,
   hasSavedSession,
@@ -97,7 +98,7 @@ export function QuestionsFilterScreen({
         <ExpandBox title="Tamanho da Letra" icon={<Type size={17} color={t.primary} />} open={open.fonte} onToggle={() => toggle("fonte")}>
           <div style={{ display: "flex", gap: 8 }}>
             {[["sm", "Pequena"], ["md", "Média"], ["lg", "Grande"]].map(([k, l]) => (
-              <Chip key={k} active={filters.fontSize === k} onClick={() => setFilters((f) => ({ ...f, fontSize: k }))}>
+              <Chip key={k} active={filters.fontSize === k} onClick={() => onSetFontSize(k)}>
                 {l}
               </Chip>
             ))}
