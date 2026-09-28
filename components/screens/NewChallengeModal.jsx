@@ -14,19 +14,24 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
   const [error, setError] = useState("");
   const [friendMenuOpen, setFriendMenuOpen] = useState(false);
   const friendFieldRef = useRef(null);
+  const [temaMenuOpen, setTemaMenuOpen] = useState(false);
+  const temaFieldRef = useRef(null);
 
   const selectedFriend = friends.find((f) => f.id === friendId) || null;
 
   useEffect(() => {
-    if (!friendMenuOpen) return;
+    if (!friendMenuOpen && !temaMenuOpen) return;
     const handleClickOutside = (e) => {
       if (friendFieldRef.current && !friendFieldRef.current.contains(e.target)) {
         setFriendMenuOpen(false);
       }
+      if (temaFieldRef.current && !temaFieldRef.current.contains(e.target)) {
+        setTemaMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [friendMenuOpen]);
+  }, [friendMenuOpen, temaMenuOpen]);
 
   const criar = async () => {
     setCreating(true);
@@ -110,6 +115,7 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
 
           {friendMenuOpen && (
             <div
+              className="dropdown-scroll"
               style={{
                 position: "absolute",
                 top: "calc(100% + 6px)",
@@ -173,33 +179,83 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
           )}
         </div>
 
-        <div style={{ marginBottom: 18 }}>
+        <div style={{ marginBottom: 18, position: "relative" }} ref={temaFieldRef}>
           <SectionLabel icon={<BookOpen size={13} />}>Tema</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-            {temas.map((tm) => {
-              const active = tema === tm;
-              return (
-                <button
-                  key={tm}
-                  onClick={() => setTema(tm)}
-                  style={{
-                    padding: "9px 10px",
-                    borderRadius: 12,
-                    border: `1.5px solid ${active ? t.primary : t.border}`,
-                    background: active ? t.primarySoft : t.surfaceAlt,
-                    color: active ? t.primary : t.text,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    textAlign: "center",
-                    transition: "all .15s ease",
-                  }}
-                >
-                  {tm}
-                </button>
-              );
-            })}
-          </div>
+          <button
+            onClick={() => setTemaMenuOpen((v) => !v)}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "9px 12px",
+              borderRadius: 12,
+              border: `1.5px solid ${temaMenuOpen ? t.primary : t.border}`,
+              background: t.surfaceAlt,
+              cursor: "pointer",
+              textAlign: "left",
+              boxSizing: "border-box",
+            }}
+          >
+            {tema ? (
+              <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: t.text }}>{tema}</span>
+            ) : (
+              <span style={{ flex: 1, fontSize: 13.5, color: t.textMuted }}>Selecione um tema</span>
+            )}
+            <ChevronDown
+              size={16}
+              color={t.textMuted}
+              style={{ transform: temaMenuOpen ? "rotate(180deg)" : "none", transition: "transform .15s", flexShrink: 0 }}
+            />
+          </button>
+
+          {temaMenuOpen && (
+            <div
+              className="dropdown-scroll"
+              style={{
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                left: 0,
+                right: 0,
+                zIndex: 5,
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                borderRadius: 12,
+                boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+                maxHeight: 216,
+                overflowY: "auto",
+                padding: 6,
+              }}
+            >
+              {temas.map((tm) => {
+                const active = tema === tm;
+                return (
+                  <button
+                    key={tm}
+                    onClick={() => {
+                      setTema(tm);
+                      setTemaMenuOpen(false);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px",
+                      borderRadius: 9,
+                      border: "none",
+                      background: active ? t.primarySoft : "transparent",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      boxSizing: "border-box",
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      color: active ? t.primary : t.text,
+                    }}
+                  >
+                    {tm}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 22 }}>

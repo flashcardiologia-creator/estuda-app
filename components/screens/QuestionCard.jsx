@@ -152,22 +152,22 @@ export function QuestionCard({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: commentOpen ? 4 : 0,
+              marginBottom: commentOpen ? 10 : 0,
               gap: 8,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 700, color: t.primary }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: fontSize - 2.5, fontWeight: 700, color: t.primary }}>
               {commentOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               Comentário
             </div>
           </div>
           {commentOpen && (
-            <div style={{ fontSize, color: t.textMuted, lineHeight: 1.5, whiteSpace: "pre-line" }}>
+            <div style={{ fontSize: fontSize - 2.5, color: t.textMuted, lineHeight: 1.5, whiteSpace: "pre-line" }}>
               {showFull && q.comentario_completo ? q.comentario_completo : answerResult.comentario || q.comentario}
             </div>
           )}
           {commentOpen && !showFull && q.comentario_completo && (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
