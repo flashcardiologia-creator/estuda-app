@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy, Shield, KeyRound, Eye, EyeOff } from "lucide-react";
+import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy, Shield, KeyRound, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
@@ -98,8 +98,8 @@ export function AccountScreen({
   const [codeCopied, setCodeCopied] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
   const [viewingFriend, setViewingFriend] = useState(null);
-  const [profileOpen, setProfileOpen] = useState(initialFocus !== "friends");
-  const [friendsOpen, setFriendsOpen] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [friendsOpen, setFriendsOpen] = useState(initialFocus === "friends");
 
   useEffect(() => {
     if (initialFocus) onFocusConsumed?.();
@@ -540,7 +540,7 @@ export function AccountScreen({
             <div style={{ minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: 10.5,
+                  fontSize: 8.5,
                   color: t.primary,
                   fontWeight: 700,
                   letterSpacing: 0.5,
@@ -550,7 +550,7 @@ export function AccountScreen({
               >
                 Seu código de amigo
               </div>
-              <div style={{ fontSize: 19, color: t.text, fontWeight: 800, letterSpacing: 1.5 }}>
+              <div style={{ fontSize: 12, color: t.text, fontWeight: 800, letterSpacing: 1.5 }}>
                 {profile.friend_code}
               </div>
             </div>
@@ -680,45 +680,52 @@ export function AccountScreen({
             </div>
           )}
 
-          {friends.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setViewingFriend(f)}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 0",
-                borderTop: `1px solid ${t.border}`,
-                borderLeft: "none",
-                borderRight: "none",
-                borderBottom: "none",
-                background: "transparent",
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              <div
+          {friends.length > 0 && (
+            <div style={{ fontSize: 11, color: t.textMuted, fontWeight: 700, marginTop: 16, marginBottom: 8 }}>
+              SEUS AMIGOS
+            </div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {friends.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setViewingFriend(f)}
                 style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: "50%",
-                  background: t.primarySoft,
+                  width: "100%",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: t.primary,
-                  flexShrink: 0,
+                  gap: 10,
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: `1px solid ${t.border}`,
+                  background: t.surfaceAlt,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  boxSizing: "border-box",
                 }}
               >
-                {f.name[0]}
-              </div>
-              <span style={{ fontSize: 13.5, color: t.text }}>{f.name}</span>
-            </button>
-          ))}
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    background: t.primarySoft,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: t.primary,
+                    flexShrink: 0,
+                  }}
+                >
+                  {f.name[0]}
+                </div>
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: t.text, flex: 1 }}>{f.name}</span>
+                <ChevronRight size={16} color={t.textMuted} style={{ flexShrink: 0 }} />
+              </button>
+            ))}
+          </div>
         </ExpandBox>
 
         <div style={{ marginTop: 20 }}>
