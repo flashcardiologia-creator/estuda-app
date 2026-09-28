@@ -13,6 +13,19 @@ function challengeDone(answered, qtd) {
   return answered >= qtd;
 }
 
+function ExpiresTag({ expiresAt }) {
+  // Recalcula a cada minuto pra virar de hora em hora no momento certo — o
+  // valor em si sempre vem do relógio real, nunca de um estado acumulado.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => forceTick((n) => n + 1), 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const hoursLeft = Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (60 * 60 * 1000)));
+  return <Tag>expira {hoursLeft}h</Tag>;
+}
+
 export function ChallengesScreen({
   supabase,
   userId,
@@ -150,10 +163,18 @@ export function ChallengesScreen({
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-          <Chip active={tab === "pendentes"} onClick={() => setTab("pendentes")} style={{ flex: 1, textAlign: "center" }}>
+          <Chip
+            active={tab === "pendentes"}
+            onClick={() => setTab("pendentes")}
+            style={{ flex: 1, textAlign: "center", ...(tab !== "pendentes" && t.name === "light" ? { background: t.surface } : {}) }}
+          >
             Pendentes ({pendentes.length})
           </Chip>
-          <Chip active={tab === "concluidos"} onClick={() => setTab("concluidos")} style={{ flex: 1, textAlign: "center" }}>
+          <Chip
+            active={tab === "concluidos"}
+            onClick={() => setTab("concluidos")}
+            style={{ flex: 1, textAlign: "center", ...(tab !== "concluidos" && t.name === "light" ? { background: t.surface } : {}) }}
+          >
             Concluídos ({concluidos.length})
           </Chip>
         </div>
@@ -188,7 +209,7 @@ export function ChallengesScreen({
                       </div>
                     </div>
                   ) : (
-                    <Tag>expira 48h</Tag>
+                    <ExpiresTag expiresAt={c.expires_at} />
                   )}
                 </div>
 

@@ -114,7 +114,12 @@ export function RankingScreen({ supabase, onNavigate }) {
       <div style={{ padding: "18px 22px" }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
           {TABS.map((tb) => (
-            <Chip key={tb.key} active={tab === tb.key} onClick={() => setTab(tb.key)} style={{ flex: 1, textAlign: "center" }}>
+            <Chip
+              key={tb.key}
+              active={tab === tb.key}
+              onClick={() => setTab(tb.key)}
+              style={{ flex: 1, textAlign: "center", ...(tab !== tb.key && t.name === "light" ? { background: t.surface } : {}) }}
+            >
               {tb.label}
             </Chip>
           ))}

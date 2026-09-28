@@ -142,7 +142,7 @@ export function QuestionsFilterScreen({
             {filters.temas.length === 0 ? "Selecione ao menos um tema" : `${previewCount} questões encontradas`}
           </div>
           {hasSavedSession && (
-            <PrimaryButton full variant="ghost" onClick={onContinue}>
+            <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={onContinue}>
               <RotateCw size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
               Continuar Sessão
             </PrimaryButton>

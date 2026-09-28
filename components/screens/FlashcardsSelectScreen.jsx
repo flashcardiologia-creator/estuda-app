@@ -80,7 +80,7 @@ export function FlashcardsSelectScreen({
             {tema ? `${sessionCount} cartões nesta sessão` : "Selecione um tema"}
           </div>
           {hasSavedFlashSession && (
-            <PrimaryButton full variant="ghost" onClick={onContinueFlashcards}>
+            <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={onContinueFlashcards}>
               <RotateCw size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
               Continuar Sessão
             </PrimaryButton>

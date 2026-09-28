@@ -81,7 +81,15 @@ export function StatsScreen({ supabase, userId, allQuestions, challenges, onNavi
                 { label: "Flashcards vistos", value: fullStats.totalFlashcards },
                 { label: "Média de flashcards/dia", value: fullStats.avgFlashcardsPerDay },
               ].map((s) => (
-                <div key={s.label} style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 12, padding: 12 }}>
+                <div
+                  key={s.label}
+                  style={{
+                    background: t.name === "light" ? t.surface : t.surfaceAlt,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 12,
+                    padding: 12,
+                  }}
+                >
                   <div style={{ fontSize: 10.5, color: t.textMuted, fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: t.text }}>
                     {s.value}
@@ -92,13 +100,25 @@ export function StatsScreen({ supabase, userId, allQuestions, challenges, onNavi
             </div>
 
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <Chip active={temaTab === "questoes"} onClick={() => setTemaTab("questoes")} style={{ flex: 1, textAlign: "center" }}>
+              <Chip
+                active={temaTab === "questoes"}
+                onClick={() => setTemaTab("questoes")}
+                style={{ flex: 1, textAlign: "center", ...(temaTab !== "questoes" && t.name === "light" ? { background: t.surface } : {}) }}
+              >
                 Questões
               </Chip>
-              <Chip active={temaTab === "acertos"} onClick={() => setTemaTab("acertos")} style={{ flex: 1, textAlign: "center" }}>
+              <Chip
+                active={temaTab === "acertos"}
+                onClick={() => setTemaTab("acertos")}
+                style={{ flex: 1, textAlign: "center", ...(temaTab !== "acertos" && t.name === "light" ? { background: t.surface } : {}) }}
+              >
                 Acertos
               </Chip>
-              <Chip active={temaTab === "flashcards"} onClick={() => setTemaTab("flashcards")} style={{ flex: 1, textAlign: "center" }}>
+              <Chip
+                active={temaTab === "flashcards"}
+                onClick={() => setTemaTab("flashcards")}
+                style={{ flex: 1, textAlign: "center", ...(temaTab !== "flashcards" && t.name === "light" ? { background: t.surface } : {}) }}
+              >
                 Flashcards
               </Chip>
             </div>

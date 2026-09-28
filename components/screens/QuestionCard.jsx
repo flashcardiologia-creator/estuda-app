@@ -66,7 +66,7 @@ export function QuestionCard({
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {options.map((op) => {
           const isSelected = selected === op.letra;
-          let bg = t.surfaceAlt,
+          let bg = t.name === "light" ? t.surface : t.surfaceAlt,
             border = t.border,
             color = t.text;
           if (answered && !filters.modoProva && answerResult) {
