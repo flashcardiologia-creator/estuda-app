@@ -14,6 +14,8 @@ import { FlashcardsSelectScreen } from "@/components/screens/FlashcardsSelectScr
 import { FlashcardsSessionScreen } from "@/components/screens/FlashcardsSessionScreen";
 import { DailyMissionScreen, DailyDoneScreen } from "@/components/screens/DailyMissionScreen";
 import { ChallengesScreen } from "@/components/screens/ChallengesScreen";
+import { RankingScreen } from "@/components/screens/RankingScreen";
+import { StatsScreen } from "@/components/screens/StatsScreen";
 
 import { fetchProfile, updateDisplayName, updateStatsVisibility, fetchStats } from "@/lib/data/profile";
 import {
@@ -418,7 +420,6 @@ export function EstudaApp({ userId, userEmail }) {
           userEmail={userEmail}
           profile={profile}
           stats={stats}
-          challenges={challenges}
           allQuestions={allQuestions}
           friends={friends}
           incomingRequests={incomingRequests}
@@ -431,6 +432,18 @@ export function EstudaApp({ userId, userEmail }) {
           onRespondRequest={respondRequest}
           onRefreshFriends={refreshFriends}
           onSignOut={signOut}
+        />
+      )}
+
+      {screen === "ranking" && <RankingScreen supabase={supabase} onNavigate={setScreen} />}
+
+      {screen === "stats" && (
+        <StatsScreen
+          supabase={supabase}
+          userId={userId}
+          allQuestions={allQuestions}
+          challenges={challenges}
+          onNavigate={setScreen}
         />
       )}
 

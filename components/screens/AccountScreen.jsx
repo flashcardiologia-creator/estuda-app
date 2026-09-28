@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { fetchFriendStats, removeFriend } from "@/lib/data/friends";
-import { fetchAllFlashcards, fetchFlashcardThemeCounts } from "@/lib/data/flashcards";
-import { fetchFullStats } from "@/lib/data/stats";
 
 export function AccountScreen({
   supabase,
@@ -16,7 +14,6 @@ export function AccountScreen({
   profile,
   stats,
   allQuestions,
-  challenges,
   friends,
   incomingRequests,
   initialFocus,
@@ -43,7 +40,6 @@ export function AccountScreen({
   const [viewingFriend, setViewingFriend] = useState(null);
   const [profileOpen, setProfileOpen] = useState(initialFocus !== "friends");
   const [friendsOpen, setFriendsOpen] = useState(true);
-  const [showFullStats, setShowFullStats] = useState(false);
 
   useEffect(() => {
     if (initialFocus) onFocusConsumed?.();
@@ -132,65 +128,110 @@ export function AccountScreen({
           ))}
         </div>
 
-        <button
-          onClick={() => setShowFullStats(true)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            width: "100%",
-            background: "transparent",
-            border: `1px solid ${t.border}`,
-            borderRadius: 12,
-            padding: "9px 12px",
-            marginBottom: 20,
-            marginTop: -10,
-            cursor: "pointer",
-            color: t.primary,
-            fontSize: 12.5,
-            fontWeight: 600,
-          }}
-        >
-          <BarChart3 size={14} /> Ver estatísticas completas
-        </button>
+        <div style={{ display: "flex", gap: 8, marginBottom: 20, marginTop: -10 }}>
+          <button
+            onClick={() => onNavigate("stats")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              flex: 1,
+              background: "transparent",
+              border: `1px solid ${t.border}`,
+              borderRadius: 12,
+              padding: "9px 12px",
+              cursor: "pointer",
+              color: t.primary,
+              fontSize: 12.5,
+              fontWeight: 600,
+            }}
+          >
+            <BarChart3 size={14} /> Ver estatísticas
+          </button>
+          <button
+            onClick={() => onNavigate("ranking")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              flex: 1,
+              background: "transparent",
+              border: `1px solid ${t.border}`,
+              borderRadius: 12,
+              padding: "9px 12px",
+              cursor: "pointer",
+              color: t.primary,
+              fontSize: 12.5,
+              fontWeight: 600,
+            }}
+          >
+            <Trophy size={14} /> Ver ranking
+          </button>
+        </div>
 
         <ExpandBox title="Perfil" icon={<User size={17} color={t.primary} />} open={profileOpen} onToggle={() => setProfileOpen((o) => !o)}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <label style={{ width: 48, flexShrink: 0, fontSize: 12.5, color: t.textMuted, fontWeight: 600 }}>Nome</label>
-            <input
-              value={name}
-              maxLength={MAX_NAME_LEN}
-              onChange={(e) => setName(sanitizeName(e.target.value))}
+          <div style={{ marginBottom: 14 }}>
+            <label
               style={{
-                flex: 1,
-                minWidth: 0,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: `1px solid ${t.border}`,
-                background: t.surfaceAlt,
-                color: t.text,
-                fontSize: 16,
-                boxSizing: "border-box",
+                display: "block",
+                fontSize: 10.5,
+                color: t.textMuted,
+                fontWeight: 700,
+                letterSpacing: 0.5,
+                textTransform: "uppercase",
+                marginBottom: 6,
               }}
-            />
-            <PrimaryButton
-              small
-              onClick={saveName}
-              disabled={!name.trim() || savingName}
-              color={nameSaved ? t.green : undefined}
             >
-              {nameSaved ? "Salvo" : "Salvar"}
-            </PrimaryButton>
+              Nome
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                value={name}
+                maxLength={MAX_NAME_LEN}
+                onChange={(e) => setName(sanitizeName(e.target.value))}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: "11px 13px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.border}`,
+                  background: t.surfaceAlt,
+                  color: t.text,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  boxSizing: "border-box",
+                }}
+              />
+              <PrimaryButton
+                small
+                onClick={saveName}
+                disabled={!name.trim() || savingName}
+                color={nameSaved ? t.green : undefined}
+              >
+                {nameSaved ? "Salvo" : "Salvar"}
+              </PrimaryButton>
+            </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
-            <label style={{ width: 48, flexShrink: 0, fontSize: 12.5, color: t.textMuted, fontWeight: 600 }}>Email</label>
+          <div style={{ marginBottom: 18 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: 10.5,
+                color: t.textMuted,
+                fontWeight: 700,
+                letterSpacing: 0.5,
+                textTransform: "uppercase",
+                marginBottom: 6,
+              }}
+            >
+              Email
+            </label>
             <div
               style={{
-                flex: 1,
-                minWidth: 0,
-                padding: "10px 12px",
+                padding: "11px 13px",
                 borderRadius: 10,
                 border: `1px solid ${t.border}`,
                 background: t.surfaceAlt,
@@ -203,14 +244,25 @@ export function AccountScreen({
             </div>
           </div>
 
-          <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${t.border}` }}>
+          <div
+            style={{
+              padding: "12px 14px",
+              borderRadius: 12,
+              background: t.surfaceAlt,
+              border: `1px solid ${t.border}`,
+            }}
+          >
             <Toggle
               checked={!!profile.stats_visible_to_friends}
               onChange={toggleStatsVisibility}
               label="Permitir que vejam suas estatísticas"
-              labelStyle={{ fontSize: 12.5, color: t.textMuted, fontWeight: 600 }}
-              sub={savingVisibility ? "Salvando…" : undefined}
-              style={{ padding: "6px 0" }}
+              labelStyle={{ fontSize: 13.5, color: t.text, fontWeight: 700 }}
+              sub={
+                savingVisibility
+                  ? "Salvando…"
+                  : "Amigos e o ranking global poderão ver sua sequência, questões respondidas e % de acerto"
+              }
+              style={{ padding: 0 }}
             />
           </div>
         </ExpandBox>
@@ -227,17 +279,30 @@ export function AccountScreen({
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: 8,
-              background: t.surfaceAlt,
-              border: `1px solid ${t.border}`,
-              borderRadius: 10,
-              padding: "10px 12px",
-              marginBottom: 12,
+              gap: 10,
+              background: t.primarySoft,
+              border: `1.5px dashed ${t.primary}`,
+              borderRadius: 12,
+              padding: "12px 14px",
+              marginBottom: 14,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 11, color: t.textMuted, fontWeight: 600 }}>Seu código</span>
-              <span style={{ fontSize: 12.5, color: t.text, fontWeight: 700, letterSpacing: 0.5 }}>{profile.friend_code}</span>
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 10.5,
+                  color: t.primary,
+                  fontWeight: 700,
+                  letterSpacing: 0.5,
+                  textTransform: "uppercase",
+                  marginBottom: 3,
+                }}
+              >
+                Seu código de amigo
+              </div>
+              <div style={{ fontSize: 19, color: t.text, fontWeight: 800, letterSpacing: 1.5 }}>
+                {profile.friend_code}
+              </div>
             </div>
             <button
               onClick={copyCode}
@@ -246,17 +311,19 @@ export function AccountScreen({
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                background: "transparent",
-                border: `1px solid ${t.border}`,
-                borderRadius: 8,
-                padding: "6px 10px",
-                color: codeCopied ? t.green : t.textMuted,
-                fontSize: 12,
-                fontWeight: 600,
+                background: codeCopied ? "transparent" : t.surface,
+                border: `1px solid ${codeCopied ? t.green : t.border}`,
+                borderRadius: 10,
+                padding: "8px 12px",
+                color: codeCopied ? t.green : t.text,
+                fontSize: 12.5,
+                fontWeight: 700,
                 cursor: "pointer",
+                flexShrink: 0,
+                transition: "all .15s ease",
               }}
             >
-              {codeCopied ? <Check size={13} /> : <Copy size={13} />}
+              {codeCopied ? <Check size={14} /> : <Copy size={14} />}
               {codeCopied ? "Copiado" : "Copiar"}
             </button>
           </div>
@@ -423,184 +490,6 @@ export function AccountScreen({
         />
       )}
 
-      {showFullStats && (
-        <FullStatsModal
-          supabase={supabase}
-          userId={userId}
-          allQuestions={allQuestions}
-          challenges={challenges}
-          onClose={() => setShowFullStats(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-function StatBar({ label, sublabel, pct, color, barBg }) {
-  const t = useT();
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
-        <span style={{ fontSize: 12.5, color: t.text, fontWeight: 600 }}>{label}</span>
-        <span style={{ fontSize: 11.5, color: t.textMuted }}>{sublabel}</span>
-      </div>
-      <div style={{ height: 8, background: barBg || t.border, borderRadius: 999, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${Math.max(0, Math.min(100, pct))}%`, background: color, borderRadius: 999 }} />
-      </div>
-    </div>
-  );
-}
-
-function pctColor(pct, t) {
-  if (pct < 30) return t.red;
-  if (pct <= 70) return t.amber;
-  return t.green;
-}
-
-function FullStatsModal({ supabase, userId, allQuestions, challenges, onClose }) {
-  const t = useT();
-  const [fullStats, setFullStats] = useState(null);
-  const [loadError, setLoadError] = useState("");
-  const [temaTab, setTemaTab] = useState("questoes");
-
-  const questionsById = useMemo(() => Object.fromEntries(allQuestions.map((q) => [q.id, q])), [allQuestions]);
-
-  const { desafiosGanhos, desafiosPct } = useMemo(() => {
-    const concluidos = (challenges || []).filter((c) => c.status === "completed");
-    const ganhos = concluidos.filter((c) => c.myCorrect > c.theirCorrect).length;
-    const pct = concluidos.length ? Math.round((ganhos / concluidos.length) * 100) : 0;
-    return { desafiosGanhos: ganhos, desafiosPct: pct };
-  }, [challenges]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [allFlashcards, flashcardThemeCounts] = await Promise.all([
-          fetchAllFlashcards(supabase),
-          fetchFlashcardThemeCounts(supabase),
-        ]);
-        const flashcardsById = Object.fromEntries(allFlashcards.map((f) => [f.id, f]));
-        const data = await fetchFullStats(supabase, userId, questionsById, flashcardsById, flashcardThemeCounts);
-        if (!cancelled) setFullStats(data);
-      } catch (err) {
-        if (!cancelled) setLoadError(err.message || "Não foi possível carregar as estatísticas.");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase, userId]);
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
-      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 460, width: "100%", maxHeight: "82vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-          <h3 style={{ fontSize: 17, color: t.text, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
-            <BarChart3 size={17} color={t.primary} /> Estatísticas completas
-          </h3>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4 }}>
-            <X size={18} color={t.textMuted} />
-          </button>
-        </div>
-
-        {loadError && <div style={{ fontSize: 13, color: t.red }}>{loadError}</div>}
-
-        {!loadError && !fullStats && (
-          <div style={{ fontSize: 13, color: t.textMuted }}>Carregando…</div>
-        )}
-
-        {fullStats && (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 22 }}>
-              {[
-                { label: "Dias ativos", value: fullStats.activeDays, pct: fullStats.activeDaysPct },
-                { label: "Desafios Ganhos", value: desafiosGanhos, pct: desafiosPct },
-                { label: "Questões respondidas", value: fullStats.totalQuestions },
-                { label: "Média de questões/dia", value: fullStats.avgQuestionsPerDay },
-                { label: "Flashcards vistos", value: fullStats.totalFlashcards },
-                { label: "Média de flashcards/dia", value: fullStats.avgFlashcardsPerDay },
-              ].map((s) => (
-                <div key={s.label} style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 12, padding: 12 }}>
-                  <div style={{ fontSize: 10.5, color: t.textMuted, fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: t.text }}>
-                    {s.value}
-                    {s.pct != null && <span style={{ color: pctColor(s.pct, t), fontSize: "0.75em" }}> ({s.pct}%)</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <Chip active={temaTab === "questoes"} onClick={() => setTemaTab("questoes")} style={{ flex: 1, textAlign: "center" }}>
-                Questões
-              </Chip>
-              <Chip active={temaTab === "acertos"} onClick={() => setTemaTab("acertos")} style={{ flex: 1, textAlign: "center" }}>
-                Acertos
-              </Chip>
-              <Chip active={temaTab === "flashcards"} onClick={() => setTemaTab("flashcards")} style={{ flex: 1, textAlign: "center" }}>
-                Flashcards
-              </Chip>
-            </div>
-
-            {temaTab === "questoes" && (
-              <div>
-                {fullStats.temaQuestionStats.length === 0 && (
-                  <div style={{ fontSize: 12.5, color: t.textMuted }}>Nenhuma questão respondida ainda.</div>
-                )}
-                {[...fullStats.temaQuestionStats]
-                  .sort((a, b) => b.pctAnswered - a.pctAnswered)
-                  .map((s) => (
-                    <StatBar
-                      key={s.tema}
-                      label={s.tema}
-                      sublabel={`${s.distinctAnswered}/${s.available}`}
-                      pct={s.pctAnswered}
-                      color={t.primary}
-                    />
-                  ))}
-              </div>
-            )}
-
-            {temaTab === "acertos" && (
-              <div>
-                {fullStats.temaQuestionStats.length === 0 && (
-                  <div style={{ fontSize: 12.5, color: t.textMuted }}>Nenhuma questão respondida ainda.</div>
-                )}
-                {[...fullStats.temaQuestionStats]
-                  .sort((a, b) => b.accuracy - a.accuracy)
-                  .map((s) => (
-                    <StatBar
-                      key={s.tema}
-                      label={s.tema}
-                      sublabel={`${s.accuracy}% (${s.correct}/${s.total})`}
-                      pct={s.accuracy}
-                      color={s.accuracy >= 70 ? t.green : s.accuracy >= 40 ? t.amber : t.red}
-                    />
-                  ))}
-              </div>
-            )}
-
-            {temaTab === "flashcards" && (
-              <div>
-                {fullStats.temaFlashcardStats.length === 0 && (
-                  <div style={{ fontSize: 12.5, color: t.textMuted }}>Nenhum flashcard disponível ainda.</div>
-                )}
-                {fullStats.temaFlashcardStats.map((s) => (
-                  <StatBar
-                    key={s.tema}
-                    label={s.tema}
-                    sublabel={`${s.viewed}/${s.total}`}
-                    pct={s.pct}
-                    color={t.primary}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
     </div>
   );
 }
