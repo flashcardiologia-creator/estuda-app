@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { PrimaryButton, Tag } from "@/components/ui/Primitives";
+import { PrimaryButton } from "@/components/ui/Primitives";
+import { QuestionCard } from "@/components/screens/QuestionCard";
 import { fetchChallengeQuestions, fetchMyChallengeAnswers, recordChallengeAnswer } from "@/lib/data/challenges";
-import { fetchOptionsForQuestions } from "@/lib/data/questions";
-
-const FONT_SIZES = { sm: 14, md: 16.5, lg: 19 };
+import { fetchOptionsForQuestions, fetchOptionsWithAnswerKey } from "@/lib/data/questions";
 
 export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onCancel, fontSize }) {
   const t = useT();
-  const questionFontSize = FONT_SIZES[fontSize] || FONT_SIZES.md;
+  const filters = { fontSize: fontSize || "md", modoProva: false, mostrarAntigas: false };
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState([]);
   const [optionsByQuestion, setOptionsByQuestion] = useState({});
@@ -20,10 +19,7 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
   const [selected, setSelected] = useState(null);
   const [revealed, setRevealed] = useState(null);
   const [responding, setResponding] = useState(false);
-  const [showFull, setShowFull] = useState(false);
-  // Não reseta ao avançar de propósito: se a pessoa minimizar o comentário,
-  // essa preferência continua valendo ao responder as próximas questões.
-  const [commentOpen, setCommentOpen] = useState(true);
+  const [struck, setStruck] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,8 +29,20 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
         fetchMyChallengeAnswers(supabase, challenge.id, userId),
       ]);
       const options = await fetchOptionsForQuestions(supabase, qs.map((q) => q.id));
+      // Pra questões já respondidas ao retomar o desafio, precisamos do
+      // gabarito (só dessas, nunca das que ainda não foram respondidas) pra
+      // exibir certo/errado corretamente ao reabrir.
+      const answeredQuestionIds = myAnswers.map((a) => a.question_id);
+      const answerKeyOptions = answeredQuestionIds.length
+        ? await fetchOptionsWithAnswerKey(supabase, answeredQuestionIds)
+        : {};
       if (cancelled) return;
-      const answered = Object.fromEntries(myAnswers.map((a) => [a.question_id, a]));
+      const answered = Object.fromEntries(
+        myAnswers.map((a) => {
+          const correctOption = answerKeyOptions[a.question_id]?.find((o) => o.correta)?.letra || null;
+          return [a.question_id, { question_id: a.question_id, selected_option: a.selected_option, correct: a.correct, correct_option: correctOption }];
+        })
+      );
       setQuestions(qs);
       setOptionsByQuestion(options);
       setAnsweredMap(answered);
@@ -45,6 +53,10 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
       cancelled = true;
     };
   }, [supabase, challenge.id, userId]);
+
+  useEffect(() => {
+    setStruck([]);
+  }, [idx]);
 
   if (loading) return null;
 
@@ -58,7 +70,10 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
     setResponding(true);
     try {
       const result = await recordChallengeAnswer(supabase, challenge.id, q.id, selected);
-      setAnsweredMap((m) => ({ ...m, [q.id]: { question_id: q.id, selected_option: selected, correct: result.correct } }));
+      setAnsweredMap((m) => ({
+        ...m,
+        [q.id]: { question_id: q.id, selected_option: selected, correct: result.correct, correct_option: result.correct_option },
+      }));
       setRevealed(result);
     } finally {
       setResponding(false);
@@ -73,10 +88,17 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
     setIdx((i) => i + 1);
     setSelected(null);
     setRevealed(null);
-    setShowFull(false);
   };
 
-  const effectiveRevealed = revealed || (already ? { correct: already.correct, correct_option: null, comentario: q.comentario } : null);
+  const toggleStruck = (letra) => {
+    setStruck((prev) => {
+      const next = prev.includes(letra) ? prev.filter((l) => l !== letra) : [...prev, letra];
+      if (!prev.includes(letra) && selected === letra) setSelected(null);
+      return next;
+    });
+  };
+
+  const effectiveRevealed = revealed || already || null;
   const effectiveSelected = selected || already?.selected_option || null;
 
   return (
@@ -105,149 +127,22 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
         </span>
       </div>
       <div style={{ padding: 22 }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          <Tag>{q.ano}</Tag>
-          <Tag>{q.instituicao}</Tag>
-          <Tag>{q.tema}</Tag>
-        </div>
-        <div style={{ fontWeight: 600, fontSize: questionFontSize, color: t.text, marginBottom: q.imagem_url ? 14 : 20, lineHeight: 1.5 }}>{q.enunciado}</div>
-
-        {q.imagem_url && (
-          <img
-            src={q.imagem_url}
-            alt="Imagem da questão"
-            style={{ display: "block", maxWidth: "100%", borderRadius: 12, marginBottom: 20, border: `1px solid ${t.border}` }}
-          />
-        )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {options.map((op) => {
-            const isSelected = effectiveSelected === op.letra;
-            let bg = t.surfaceAlt,
-              border = t.border,
-              color = t.text;
-            if (effectiveRevealed) {
-              if (effectiveRevealed.correct_option ? op.letra === effectiveRevealed.correct_option : isSelected && effectiveRevealed.correct) {
-                bg = "rgba(47,179,128,0.14)";
-                border = t.green;
-                color = t.green;
-              } else if (isSelected) {
-                bg = "rgba(229,72,77,0.14)";
-                border = t.red;
-                color = t.red;
-              }
-            } else if (isSelected) {
-              bg = t.primarySoft;
-              border = t.primary;
-              color = t.primary;
-            }
-            return (
-              <button
-                key={op.id}
-                disabled={!!effectiveRevealed}
-                onClick={() => setSelected(op.letra)}
-                style={{
-                  textAlign: "left",
-                  padding: "13px 16px",
-                  borderRadius: 12,
-                  cursor: effectiveRevealed ? "default" : "pointer",
-                  border: `1.5px solid ${border}`,
-                  background: bg,
-                  color,
-                  fontSize: questionFontSize - 2.5,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                {op.letra.toUpperCase()}) {op.texto}
-                {effectiveRevealed && (
-                  <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                    {effectiveRevealed.optionStats?.[op.letra] && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted }}>
-                        {effectiveRevealed.optionStats[op.letra].pct}%
-                      </span>
-                    )}
-                    {effectiveRevealed.correct_option === op.letra && <Check size={16} />}
-                    {isSelected && effectiveRevealed.correct_option && effectiveRevealed.correct_option !== op.letra && <X size={16} />}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <QuestionCard
+          q={q}
+          options={options}
+          filters={filters}
+          selected={effectiveSelected}
+          onSelect={setSelected}
+          answered={!!effectiveRevealed}
+          answerResult={effectiveRevealed}
+          onResponder={responder}
+          responding={responding}
+          struckLetras={struck}
+          onToggleStruck={toggleStruck}
+        />
 
         {effectiveRevealed && (
-          <div
-            onClick={() => setCommentOpen((o) => !o)}
-            style={{
-              marginTop: 16,
-              padding: 14,
-              borderRadius: 12,
-              background: t.surfaceAlt,
-              border: `1px solid ${t.border}`,
-              cursor: "pointer",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: commentOpen ? 4 : 0,
-                gap: 8,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 700, color: t.primary }}>
-                {commentOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                Comentário
-              </div>
-            </div>
-            {commentOpen && (
-              <div style={{ fontSize: 16, color: t.textMuted, lineHeight: 1.5, whiteSpace: "pre-line" }}>
-                {showFull && q.comentario_completo ? q.comentario_completo : effectiveRevealed.comentario || q.comentario}
-              </div>
-            )}
-            {commentOpen && !showFull && q.comentario_completo && (
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowFull(true);
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    background: t.surfaceAlt,
-                    border: `1px solid ${t.border}`,
-                    borderRadius: 8,
-                    padding: "5px 10px",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: t.textMuted,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    whiteSpace: "nowrap",
-                    transition: "transform .1s, filter .15s",
-                  }}
-                  onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.95)")}
-                  onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                >
-                  <ChevronDown size={12} />
-                  Resposta completa
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div style={{ marginTop: 22 }}>
-          {!effectiveRevealed ? (
-            <PrimaryButton full disabled={!selected || responding} onClick={responder}>
-              Responder
-            </PrimaryButton>
-          ) : (
+          <div style={{ marginTop: 22 }}>
             <PrimaryButton full onClick={avancar}>
               {isLast ? (
                 "Finalizar Desafio"
@@ -258,8 +153,8 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
                 </>
               )}
             </PrimaryButton>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
