@@ -137,7 +137,7 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
                     border: `1px solid ${t.border}`,
                     background: t.surfaceAlt,
                     color: t.text,
-                    fontSize: 13.5,
+                    fontSize: 16,
                     fontFamily: "inherit",
                     resize: "vertical",
                     boxSizing: "border-box",

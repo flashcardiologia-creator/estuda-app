@@ -246,7 +246,7 @@ export function EstudaApp({ userId, userEmail }) {
   };
 
   /* ---- Flashcards ---- */
-  const startFlashcards = async (tema, qtd, aleatorio) => {
+  const startFlashcards = async (tema, qtd, aleatorio, tamanho) => {
     let pool = await fetchFlashcardsByTheme(supabase, tema);
     if (aleatorio) pool = shuffle(pool);
     if (qtd !== "Todos") pool = pool.slice(0, qtd);
@@ -256,6 +256,7 @@ export function EstudaApp({ userId, userEmail }) {
       flipped: {},
       viewed: {},
       cardsById: Object.fromEntries(pool.map((f) => [f.id, f])),
+      fontSize: tamanho || "md",
     });
     setScreen("flashcards-session");
   };
@@ -394,6 +395,7 @@ export function EstudaApp({ userId, userEmail }) {
           userEmail={userEmail}
           profile={profile}
           stats={stats}
+          challenges={challenges}
           allQuestions={allQuestions}
           friends={friends}
           incomingRequests={incomingRequests}

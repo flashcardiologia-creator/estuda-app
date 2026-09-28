@@ -198,11 +198,18 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
                 {commentOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 Comentário
               </div>
-              {commentOpen && q.comentario_completo && (
+            </div>
+            {commentOpen && (
+              <div style={{ fontSize: 16, color: t.textMuted, lineHeight: 1.5, whiteSpace: "pre-line" }}>
+                {showFull && q.comentario_completo ? q.comentario_completo : effectiveRevealed.comentario || q.comentario}
+              </div>
+            )}
+            {commentOpen && !showFull && q.comentario_completo && (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowFull((s) => !s);
+                    setShowFull(true);
                   }}
                   style={{
                     display: "flex",
@@ -224,14 +231,9 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
                   onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
                   onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
                 >
-                  {showFull ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                  {showFull ? "Resposta resumida" : "Resposta completa"}
+                  <ChevronDown size={12} />
+                  Resposta completa
                 </button>
-              )}
-            </div>
-            {commentOpen && (
-              <div style={{ fontSize: 16, color: t.textMuted, lineHeight: 1.5, whiteSpace: "pre-line" }}>
-                {showFull && q.comentario_completo ? q.comentario_completo : effectiveRevealed.comentario || q.comentario}
               </div>
             )}
           </div>

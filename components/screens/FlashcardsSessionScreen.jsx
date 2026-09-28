@@ -6,6 +6,8 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag } from "@/components/ui/Primitives";
 import { ReportButton, ReportIssueModal } from "@/components/ui/ReportIssue";
 
+const FLASHCARD_FONT_SIZES = { sm: 16, md: 20, lg: 24 };
+
 export function FlashcardsSessionScreen({ supabase, userId, session, setSession, onNavigate, onFinish, onView }) {
   const t = useT();
   const [showReport, setShowReport] = useState(false);
@@ -14,6 +16,7 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
   const card = session.cardsById[session.ids[idx]];
   const flipped = session.flipped[card.id] || false;
   const viewed = !!(session.viewed && session.viewed[card.id]);
+  const cardFontSize = FLASHCARD_FONT_SIZES[session.fontSize] || FLASHCARD_FONT_SIZES.md;
 
   const flip = () => {
     const nextFlipped = !flipped;
@@ -84,7 +87,7 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
         >
           {flipped && <div style={{ fontWeight: 700, fontSize: 15, color: answerBorder, marginBottom: 14 }}>Resposta</div>}
           {!flipped && <Tag>{card.tema}</Tag>}
-          <div style={{ fontWeight: 700, fontSize: 20, color: t.text, marginTop: flipped ? 0 : 18, lineHeight: 1.4 }}>
+          <div style={{ fontWeight: 700, fontSize: cardFontSize, color: t.text, marginTop: flipped ? 0 : 18, lineHeight: 1.4 }}>
             {flipped ? card.resposta : card.pergunta}
           </div>
           <div style={{ fontSize: 13, color: flipped ? answerBorder : t.primary, marginTop: 22, fontWeight: 600 }}>

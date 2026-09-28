@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3 } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { ScreenHeader, ExpandBox, PrimaryButton, Toggle } from "@/components/ui/Primitives";
+import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { fetchFriendStats, removeFriend } from "@/lib/data/friends";
-import { fetchAllFlashcards } from "@/lib/data/flashcards";
+import { fetchAllFlashcards, fetchFlashcardThemeCounts } from "@/lib/data/flashcards";
 import { fetchFullStats } from "@/lib/data/stats";
 
 export function AccountScreen({
@@ -16,6 +16,7 @@ export function AccountScreen({
   profile,
   stats,
   allQuestions,
+  challenges,
   friends,
   incomingRequests,
   initialFocus,
@@ -169,7 +170,7 @@ export function AccountScreen({
                 border: `1px solid ${t.border}`,
                 background: t.surfaceAlt,
                 color: t.text,
-                fontSize: 13,
+                fontSize: 16,
                 boxSizing: "border-box",
               }}
             />
@@ -427,6 +428,7 @@ export function AccountScreen({
           supabase={supabase}
           userId={userId}
           allQuestions={allQuestions}
+          challenges={challenges}
           onClose={() => setShowFullStats(false)}
         />
       )}
@@ -449,20 +451,37 @@ function StatBar({ label, sublabel, pct, color, barBg }) {
   );
 }
 
-function FullStatsModal({ supabase, userId, allQuestions, onClose }) {
+function pctColor(pct, t) {
+  if (pct < 30) return t.red;
+  if (pct <= 70) return t.amber;
+  return t.green;
+}
+
+function FullStatsModal({ supabase, userId, allQuestions, challenges, onClose }) {
   const t = useT();
   const [fullStats, setFullStats] = useState(null);
   const [loadError, setLoadError] = useState("");
+  const [temaTab, setTemaTab] = useState("questoes");
 
   const questionsById = useMemo(() => Object.fromEntries(allQuestions.map((q) => [q.id, q])), [allQuestions]);
+
+  const { desafiosGanhos, desafiosPct } = useMemo(() => {
+    const concluidos = (challenges || []).filter((c) => c.status === "completed");
+    const ganhos = concluidos.filter((c) => c.myCorrect > c.theirCorrect).length;
+    const pct = concluidos.length ? Math.round((ganhos / concluidos.length) * 100) : 0;
+    return { desafiosGanhos: ganhos, desafiosPct: pct };
+  }, [challenges]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const allFlashcards = await fetchAllFlashcards(supabase);
+        const [allFlashcards, flashcardThemeCounts] = await Promise.all([
+          fetchAllFlashcards(supabase),
+          fetchFlashcardThemeCounts(supabase),
+        ]);
         const flashcardsById = Object.fromEntries(allFlashcards.map((f) => [f.id, f]));
-        const data = await fetchFullStats(supabase, userId, questionsById, flashcardsById);
+        const data = await fetchFullStats(supabase, userId, questionsById, flashcardsById, flashcardThemeCounts);
         if (!cancelled) setFullStats(data);
       } catch (err) {
         if (!cancelled) setLoadError(err.message || "Não foi possível carregar as estatísticas.");
@@ -496,8 +515,8 @@ function FullStatsModal({ supabase, userId, allQuestions, onClose }) {
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 22 }}>
               {[
-                { label: "Dias ativos", value: fullStats.activeDays },
-                { label: "% de dias ativos", value: `${fullStats.activeDaysPct}%` },
+                { label: "Dias ativos", value: fullStats.activeDays, pct: fullStats.activeDaysPct },
+                { label: "Desafios Ganhos", value: desafiosGanhos, pct: desafiosPct },
                 { label: "Questões respondidas", value: fullStats.totalQuestions },
                 { label: "Média de questões/dia", value: fullStats.avgQuestionsPerDay },
                 { label: "Flashcards vistos", value: fullStats.totalFlashcards },
@@ -505,45 +524,79 @@ function FullStatsModal({ supabase, userId, allQuestions, onClose }) {
               ].map((s) => (
                 <div key={s.label} style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 12, padding: 12 }}>
                   <div style={{ fontSize: 10.5, color: t.textMuted, fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: t.text }}>{s.value}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: t.text }}>
+                    {s.value}
+                    {s.pct != null && <span style={{ color: pctColor(s.pct, t), fontSize: "0.75em" }}> ({s.pct}%)</span>}
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 10 }}>ACERTOS POR TEMA</div>
-            {fullStats.temaQuestionStats.length === 0 && (
-              <div style={{ fontSize: 12.5, color: t.textMuted, marginBottom: 20 }}>Nenhuma questão respondida ainda.</div>
-            )}
-            <div style={{ marginBottom: 22 }}>
-              {fullStats.temaQuestionStats.map((s) => (
-                <StatBar
-                  key={s.tema}
-                  label={s.tema}
-                  sublabel={`${s.accuracy}% (${s.correct}/${s.total})`}
-                  pct={s.accuracy}
-                  color={s.accuracy >= 70 ? t.green : s.accuracy >= 40 ? t.amber : t.red}
-                />
-              ))}
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 16 }}>
+              <Chip active={temaTab === "questoes"} onClick={() => setTemaTab("questoes")}>
+                Questões por Tema
+              </Chip>
+              <Chip active={temaTab === "acertos"} onClick={() => setTemaTab("acertos")}>
+                Acertos por Tema
+              </Chip>
+              <Chip active={temaTab === "flashcards"} onClick={() => setTemaTab("flashcards")}>
+                Flashcards por Tema
+              </Chip>
             </div>
 
-            <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 10 }}>FLASHCARDS VISTOS POR TEMA</div>
-            {fullStats.temaFlashcardStats.length === 0 && (
-              <div style={{ fontSize: 12.5, color: t.textMuted }}>Nenhum flashcard visto ainda.</div>
+            {temaTab === "questoes" && (
+              <div>
+                {fullStats.temaQuestionStats.length === 0 && (
+                  <div style={{ fontSize: 12.5, color: t.textMuted }}>Nenhuma questão respondida ainda.</div>
+                )}
+                {fullStats.temaQuestionStats.map((s) => {
+                  const max = fullStats.temaQuestionStats[0].total;
+                  return (
+                    <StatBar
+                      key={s.tema}
+                      label={s.tema}
+                      sublabel={`${s.total}`}
+                      pct={(s.total / max) * 100}
+                      color={t.primary}
+                    />
+                  );
+                })}
+              </div>
             )}
-            <div>
-              {fullStats.temaFlashcardStats.map((s) => {
-                const max = fullStats.temaFlashcardStats[0].count;
-                return (
+
+            {temaTab === "acertos" && (
+              <div>
+                {fullStats.temaQuestionStats.length === 0 && (
+                  <div style={{ fontSize: 12.5, color: t.textMuted }}>Nenhuma questão respondida ainda.</div>
+                )}
+                {fullStats.temaQuestionStats.map((s) => (
                   <StatBar
                     key={s.tema}
                     label={s.tema}
-                    sublabel={`${s.count}`}
-                    pct={(s.count / max) * 100}
+                    sublabel={`${s.accuracy}% (${s.correct}/${s.total})`}
+                    pct={s.accuracy}
+                    color={s.accuracy >= 70 ? t.green : s.accuracy >= 40 ? t.amber : t.red}
+                  />
+                ))}
+              </div>
+            )}
+
+            {temaTab === "flashcards" && (
+              <div>
+                {fullStats.temaFlashcardStats.length === 0 && (
+                  <div style={{ fontSize: 12.5, color: t.textMuted }}>Nenhum flashcard disponível ainda.</div>
+                )}
+                {fullStats.temaFlashcardStats.map((s) => (
+                  <StatBar
+                    key={s.tema}
+                    label={s.tema}
+                    sublabel={`${s.viewed}/${s.total}`}
+                    pct={s.pct}
                     color={t.primary}
                   />
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
