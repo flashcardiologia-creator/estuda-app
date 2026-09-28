@@ -1,11 +1,55 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy } from "lucide-react";
+import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy, Shield, KeyRound, Eye, EyeOff } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { fetchFriendStats, removeFriend } from "@/lib/data/friends";
+
+function PasswordField({ value, onChange, placeholder, visible, onToggleVisible }) {
+  const t = useT();
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        type={visible ? "text" : "password"}
+        placeholder={placeholder}
+        autoComplete="new-password"
+        value={value}
+        onChange={onChange}
+        style={{
+          width: "100%",
+          padding: "10px 40px 10px 12px",
+          borderRadius: 10,
+          border: `1px solid ${t.border}`,
+          background: t.surface,
+          color: t.text,
+          fontSize: 16,
+          boxSizing: "border-box",
+        }}
+      />
+      <button
+        type="button"
+        onClick={onToggleVisible}
+        title={visible ? "Ocultar senha" : "Mostrar senha"}
+        style={{
+          position: "absolute",
+          right: 4,
+          top: "50%",
+          transform: "translateY(-50%)",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: 8,
+          display: "flex",
+          color: t.textMuted,
+        }}
+      >
+        {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
+  );
+}
 
 export function AccountScreen({
   supabase,
@@ -21,6 +65,7 @@ export function AccountScreen({
   onNavigate,
   onSaveName,
   onSaveStatsVisibility,
+  onSaveRankingVisibility,
   onAddFriend,
   onRespondRequest,
   onRefreshFriends,
@@ -30,6 +75,17 @@ export function AccountScreen({
   const [name, setName] = useState(profile.name);
   const [savingName, setSavingName] = useState(false);
   const [savingVisibility, setSavingVisibility] = useState(false);
+  const [savingRankingVisibility, setSavingRankingVisibility] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [newFriend, setNewFriend] = useState("");
   const [friendError, setFriendError] = useState("");
   const [friendInfo, setFriendInfo] = useState("");
@@ -62,6 +118,53 @@ export function AccountScreen({
       await onSaveStatsVisibility(visible);
     } finally {
       setSavingVisibility(false);
+    }
+  };
+
+  const toggleRankingVisibility = async (visible) => {
+    setSavingRankingVisibility(true);
+    try {
+      await onSaveRankingVisibility(visible);
+    } finally {
+      setSavingRankingVisibility(false);
+    }
+  };
+
+  const changePassword = async () => {
+    setPasswordError("");
+    setPasswordSuccess(false);
+    if (!currentPassword) {
+      setPasswordError("Digite sua senha atual.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("As senhas não coincidem.");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: currentPassword,
+      });
+      if (signInError) {
+        setPasswordError("Senha atual incorreta.");
+        return;
+      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setPasswordError(err.message || "Não foi possível trocar a senha.");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -244,6 +347,95 @@ export function AccountScreen({
             </div>
           </div>
 
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontSize: 10.5,
+                color: t.textMuted,
+                fontWeight: 700,
+                letterSpacing: 0.5,
+                textTransform: "uppercase",
+                marginBottom: 6,
+              }}
+            >
+              Senha
+            </label>
+            <div
+              style={{
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: t.surfaceAlt,
+                border: `1px solid ${t.border}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <PasswordField
+                placeholder="Senha atual"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                visible={showCurrentPassword}
+                onToggleVisible={() => setShowCurrentPassword((v) => !v)}
+              />
+              <PasswordField
+                placeholder="Nova senha"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                visible={showNewPassword}
+                onToggleVisible={() => setShowNewPassword((v) => !v)}
+              />
+              <PasswordField
+                placeholder="Confirmar nova senha"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                visible={showConfirmPassword}
+                onToggleVisible={() => setShowConfirmPassword((v) => !v)}
+              />
+              {passwordError && <div style={{ fontSize: 12, color: t.red }}>{passwordError}</div>}
+              {passwordSuccess && <div style={{ fontSize: 12, color: t.green }}>Senha alterada com sucesso.</div>}
+              <PrimaryButton
+                small
+                onClick={changePassword}
+                disabled={!currentPassword || !newPassword || !confirmPassword || changingPassword}
+              >
+                <KeyRound size={13} style={{ marginRight: 6, verticalAlign: -2 }} />
+                Trocar senha
+              </PrimaryButton>
+            </div>
+          </div>
+        </ExpandBox>
+
+        <ExpandBox
+          title="Permissões"
+          icon={<Shield size={17} color={t.primary} />}
+          open={permissionsOpen}
+          onToggle={() => setPermissionsOpen((o) => !o)}
+        >
+          <div
+            style={{
+              padding: "12px 14px",
+              borderRadius: 12,
+              background: t.surfaceAlt,
+              border: `1px solid ${t.border}`,
+              marginBottom: 12,
+            }}
+          >
+            <Toggle
+              checked={!!profile.stats_visible_to_friends}
+              onChange={toggleStatsVisibility}
+              label="Amigos compararem estatísticas com você"
+              labelStyle={{ fontSize: 13.5, color: t.text, fontWeight: 700 }}
+              sub={
+                savingVisibility
+                  ? "Salvando…"
+                  : "Amigos poderão ver sua sequência, questões respondidas e % de acerto"
+              }
+              style={{ padding: 0 }}
+            />
+          </div>
+
           <div
             style={{
               padding: "12px 14px",
@@ -253,14 +445,14 @@ export function AccountScreen({
             }}
           >
             <Toggle
-              checked={!!profile.stats_visible_to_friends}
-              onChange={toggleStatsVisibility}
-              label="Permitir que vejam suas estatísticas"
+              checked={!!profile.ranking_visible}
+              onChange={toggleRankingVisibility}
+              label="Aparecer no ranking global"
               labelStyle={{ fontSize: 13.5, color: t.text, fontWeight: 700 }}
               sub={
-                savingVisibility
+                savingRankingVisibility
                   ? "Salvando…"
-                  : "Amigos e o ranking global poderão ver sua sequência, questões respondidas e % de acerto"
+                  : "Seu nome e estatísticas aparecerão no ranking geral do app"
               }
               style={{ padding: 0 }}
             />

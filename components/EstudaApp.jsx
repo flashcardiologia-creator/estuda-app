@@ -17,7 +17,7 @@ import { ChallengesScreen } from "@/components/screens/ChallengesScreen";
 import { RankingScreen } from "@/components/screens/RankingScreen";
 import { StatsScreen } from "@/components/screens/StatsScreen";
 
-import { fetchProfile, updateDisplayName, updateStatsVisibility, fetchStats } from "@/lib/data/profile";
+import { fetchProfile, updateDisplayName, updateStatsVisibility, updateRankingVisibility, fetchStats } from "@/lib/data/profile";
 import {
   fetchAllQuestions,
   applyQuestionFilters,
@@ -40,7 +40,18 @@ import {
 import { fetchChallenges } from "@/lib/data/challenges";
 import { shuffle, todayStr, msUntilNextDayBoundary } from "@/lib/util";
 
-const HIDDEN_HEADER_SCREENS = ["questions-session", "flashcards-session", "daily-session", "questions-results"];
+const HIDDEN_HEADER_SCREENS = [
+  "questions-session",
+  "flashcards-session",
+  "daily-session",
+  "questions-results",
+  "account",
+  "stats",
+  "ranking",
+  "questions-filters",
+  "flashcards-select",
+  "challenges",
+];
 
 const DEFAULT_FILTERS = {
   temas: [],
@@ -365,6 +376,11 @@ export function EstudaApp({ userId, userEmail }) {
     setProfile((p) => ({ ...p, stats_visible_to_friends: visible }));
   };
 
+  const saveRankingVisibility = async (visible) => {
+    await updateRankingVisibility(supabase, userId, visible);
+    setProfile((p) => ({ ...p, ranking_visible: visible }));
+  };
+
   const addFriend = async (name) => {
     const result = await addFriendByName(supabase, name);
     if (result.status === "accepted") {
@@ -428,6 +444,7 @@ export function EstudaApp({ userId, userEmail }) {
           onNavigate={setScreen}
           onSaveName={saveDisplayName}
           onSaveStatsVisibility={saveStatsVisibility}
+          onSaveRankingVisibility={saveRankingVisibility}
           onAddFriend={addFriend}
           onRespondRequest={respondRequest}
           onRefreshFriends={refreshFriends}
