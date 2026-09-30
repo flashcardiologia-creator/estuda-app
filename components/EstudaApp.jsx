@@ -24,6 +24,7 @@ import {
   updateRankingVisibility,
   updateQuestionFontSize,
   updateFlashcardFontSize,
+  resetStreak,
   fetchStats,
 } from "@/lib/data/profile";
 import {
@@ -46,7 +47,7 @@ import {
   respondToFriendRequest,
 } from "@/lib/data/friends";
 import { fetchChallenges } from "@/lib/data/challenges";
-import { shuffle, todayStr, msUntilNextDayBoundary, MISSION_GRACE_MS } from "@/lib/util";
+import { shuffle, todayStr, msUntilNextDayBoundary, MISSION_GRACE_MS, effectiveStreak } from "@/lib/util";
 
 const HIDDEN_HEADER_SCREENS = [
   "questions-session",
@@ -135,13 +136,18 @@ export function EstudaApp({ userId, userEmail }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [profileData, questions, favIds, friendsData] = await Promise.all([
+      let [profileData, questions, favIds, friendsData] = await Promise.all([
         fetchProfile(supabase, userId),
         fetchAllQuestions(supabase),
         fetchFavoriteIds(supabase, userId),
         fetchFriends(supabase),
       ]);
       if (cancelled) return;
+      const correctedStreak = effectiveStreak(profileData.streak, profileData.last_mission_date);
+      if (correctedStreak !== profileData.streak) {
+        profileData = { ...profileData, streak: correctedStreak };
+        resetStreak(supabase, userId).catch(() => {});
+      }
       setProfile(profileData);
       setFilters((f) => ({ ...f, fontSize: profileData.question_font_size || "md" }));
       setFlashcardFontSize(profileData.flashcard_font_size || "md");
