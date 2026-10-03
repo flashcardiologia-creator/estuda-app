@@ -110,6 +110,11 @@ export function Dropdown({
   multi = false,
   allLabel = "Todos",
   placeholder = "Selecionar",
+  // Alguns filtros (Anos, Instituições) tratam array vazio como "sem
+  // restrição" — ou seja, vazio já significa "Todos" pro resto do app. Com
+  // essa flag o dropdown mostra/trata esse estado como Todos em vez de pedir
+  // pra selecionar algo.
+  emptyMeansAll = false,
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -131,13 +136,16 @@ export function Dropdown({
     };
   }, [open]);
 
+  const emptyIsAll = multi && emptyMeansAll && selected.length === 0;
   const allSelected = multi
-    ? options.length > 0 && selected.length === options.length
+    ? options.length > 0 && (selected.length === options.length || emptyIsAll)
     : selected === DROPDOWN_ALL;
 
   const label = multi
     ? selected.length === 0
-      ? placeholder
+      ? emptyMeansAll
+        ? allLabel
+        : placeholder
       : allSelected
         ? allLabel
         : selected.length === 1
@@ -160,12 +168,18 @@ export function Dropdown({
 
   const handleOption = (opt) => {
     if (multi) {
-      onChange(selected.includes(opt) ? selected.filter((x) => x !== opt) : [...selected, opt]);
+      // Se vazio já significa "todos", marcar/desmarcar um item parte da
+      // lista completa (não de um array vazio) — senão desmarcar um item
+      // sozinho pareceria "adicionar" em vez de "excluir esse".
+      const effective = emptyIsAll ? options : selected;
+      onChange(effective.includes(opt) ? effective.filter((x) => x !== opt) : [...effective, opt]);
     } else {
       onChange(opt);
       setOpen(false);
     }
   };
+
+  const isOptionActive = (opt) => (multi ? emptyIsAll || selected.includes(opt) : selected === opt);
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -198,13 +212,14 @@ export function Dropdown({
       </button>
       {open && (
         <div
+          className="dropdown-scroll"
           style={{
             position: "absolute",
             top: "calc(100% + 6px)",
             left: 0,
             right: 0,
             maxHeight: 280,
-            overflowY: "auto",
+            overflowY: "scroll",
             background: t.surface,
             border: `1px solid ${t.border}`,
             borderRadius: 12,
@@ -218,7 +233,7 @@ export function Dropdown({
             <DropdownItem
               key={opt}
               label={opt}
-              active={multi ? selected.includes(opt) : selected === opt}
+              active={isOptionActive(opt)}
               multi={multi}
               onClick={() => handleOption(opt)}
             />

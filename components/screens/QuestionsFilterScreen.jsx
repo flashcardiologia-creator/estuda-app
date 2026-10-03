@@ -22,17 +22,6 @@ export function QuestionsFilterScreen({
   const { temas: TEMAS, anos, instituicoes } = useMemo(() => deriveFilterOptions(allQuestions), [allQuestions]);
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
-  const toggleArr = (key, val) =>
-    setFilters((f) => ({
-      ...f,
-      [key]: f[key].includes(val) ? f[key].filter((x) => x !== val) : [...f[key], val],
-    }));
-
-  const allAnosSelected = anos.length > 0 && filters.anos.length === anos.length;
-  const anosTodosActive = filters.anos.length === 0 || allAnosSelected;
-  const toggleTodosAnos = () =>
-    setFilters((f) => ({ ...f, anos: allAnosSelected ? [] : [...anos] }));
-
   const previewCount = useMemo(
     () => applyQuestionFilters(allQuestions, filters, favorites).length,
     [allQuestions, filters, favorites]
@@ -54,28 +43,29 @@ export function QuestionsFilterScreen({
           />
         </div>
 
-        <ExpandBox title="Anos" icon={<Clock size={17} color={t.primary} />} open={open.anos} onToggle={() => toggle("anos")} badge={filters.anos.length}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {anos.map((a) => (
-              <Chip key={a} active={filters.anos.includes(a)} onClick={() => toggleArr("anos", a)}>
-                {a}
-              </Chip>
-            ))}
-            <Chip active={anosTodosActive} onClick={toggleTodosAnos}>
-              Todos
-            </Chip>
-          </div>
-        </ExpandBox>
+        <div style={{ marginBottom: 12 }}>
+          <SectionLabel icon={<Clock size={15} color={t.primary} />}>Anos</SectionLabel>
+          <Dropdown
+            options={anos}
+            selected={filters.anos}
+            onChange={(anos) => setFilters((f) => ({ ...f, anos }))}
+            multi
+            emptyMeansAll
+            allLabel="Todos"
+          />
+        </div>
 
-        <ExpandBox title="Instituições" icon={<Award size={17} color={t.primary} />} open={open.instituicoes} onToggle={() => toggle("instituicoes")} badge={filters.instituicoes.length}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {instituicoes.map((i) => (
-              <Chip key={i} active={filters.instituicoes.includes(i)} onClick={() => toggleArr("instituicoes", i)}>
-                {i}
-              </Chip>
-            ))}
-          </div>
-        </ExpandBox>
+        <div style={{ marginBottom: 12 }}>
+          <SectionLabel icon={<Award size={15} color={t.primary} />}>Instituições</SectionLabel>
+          <Dropdown
+            options={instituicoes}
+            selected={filters.instituicoes}
+            onChange={(instituicoes) => setFilters((f) => ({ ...f, instituicoes }))}
+            multi
+            emptyMeansAll
+            allLabel="Todos"
+          />
+        </div>
 
         <ExpandBox title="Cronômetro" icon={<Timer size={17} color={t.primary} />} open={open.cron} onToggle={() => toggle("cron")}>
           <Toggle
