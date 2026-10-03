@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Clock, Award, Timer, Type, Star, Lock, RotateCw } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, Dropdown, SectionLabel } from "@/components/ui/Primitives";
+import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList } from "@/components/ui/Primitives";
 import { applyQuestionFilters, deriveFilterOptions } from "@/lib/data/questions";
 
 export function QuestionsFilterScreen({
@@ -31,21 +31,18 @@ export function QuestionsFilterScreen({
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
       <ScreenHeader title="Questões" onBack={() => onNavigate("home")} />
       <div style={{ padding: "18px 22px" }}>
-        <div style={{ marginBottom: 12 }}>
-          <SectionLabel icon={<BookOpen size={15} color={t.primary} />}>Temas</SectionLabel>
-          <Dropdown
+        <ExpandBox title="Temas" icon={<BookOpen size={17} color={t.primary} />} open={open.temas} onToggle={() => toggle("temas")} badge={filters.temas.length}>
+          <DropdownList
             options={TEMAS}
             selected={filters.temas}
             onChange={(temas) => setFilters((f) => ({ ...f, temas }))}
             multi
             allLabel="Todos"
-            placeholder="Selecionar temas"
           />
-        </div>
+        </ExpandBox>
 
-        <div style={{ marginBottom: 12 }}>
-          <SectionLabel icon={<Clock size={15} color={t.primary} />}>Anos</SectionLabel>
-          <Dropdown
+        <ExpandBox title="Anos" icon={<Clock size={17} color={t.primary} />} open={open.anos} onToggle={() => toggle("anos")} badge={filters.anos.length}>
+          <DropdownList
             options={anos}
             selected={filters.anos}
             onChange={(anos) => setFilters((f) => ({ ...f, anos }))}
@@ -53,11 +50,10 @@ export function QuestionsFilterScreen({
             emptyMeansAll
             allLabel="Todos"
           />
-        </div>
+        </ExpandBox>
 
-        <div style={{ marginBottom: 12 }}>
-          <SectionLabel icon={<Award size={15} color={t.primary} />}>Instituições</SectionLabel>
-          <Dropdown
+        <ExpandBox title="Instituições" icon={<Award size={17} color={t.primary} />} open={open.instituicoes} onToggle={() => toggle("instituicoes")} badge={filters.instituicoes.length}>
+          <DropdownList
             options={instituicoes}
             selected={filters.instituicoes}
             onChange={(instituicoes) => setFilters((f) => ({ ...f, instituicoes }))}
@@ -65,7 +61,7 @@ export function QuestionsFilterScreen({
             emptyMeansAll
             allLabel="Todos"
           />
-        </div>
+        </ExpandBox>
 
         <ExpandBox title="Cronômetro" icon={<Timer size={17} color={t.primary} />} open={open.cron} onToggle={() => toggle("cron")}>
           <Toggle

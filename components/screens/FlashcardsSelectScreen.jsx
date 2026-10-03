@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Hash, RotateCw, Shuffle, Type } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, Dropdown, DROPDOWN_ALL, SectionLabel } from "@/components/ui/Primitives";
+import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList, DROPDOWN_ALL } from "@/components/ui/Primitives";
 
 const QTD_OPTIONS = [5, 10, 15, 20, 25, 50, "Todos"];
 const TAMANHO_OPTIONS = [
@@ -37,16 +37,9 @@ export function FlashcardsSelectScreen({
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
       <ScreenHeader title="Flashcards" onBack={() => onNavigate("home")} />
       <div style={{ padding: "18px 22px" }}>
-        <div style={{ marginBottom: 12 }}>
-          <SectionLabel icon={<BookOpen size={15} color={t.primary} />}>Tema</SectionLabel>
-          <Dropdown
-            options={temas}
-            selected={tema}
-            onChange={setTema}
-            allLabel="Todos"
-            placeholder="Selecionar tema"
-          />
-        </div>
+        <ExpandBox title="Tema" icon={<BookOpen size={17} color={t.primary} />} open={open.tema} onToggle={() => toggle("tema")}>
+          <DropdownList options={temas} selected={tema} onChange={setTema} allLabel="Todos" />
+        </ExpandBox>
 
         <ExpandBox title="Quantidade" icon={<Hash size={17} color={t.primary} />} open={open.qtd} onToggle={() => toggle("qtd")}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

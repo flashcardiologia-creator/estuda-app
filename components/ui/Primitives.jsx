@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import { Check, ChevronDown, ChevronLeft, Flame, Lock, Loader2 } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 
@@ -103,66 +103,33 @@ export function ExpandBox({ title, icon, open, onToggle, children, badge }) {
 // opção, já que nenhum tema de verdade pode colidir com essa string.
 export const DROPDOWN_ALL = "__ALL__";
 
-export function Dropdown({
+// Lista de seleção (checkbox em modo multi, "Todos" sempre primeiro) pra
+// usar DENTRO de um ExpandBox já existente — mantém o visual de accordion
+// dos outros filtros (Cronômetro, Favoritas etc.) em vez de um dropdown
+// flutuante separado. Rolagem sempre visível (classe dropdown-scroll) pra
+// já indicar que há mais opções abaixo quando a lista é longa.
+export function DropdownList({
   options,
   selected,
   onChange,
   multi = false,
   allLabel = "Todos",
-  placeholder = "Selecionar",
   // Alguns filtros (Anos, Instituições) tratam array vazio como "sem
   // restrição" — ou seja, vazio já significa "Todos" pro resto do app. Com
-  // essa flag o dropdown mostra/trata esse estado como Todos em vez de pedir
-  // pra selecionar algo.
+  // essa flag a lista mostra/trata esse estado como Todos marcado em vez de
+  // pedir pra selecionar algo.
   emptyMeansAll = false,
 }) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDocClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    }
-    function onKey(e) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
   const emptyIsAll = multi && emptyMeansAll && selected.length === 0;
   const allSelected = multi
     ? options.length > 0 && (selected.length === options.length || emptyIsAll)
     : selected === DROPDOWN_ALL;
-
-  const label = multi
-    ? selected.length === 0
-      ? emptyMeansAll
-        ? allLabel
-        : placeholder
-      : allSelected
-        ? allLabel
-        : selected.length === 1
-          ? selected[0]
-          : `${selected.length} selecionados`
-    : selected == null
-      ? placeholder
-      : allSelected
-        ? allLabel
-        : selected;
 
   const handleAll = () => {
     if (multi) {
       onChange(allSelected ? [] : [...options]);
     } else {
       onChange(DROPDOWN_ALL);
-      setOpen(false);
     }
   };
 
@@ -175,71 +142,23 @@ export function Dropdown({
       onChange(effective.includes(opt) ? effective.filter((x) => x !== opt) : [...effective, opt]);
     } else {
       onChange(opt);
-      setOpen(false);
     }
   };
 
   const isOptionActive = (opt) => (multi ? emptyIsAll || selected.includes(opt) : selected === opt);
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 10,
-          padding: "12px 14px",
-          borderRadius: 12,
-          border: `1.5px solid ${open ? t.primary : t.border}`,
-          background: t.surfaceAlt,
-          color: t.text,
-          fontFamily: FONT_BODY,
-          fontSize: 14.5,
-          fontWeight: 600,
-          cursor: "pointer",
-          textAlign: "left",
-        }}
-      >
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
-        <ChevronDown
-          size={17}
-          color={t.textMuted}
-          style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .15s", flexShrink: 0 }}
+    <div className="dropdown-scroll" style={{ maxHeight: 280, overflowY: "scroll", paddingRight: 2 }}>
+      <DropdownItem label={allLabel} active={allSelected} multi={multi} onClick={handleAll} />
+      {options.map((opt) => (
+        <DropdownItem
+          key={opt}
+          label={opt}
+          active={isOptionActive(opt)}
+          multi={multi}
+          onClick={() => handleOption(opt)}
         />
-      </button>
-      {open && (
-        <div
-          className="dropdown-scroll"
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
-            right: 0,
-            maxHeight: 280,
-            overflowY: "scroll",
-            background: t.surface,
-            border: `1px solid ${t.border}`,
-            borderRadius: 12,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-            zIndex: 20,
-            padding: 6,
-          }}
-        >
-          <DropdownItem label={allLabel} active={allSelected} multi={multi} onClick={handleAll} />
-          {options.map((opt) => (
-            <DropdownItem
-              key={opt}
-              label={opt}
-              active={isOptionActive(opt)}
-              multi={multi}
-              onClick={() => handleOption(opt)}
-            />
-          ))}
-        </div>
-      )}
+      ))}
     </div>
   );
 }
