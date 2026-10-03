@@ -38,7 +38,8 @@ import {
   fetchFavoriteIds,
   setFavorite,
 } from "@/lib/data/questions";
-import { fetchFlashcardThemeCounts, fetchFlashcardsByTheme, recordFlashcardView } from "@/lib/data/flashcards";
+import { fetchFlashcardThemeCounts, fetchFlashcardsByTheme, fetchAllFlashcards, recordFlashcardView } from "@/lib/data/flashcards";
+import { DROPDOWN_ALL } from "@/components/ui/Primitives";
 import { fetchDailyMissionItems, completeDailyMission, expireDailyMission } from "@/lib/data/mission";
 import {
   fetchFriends,
@@ -301,8 +302,11 @@ export function EstudaApp({ userId, userEmail }) {
 
   /* ---- Flashcards ---- */
   const startFlashcards = async (tema, qtd, aleatorio, tamanho) => {
-    let pool = await fetchFlashcardsByTheme(supabase, tema);
-    if (aleatorio) pool = shuffle(pool);
+    let pool = tema === DROPDOWN_ALL ? await fetchAllFlashcards(supabase) : await fetchFlashcardsByTheme(supabase, tema);
+    // Com "Todos" embaralha sempre, mesmo sem o toggle Aleatorizar — senão uma
+    // quantidade limitada ficaria presa aos primeiros temas por ordem de id,
+    // em vez de misturar.
+    if (aleatorio || tema === DROPDOWN_ALL) pool = shuffle(pool);
     if (qtd !== "Todos") pool = pool.slice(0, qtd);
     setFlashSession({
       ids: pool.map((f) => f.id),

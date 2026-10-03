@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Hash, RotateCw, Shuffle, Type } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton } from "@/components/ui/Primitives";
+import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, Dropdown, DROPDOWN_ALL, SectionLabel } from "@/components/ui/Primitives";
 
 const QTD_OPTIONS = [5, 10, 15, 20, 25, 50, "Todos"];
 const TAMANHO_OPTIONS = [
@@ -29,22 +29,24 @@ export function FlashcardsSelectScreen({
   const [open, setOpen] = useState({});
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
-  const availableCount = tema ? themeCounts[tema] || 0 : 0;
+  const totalCount = useMemo(() => Object.values(themeCounts).reduce((a, b) => a + b, 0), [themeCounts]);
+  const availableCount = !tema ? 0 : tema === DROPDOWN_ALL ? totalCount : themeCounts[tema] || 0;
   const sessionCount = tema ? Math.min(qtd === "Todos" ? availableCount : qtd, availableCount) : 0;
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
       <ScreenHeader title="Flashcards" onBack={() => onNavigate("home")} />
       <div style={{ padding: "18px 22px" }}>
-        <ExpandBox title="Tema" icon={<BookOpen size={17} color={t.primary} />} open={open.tema} onToggle={() => toggle("tema")}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {temas.map((tm) => (
-              <Chip key={tm} active={tema === tm} onClick={() => setTema(tm)}>
-                {tm}
-              </Chip>
-            ))}
-          </div>
-        </ExpandBox>
+        <div style={{ marginBottom: 12 }}>
+          <SectionLabel icon={<BookOpen size={15} color={t.primary} />}>Tema</SectionLabel>
+          <Dropdown
+            options={temas}
+            selected={tema}
+            onChange={setTema}
+            allLabel="Todos"
+            placeholder="Selecionar tema"
+          />
+        </div>
 
         <ExpandBox title="Quantidade" icon={<Hash size={17} color={t.primary} />} open={open.qtd} onToggle={() => toggle("qtd")}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

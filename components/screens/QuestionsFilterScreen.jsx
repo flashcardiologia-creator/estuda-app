@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Clock, Award, Timer, Type, Star, Lock, RotateCw } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton } from "@/components/ui/Primitives";
+import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, Dropdown, SectionLabel } from "@/components/ui/Primitives";
 import { applyQuestionFilters, deriveFilterOptions } from "@/lib/data/questions";
 
 export function QuestionsFilterScreen({
@@ -18,7 +18,7 @@ export function QuestionsFilterScreen({
   onNavigate,
 }) {
   const t = useT();
-  const [open, setOpen] = useState({ temas: false });
+  const [open, setOpen] = useState({});
   const { temas: TEMAS, anos, instituicoes } = useMemo(() => deriveFilterOptions(allQuestions), [allQuestions]);
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
@@ -27,10 +27,6 @@ export function QuestionsFilterScreen({
       ...f,
       [key]: f[key].includes(val) ? f[key].filter((x) => x !== val) : [...f[key], val],
     }));
-
-  const allTemasSelected = TEMAS.length > 0 && filters.temas.length === TEMAS.length;
-  const toggleTodosTemas = () =>
-    setFilters((f) => ({ ...f, temas: allTemasSelected ? [] : [...TEMAS] }));
 
   const allAnosSelected = anos.length > 0 && filters.anos.length === anos.length;
   const anosTodosActive = filters.anos.length === 0 || allAnosSelected;
@@ -46,18 +42,17 @@ export function QuestionsFilterScreen({
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
       <ScreenHeader title="Questões" onBack={() => onNavigate("home")} />
       <div style={{ padding: "18px 22px" }}>
-        <ExpandBox title="Temas" icon={<BookOpen size={17} color={t.primary} />} open={open.temas} onToggle={() => toggle("temas")} badge={filters.temas.length}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {TEMAS.map((tm) => (
-              <Chip key={tm} active={filters.temas.includes(tm)} onClick={() => toggleArr("temas", tm)}>
-                {tm}
-              </Chip>
-            ))}
-            <Chip active={allTemasSelected} onClick={toggleTodosTemas}>
-              Todos
-            </Chip>
-          </div>
-        </ExpandBox>
+        <div style={{ marginBottom: 12 }}>
+          <SectionLabel icon={<BookOpen size={15} color={t.primary} />}>Temas</SectionLabel>
+          <Dropdown
+            options={TEMAS}
+            selected={filters.temas}
+            onChange={(temas) => setFilters((f) => ({ ...f, temas }))}
+            multi
+            allLabel="Todos"
+            placeholder="Selecionar temas"
+          />
+        </div>
 
         <ExpandBox title="Anos" icon={<Clock size={17} color={t.primary} />} open={open.anos} onToggle={() => toggle("anos")} badge={filters.anos.length}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

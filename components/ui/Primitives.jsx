@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { ChevronDown, ChevronLeft, Flame, Lock, Loader2 } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, ChevronLeft, Flame, Lock, Loader2 } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 
 const FONT_BODY = "inherit";
@@ -98,6 +98,181 @@ export function ExpandBox({ title, icon, open, onToggle, children, badge }) {
   );
 }
 
+// Sentinela usada para representar "Todos" quando o Dropdown está em modo de
+// seleção única (ex.: tema dos flashcards) — distingue de um valor real de
+// opção, já que nenhum tema de verdade pode colidir com essa string.
+export const DROPDOWN_ALL = "__ALL__";
+
+export function Dropdown({
+  options,
+  selected,
+  onChange,
+  multi = false,
+  allLabel = "Todos",
+  placeholder = "Selecionar",
+}) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    function onKey(e) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const allSelected = multi
+    ? options.length > 0 && selected.length === options.length
+    : selected === DROPDOWN_ALL;
+
+  const label = multi
+    ? selected.length === 0
+      ? placeholder
+      : allSelected
+        ? allLabel
+        : selected.length === 1
+          ? selected[0]
+          : `${selected.length} selecionados`
+    : selected == null
+      ? placeholder
+      : allSelected
+        ? allLabel
+        : selected;
+
+  const handleAll = () => {
+    if (multi) {
+      onChange(allSelected ? [] : [...options]);
+    } else {
+      onChange(DROPDOWN_ALL);
+      setOpen(false);
+    }
+  };
+
+  const handleOption = (opt) => {
+    if (multi) {
+      onChange(selected.includes(opt) ? selected.filter((x) => x !== opt) : [...selected, opt]);
+    } else {
+      onChange(opt);
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          padding: "12px 14px",
+          borderRadius: 12,
+          border: `1.5px solid ${open ? t.primary : t.border}`,
+          background: t.surfaceAlt,
+          color: t.text,
+          fontFamily: FONT_BODY,
+          fontSize: 14.5,
+          fontWeight: 600,
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+      >
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+        <ChevronDown
+          size={17}
+          color={t.textMuted}
+          style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .15s", flexShrink: 0 }}
+        />
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            right: 0,
+            maxHeight: 280,
+            overflowY: "auto",
+            background: t.surface,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            zIndex: 20,
+            padding: 6,
+          }}
+        >
+          <DropdownItem label={allLabel} active={allSelected} multi={multi} onClick={handleAll} />
+          {options.map((opt) => (
+            <DropdownItem
+              key={opt}
+              label={opt}
+              active={multi ? selected.includes(opt) : selected === opt}
+              multi={multi}
+              onClick={() => handleOption(opt)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropdownItem({ label, active, multi, onClick }) {
+  const t = useT();
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 10px",
+        borderRadius: 8,
+        border: "none",
+        background: active ? t.primarySoft : "transparent",
+        color: active ? t.primary : t.text,
+        fontFamily: FONT_BODY,
+        fontSize: 14,
+        fontWeight: active ? 700 : 500,
+        cursor: "pointer",
+        textAlign: "left",
+      }}
+    >
+      {multi && (
+        <span
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: 5,
+            border: `1.5px solid ${active ? t.primary : t.border}`,
+            background: active ? t.primary : "transparent",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          {active && <Check size={12} color="#fff" strokeWidth={3} />}
+        </span>
+      )}
+      <span style={{ flex: 1 }}>{label}</span>
+    </button>
+  );
+}
+
 export function Toggle({ checked, onChange, label, sub, labelStyle, style }) {
   const t = useT();
   return (
@@ -137,7 +312,7 @@ export function Toggle({ checked, onChange, label, sub, labelStyle, style }) {
   );
 }
 
-export function PrimaryButton({ children, onClick, disabled, full, small, variant = "primary", color, type }) {
+export function PrimaryButton({ children, onClick, disabled, full, small, variant = "primary", color, textColor, type }) {
   const t = useT();
   const bg = color || (variant === "primary" ? t.primary : variant === "ghost" ? "transparent" : t.green);
   return (
@@ -152,7 +327,7 @@ export function PrimaryButton({ children, onClick, disabled, full, small, varian
         padding: small ? "9px 16px" : "13px 22px",
         borderRadius: 12,
         background: disabled ? t.border : bg,
-        color: variant === "ghost" ? t.text : "#fff",
+        color: textColor || (variant === "ghost" ? t.text : "#fff"),
         border: variant === "ghost" ? `1.5px solid ${t.border}` : "none",
         cursor: disabled ? "default" : "pointer",
         width: full ? "100%" : "auto",

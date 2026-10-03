@@ -253,7 +253,7 @@ export function AccountScreen({
               borderRadius: 12,
               padding: "9px 12px",
               cursor: "pointer",
-              color: t.primary,
+              color: t.textMuted,
               fontSize: 12.5,
               fontWeight: 600,
             }}
@@ -273,7 +273,7 @@ export function AccountScreen({
               borderRadius: 12,
               padding: "9px 12px",
               cursor: "pointer",
-              color: t.primary,
+              color: t.textMuted,
               fontSize: 12.5,
               fontWeight: 600,
             }}
@@ -360,9 +360,11 @@ export function AccountScreen({
               )}
               <PrimaryButton
                 small
+                variant={nameSaved ? "primary" : "ghost"}
                 onClick={saveName}
                 disabled={!name.trim() || savingName}
-                color={nameSaved ? t.green : undefined}
+                color={nameSaved ? t.green : t.name === "light" ? t.surface : "transparent"}
+                textColor={nameSaved ? undefined : t.textMuted}
               >
                 {nameSaved ? "Salvo" : "Salvar"}
               </PrimaryButton>
@@ -414,13 +416,17 @@ export function AccountScreen({
             </label>
             <div
               style={{
-                padding: "12px 14px",
-                borderRadius: 12,
-                background: t.surfaceAlt,
-                border: `1px solid ${t.border}`,
                 display: "flex",
                 flexDirection: "column",
                 gap: 8,
+                ...(passwordFormOpen
+                  ? {
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      background: t.surfaceAlt,
+                      border: `1px solid ${t.border}`,
+                    }
+                  : {}),
               }}
             >
               {passwordFormOpen && (
