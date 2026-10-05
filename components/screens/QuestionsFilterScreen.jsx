@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { BookOpen, Clock, Award, Timer, Type, Star, Lock, RotateCw } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList } from "@/components/ui/Primitives";
-import { applyQuestionFilters, deriveFilterOptions } from "@/lib/data/questions";
+import { applyQuestionFilters, deriveFilterOptions, parseInstituicao } from "@/lib/data/questions";
 
 export function QuestionsFilterScreen({
   allQuestions,
@@ -58,8 +58,8 @@ export function QuestionsFilterScreen({
             selected={filters.instituicoes}
             onChange={(instituicoes) => setFilters((f) => ({ ...f, instituicoes }))}
             multi
-            emptyMeansAll
             allLabel="Todos"
+            groupBy={parseInstituicao}
           />
         </ExpandBox>
 
@@ -120,7 +120,11 @@ export function QuestionsFilterScreen({
 
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center" }}>
-            {filters.temas.length === 0 ? "Selecione ao menos um tema" : `${previewCount} questões encontradas`}
+            {filters.temas.length === 0
+              ? "Selecione ao menos um tema"
+              : filters.instituicoes.length === 0
+                ? "Selecione ao menos uma instituição"
+                : `${previewCount} questões encontradas`}
           </div>
           {hasSavedSession && (
             <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={onContinue}>
@@ -128,7 +132,7 @@ export function QuestionsFilterScreen({
               Continuar Sessão
             </PrimaryButton>
           )}
-          <PrimaryButton full disabled={filters.temas.length === 0 || previewCount === 0} onClick={onStart}>
+          <PrimaryButton full disabled={filters.temas.length === 0 || filters.instituicoes.length === 0 || previewCount === 0} onClick={onStart}>
             Iniciar Questões
           </PrimaryButton>
         </div>

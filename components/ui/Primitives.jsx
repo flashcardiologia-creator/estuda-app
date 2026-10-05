@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Check, ChevronDown, ChevronLeft, Flame, Lock, Loader2 } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, Flame, Lock, Loader2, Minus } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 
 const FONT_BODY = "inherit";
@@ -119,7 +119,12 @@ export function DropdownList({
   // essa flag a lista mostra/trata esse estado como Todos marcado em vez de
   // pedir pra selecionar algo.
   emptyMeansAll = false,
+  // Opcional: função (opção) => { group, sub }. Opções com sub != null são
+  // agrupadas numa linha expansível (ex.: INCOR) cujas subopções aparecem
+  // ao clicar, com um "Todos" do grupo no topo.
+  groupBy,
 }) {
+  const [expanded, setExpanded] = React.useState({});
   const emptyIsAll = multi && emptyMeansAll && selected.length === 0;
   const allSelected = multi
     ? options.length > 0 && (selected.length === options.length || emptyIsAll)
@@ -147,24 +152,86 @@ export function DropdownList({
 
   const isOptionActive = (opt) => (multi ? emptyIsAll || selected.includes(opt) : selected === opt);
 
+  const handleGroupAll = (subs) => {
+    const effective = emptyIsAll ? options : selected;
+    const allActive = subs.every((s) => effective.includes(s));
+    onChange(allActive ? effective.filter((x) => !subs.includes(x)) : [...new Set([...effective, ...subs])]);
+  };
+
+  const entries = [];
+  const groups = {};
+  for (const opt of options) {
+    const parsed = groupBy ? groupBy(opt) : null;
+    if (!parsed || parsed.sub == null) {
+      entries.push({ type: "item", opt });
+    } else {
+      if (!groups[parsed.group]) {
+        groups[parsed.group] = { type: "group", name: parsed.group, subs: [] };
+        entries.push(groups[parsed.group]);
+      }
+      groups[parsed.group].subs.push(opt);
+    }
+  }
+
   return (
     <div className="dropdown-scroll" style={{ maxHeight: 280, overflowY: "scroll", paddingRight: 2 }}>
       <DropdownItem label={allLabel} active={allSelected} multi={multi} onClick={handleAll} />
-      {options.map((opt) => (
-        <DropdownItem
-          key={opt}
-          label={opt}
-          active={isOptionActive(opt)}
-          multi={multi}
-          onClick={() => handleOption(opt)}
-        />
-      ))}
+      {entries.map((entry) => {
+        if (entry.type === "item") {
+          return (
+            <DropdownItem
+              key={entry.opt}
+              label={entry.opt}
+              active={isOptionActive(entry.opt)}
+              multi={multi}
+              onClick={() => handleOption(entry.opt)}
+            />
+          );
+        }
+        const activeCount = entry.subs.filter(isOptionActive).length;
+        const isOpen = !!expanded[entry.name];
+        return (
+          <React.Fragment key={entry.name}>
+            <DropdownItem
+              label={entry.name}
+              active={activeCount === entry.subs.length}
+              partial={activeCount > 0 && activeCount < entry.subs.length}
+              multi={multi}
+              onClick={() => setExpanded((e) => ({ ...e, [entry.name]: !e[entry.name] }))}
+              trailing={<ChevronDown size={16} style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }} />}
+            />
+            {isOpen && (
+              <>
+                <DropdownItem
+                  label={allLabel}
+                  indent={26}
+                  active={activeCount === entry.subs.length}
+                  partial={activeCount > 0 && activeCount < entry.subs.length}
+                  multi={multi}
+                  onClick={() => handleGroupAll(entry.subs)}
+                />
+                {entry.subs.map((opt) => (
+                  <DropdownItem
+                    key={opt}
+                    label={groupBy(opt).sub}
+                    indent={26}
+                    active={isOptionActive(opt)}
+                    multi={multi}
+                    onClick={() => handleOption(opt)}
+                  />
+                ))}
+              </>
+            )}
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 }
 
-function DropdownItem({ label, active, multi, onClick }) {
+function DropdownItem({ label, active, partial, multi, onClick, indent = 0, trailing }) {
   const t = useT();
+  const highlighted = active || partial;
   return (
     <button
       onClick={onClick}
@@ -174,13 +241,14 @@ function DropdownItem({ label, active, multi, onClick }) {
         alignItems: "center",
         gap: 10,
         padding: "10px 10px",
+        paddingLeft: 10 + indent,
         borderRadius: 8,
         border: "none",
-        background: active ? t.primarySoft : "transparent",
-        color: active ? t.primary : t.text,
+        background: highlighted ? t.primarySoft : "transparent",
+        color: highlighted ? t.primary : t.text,
         fontFamily: FONT_BODY,
         fontSize: 14,
-        fontWeight: active ? 700 : 500,
+        fontWeight: highlighted ? 700 : 500,
         cursor: "pointer",
         textAlign: "left",
       }}
@@ -191,7 +259,7 @@ function DropdownItem({ label, active, multi, onClick }) {
             width: 18,
             height: 18,
             borderRadius: 5,
-            border: `1.5px solid ${active ? t.primary : t.border}`,
+            border: `1.5px solid ${highlighted ? t.primary : t.border}`,
             background: active ? t.primary : "transparent",
             display: "flex",
             alignItems: "center",
@@ -200,9 +268,11 @@ function DropdownItem({ label, active, multi, onClick }) {
           }}
         >
           {active && <Check size={12} color="#fff" strokeWidth={3} />}
+          {partial && <Minus size={12} color={t.primary} strokeWidth={3} />}
         </span>
       )}
       <span style={{ flex: 1 }}>{label}</span>
+      {trailing}
     </button>
   );
 }

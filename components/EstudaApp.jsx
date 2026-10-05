@@ -150,7 +150,11 @@ export function EstudaApp({ userId, userEmail }) {
         resetStreak(supabase, userId).catch(() => {});
       }
       setProfile(profileData);
-      setFilters((f) => ({ ...f, fontSize: profileData.question_font_size || "md" }));
+      setFilters((f) => ({
+        ...f,
+        fontSize: profileData.question_font_size || "md",
+        instituicoes: deriveFilterOptions(questions).instituicoes,
+      }));
       setFlashcardFontSize(profileData.flashcard_font_size || "md");
       setAllQuestions(questions);
       setFavorites(favIds);
