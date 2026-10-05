@@ -53,7 +53,7 @@ export function QuestionCard({
         )}
       </div>
 
-      <div style={{ fontSize, fontWeight: 600, color: t.text, lineHeight: 1.5, marginBottom: q.imagem_url ? 14 : 20 }}>{q.enunciado}</div>
+      <div style={{ fontSize, fontWeight: 600, color: t.text, lineHeight: 1.5, whiteSpace: "pre-line", marginBottom: q.imagem_url ? 14 : 20 }}>{q.enunciado}</div>
 
       {q.imagem_url && (
         <img

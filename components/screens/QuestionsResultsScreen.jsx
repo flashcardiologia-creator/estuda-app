@@ -51,7 +51,7 @@ export function QuestionsResultsScreen({ session, questionsById, optionsByQuesti
                       <Tag>{q.instituicao}</Tag>
                       <Tag>{q.tema}</Tag>
                     </div>
-                    <div style={{ fontWeight: 600, fontSize: 14.5, color: t.text, marginBottom: q.imagem_url ? 8 : 10 }}>{q.enunciado}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14.5, color: t.text, whiteSpace: "pre-line", marginBottom: q.imagem_url ? 8 : 10 }}>{q.enunciado}</div>
                     {q.imagem_url && (
                       <img
                         src={q.imagem_url}
