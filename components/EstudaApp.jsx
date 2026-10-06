@@ -153,6 +153,7 @@ export function EstudaApp({ userId, userEmail }) {
       setFilters((f) => ({
         ...f,
         fontSize: profileData.question_font_size || "md",
+        anos: deriveFilterOptions(questions).anos,
         instituicoes: deriveFilterOptions(questions).instituicoes,
       }));
       setFlashcardFontSize(profileData.flashcard_font_size || "md");

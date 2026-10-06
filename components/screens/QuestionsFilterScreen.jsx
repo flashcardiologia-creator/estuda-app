@@ -6,6 +6,17 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList } from "@/components/ui/Primitives";
 import { applyQuestionFilters, deriveFilterOptions, parseInstituicao } from "@/lib/data/questions";
 
+// "um tema e ano", "um ano e uma instituição", "um tema, ano e uma instituição":
+// o artigo só se repete quando muda o gênero.
+function juntarFaltando(itens) {
+  const partes = itens.map((it, i) => {
+    const artigo = it.fem ? "uma" : "um";
+    const anterior = itens[i - 1];
+    return i > 0 && anterior.fem === it.fem ? it.nome : `${artigo} ${it.nome}`;
+  });
+  return partes.length > 1 ? `${partes.slice(0, -1).join(", ")} e ${partes[partes.length - 1]}` : partes[0];
+}
+
 export function QuestionsFilterScreen({
   allQuestions,
   favorites,
@@ -27,6 +38,13 @@ export function QuestionsFilterScreen({
     [allQuestions, filters, favorites]
   );
 
+  // Filtros obrigatórios que estão sem nenhuma seleção (ordem: tema, ano, instituição).
+  const faltando = [
+    filters.temas.length === 0 && { nome: "tema", fem: false },
+    filters.anos.length === 0 && { nome: "ano", fem: false },
+    filters.instituicoes.length === 0 && { nome: "instituição", fem: true },
+  ].filter(Boolean);
+
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
       <ScreenHeader title="Questões" onBack={() => onNavigate("home")} />
@@ -47,7 +65,6 @@ export function QuestionsFilterScreen({
             selected={filters.anos}
             onChange={(anos) => setFilters((f) => ({ ...f, anos }))}
             multi
-            emptyMeansAll
             allLabel="Todos"
           />
         </ExpandBox>
@@ -120,11 +137,7 @@ export function QuestionsFilterScreen({
 
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center" }}>
-            {filters.temas.length === 0
-              ? "Selecione ao menos um tema"
-              : filters.instituicoes.length === 0
-                ? "Selecione ao menos uma instituição"
-                : `${previewCount} questões encontradas`}
+            {faltando.length ? `Selecione ao menos ${juntarFaltando(faltando)}` : `${previewCount} questões encontradas`}
           </div>
           {hasSavedSession && (
             <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={onContinue}>
@@ -132,7 +145,7 @@ export function QuestionsFilterScreen({
               Continuar Sessão
             </PrimaryButton>
           )}
-          <PrimaryButton full disabled={filters.temas.length === 0 || filters.instituicoes.length === 0 || previewCount === 0} onClick={onStart}>
+          <PrimaryButton full disabled={faltando.length > 0 || previewCount === 0} onClick={onStart}>
             Iniciar Questões
           </PrimaryButton>
         </div>
