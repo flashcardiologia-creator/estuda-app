@@ -2,6 +2,43 @@ html {
   height: 100%;
 }
 
+/* Telas maiores que um celular (iPad, notebook, desktop): em vez de uma faixa
+   estreita de 640px no meio, o app inteiro (texto, botões, flashcards) é
+   ampliado por zoom. --z é o fator; as telas que usam 100vh dividem por ele.
+   Exige altura mínima pra não ampliar o celular na horizontal (largo, mas
+   baixo). */
+:root {
+  --z: 1;
+}
+
+.app-zoom {
+  zoom: var(--z);
+}
+
+@media (min-width: 768px) and (min-height: 560px) {
+  :root {
+    --z: 1.2;
+  }
+}
+
+@media (min-width: 1024px) and (min-height: 560px) {
+  :root {
+    --z: 1.35;
+  }
+}
+
+@media (min-width: 1440px) and (min-height: 560px) {
+  :root {
+    --z: 1.5;
+  }
+}
+
+@media (min-width: 1800px) and (min-height: 560px) {
+  :root {
+    --z: 1.7;
+  }
+}
+
 html,
 body {
   max-width: 100vw;

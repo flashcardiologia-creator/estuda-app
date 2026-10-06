@@ -16,6 +16,10 @@ export function Header({ streak, onNavigate, missionDone }) {
         justifyContent: "space-between",
         padding: "6px 24px 6px",
         background: "transparent",
+        // Alinha com a coluna de conteúdo das telas (em telas largas, sem isso
+        // o contador de sequência e os botões ficam nas pontas da janela).
+        maxWidth: 640,
+        margin: "0 auto",
       }}
     >
       <div

@@ -113,7 +113,7 @@ function LoginForm() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: 20 }}>
+    <div style={{ minHeight: "calc(100vh / var(--z, 1))", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: 20 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <Flame size={38} color={t.amber} fill={t.amber} />
         <h1 style={{ fontSize: 30, fontWeight: 700, color: t.text, margin: 0 }}>FlashCardio</h1>

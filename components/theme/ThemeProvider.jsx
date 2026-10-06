@@ -54,7 +54,7 @@ export function ThemeProvider({ children }) {
             paddingBottom: "env(safe-area-inset-bottom)",
           }}
         >
-          {children}
+          <div className="app-zoom">{children}</div>
         </div>
       </ThemeCtx.Provider>
     </ThemeControlCtx.Provider>
