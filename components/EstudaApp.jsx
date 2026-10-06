@@ -27,8 +27,10 @@ import {
   resetStreak,
   fetchStats,
 } from "@/lib/data/profile";
+import { withRetry, withTimeout } from "@/lib/data/chunk";
 import {
   fetchAllQuestions,
+  fetchQuestionTexts,
   applyQuestionFilters,
   deriveFilterOptions,
   fetchOptionsForQuestions,
@@ -82,8 +84,14 @@ export function EstudaApp({ userId, userEmail }) {
 
   const [screen, setScreen] = useState("home");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [profile, setProfile] = useState(null);
   const [allQuestions, setAllQuestions] = useState([]);
+  // Textos (enunciado/comentários) já baixados, por id; e a promessa do download
+  // em segundo plano, para a sessão de questões esperar por ele se precisar.
+  const textsRef = useRef({});
+  const textsBgRef = useRef(null);
   const [favorites, setFavorites] = useState([]);
   const [friends, setFriends] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
@@ -146,15 +154,61 @@ export function EstudaApp({ userId, userEmail }) {
     }
   }, [profile, missionDone, prefetchDaily]);
 
+  // Baixa os textos das questões `ids` que ainda não estão na memória e os
+  // mescla em `allQuestions`. Em lotes pequenos, com nova tentativa.
+  const hydrateTexts = useCallback(
+    async (ids) => {
+      const missing = ids.filter((id) => !textsRef.current[id]);
+      if (!missing.length) return;
+      const got = await fetchQuestionTexts(supabase, missing);
+      Object.assign(textsRef.current, got);
+      setAllQuestions((prev) => prev.map((q) => (got[q.id] ? { ...q, ...got[q.id] } : q)));
+    },
+    [supabase]
+  );
+
+  // Se o carregamento inicial falhar de vez, recarrega a página sozinho uma
+  // vez (equivale a "fechar e abrir de novo", que resolvia) e, se persistir,
+  // mostra uma tela com botão em vez de ficar eternamente em "Carregando…".
+  const recoverFromLoadFailure = useCallback(() => {
+    try {
+      const last = Number(sessionStorage.getItem("estuda-auto-reload") || 0);
+      if (Date.now() - last > 60000) {
+        sessionStorage.setItem("estuda-auto-reload", String(Date.now()));
+        window.location.reload();
+        return;
+      }
+    } catch {
+      // sessionStorage indisponível: cai direto na tela de erro
+    }
+    setLoadError(true);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let [profileData, questions, favIds, friendsData] = await Promise.all([
-        fetchProfile(supabase, userId),
-        fetchAllQuestions(supabase),
-        fetchFavoriteIds(supabase, userId),
-        fetchFriends(supabase),
-      ]);
+      let profileData, questions, favIds, friendsData;
+      try {
+        setLoadError(false);
+        // Favoritas e amigos não são essenciais para abrir o app: se falharem, seguem vazios.
+        [profileData, questions, favIds, friendsData] = await withRetry(
+          () =>
+            withTimeout(
+              Promise.all([
+                fetchProfile(supabase, userId),
+                fetchAllQuestions(supabase),
+                fetchFavoriteIds(supabase, userId).catch(() => []),
+                fetchFriends(supabase).catch(() => []),
+              ]),
+              15000,
+              "carregamento inicial"
+            ),
+          2
+        );
+      } catch {
+        if (!cancelled) recoverFromLoadFailure();
+        return;
+      }
       if (cancelled) return;
       const correctedStreak = effectiveStreak(profileData.streak, profileData.last_mission_date);
       if (correctedStreak !== profileData.streak) {
@@ -174,14 +228,27 @@ export function EstudaApp({ userId, userEmail }) {
       setFriends(friendsData);
       setLoading(false);
       // Não bloqueia o app: o balão de pendentes só precisa aparecer assim que chegar.
-      fetchChallenges(supabase, userId).then((data) => {
-        if (!cancelled) setChallenges(data);
-      });
+      fetchChallenges(supabase, userId)
+        .then((data) => {
+          if (!cancelled) setChallenges(data);
+        })
+        .catch(() => {});
+      // Os textos longos das questões chegam em segundo plano, em lotes de 300.
+      const ids = questions.map((q) => q.id);
+      textsBgRef.current = (async () => {
+        for (let i = 0; i < ids.length && !cancelled; i += 300) {
+          try {
+            await hydrateTexts(ids.slice(i, i + 300));
+          } catch {
+            // se um lote falhar, startQuestions baixa o que faltar na hora de iniciar
+          }
+        }
+      })();
     })();
     return () => {
       cancelled = true;
     };
-  }, [supabase, userId]);
+  }, [supabase, userId, loadAttempt, hydrateTexts, recoverFromLoadFailure]);
 
   useEffect(() => {
     if (screen === "account") {
@@ -248,7 +315,12 @@ export function EstudaApp({ userId, userEmail }) {
 
   /* ---- Questões ---- */
   const startQuestions = async () => {
-    const pool = applyQuestionFilters(allQuestions, filters, favorites);
+    const filtered = applyQuestionFilters(allQuestions, filters, favorites);
+    // Garante os textos (enunciado/comentários) das questões escolhidas: espera o
+    // download em segundo plano e baixa na hora só o que ainda faltar.
+    if (textsBgRef.current) await textsBgRef.current;
+    await hydrateTexts(filtered.map((q) => q.id));
+    const pool = filtered.map((q) => (textsRef.current[q.id] ? { ...q, ...textsRef.current[q.id] } : q));
     const ids = shuffle(pool).map((q) => q.id);
     const [options, hist] = await Promise.all([
       fetchOptionsForQuestions(supabase, ids),
@@ -457,6 +529,24 @@ export function EstudaApp({ userId, userEmail }) {
   };
 
   const temas = useMemo(() => deriveFilterOptions(allQuestions).temas, [allQuestions]);
+
+  if (loadError) {
+    return (
+      <div style={{ padding: 60, textAlign: "center", color: t.textMuted }}>
+        <div style={{ marginBottom: 16 }}>Não foi possível carregar. Confira sua conexão e tente de novo.</div>
+        <button
+          type="button"
+          onClick={() => {
+            setLoading(true);
+            setLoadAttempt((n) => n + 1);
+          }}
+          style={{ padding: "12px 22px", fontSize: 15, fontWeight: 600, borderRadius: 10, border: `1px solid ${t.textMuted}`, background: "transparent", color: t.text, cursor: "pointer" }}
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
 
   if (loading || !profile) {
     return (
