@@ -113,18 +113,18 @@ function LoginForm() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <Flame size={38} color={t.amber} fill={t.amber} />
+        <h1 style={{ fontSize: 30, fontWeight: 700, color: t.text, margin: 0 }}>FlashCardio</h1>
+      </div>
       <div style={{ width: "100%", maxWidth: 380, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: 30 }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
-          <Flame size={34} color={t.amber} fill={t.amber} />
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: t.text, marginTop: 10 }}>FlashCardio</h1>
-          {mode !== "login" && (
-            <p style={{ fontSize: 13, color: t.textMuted, marginTop: 4, textAlign: "center" }}>
-              {mode === "signup" && "Crie sua conta gratuita"}
-              {mode === "forgot" && "Informe seu e-mail para receber o link de redefinição"}
-            </p>
-          )}
-        </div>
+        {mode !== "login" && (
+          <p style={{ fontSize: 13, color: t.textMuted, margin: "0 0 20px", textAlign: "center" }}>
+            {mode === "signup" && "Crie sua conta gratuita"}
+            {mode === "forgot" && "Informe seu e-mail para receber o link de redefinição"}
+          </p>
+        )}
 
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {mode === "signup" && (

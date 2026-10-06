@@ -107,6 +107,17 @@ export function EstudaApp({ userId, userEmail }) {
   const [dailyOptionsByQuestion, setDailyOptionsByQuestion] = useState({});
   const [dailySession, setDailySession] = useState(null);
   const dailyPrefetchRef = useRef(null);
+  // Dia (virada à meia-noite de Brasília) a que pertence a missão guardada em
+  // memória — serve pra descartá-la se o dia virar com a missão fechada.
+  const dailyDateRef = useRef(null);
+
+  const clearDaily = useCallback(() => {
+    setDailySession(null);
+    setDailyItems(null);
+    setDailyOptionsByQuestion({});
+    dailyPrefetchRef.current = null;
+    dailyDateRef.current = null;
+  }, []);
 
   const missionDone = profile ? profile.last_mission_date === todayStr() : false;
 
@@ -115,6 +126,7 @@ export function EstudaApp({ userId, userEmail }) {
   // conjunto é reaproveitado se o usuário sair e voltar, sem sortear de novo.
   const prefetchDaily = useCallback(() => {
     if (dailyPrefetchRef.current) return dailyPrefetchRef.current;
+    dailyDateRef.current = todayStr();
     const p = fetchDailyMissionItems(supabase, userId).then(({ questions, flashcards, options }) => {
       const items = [
         ...questions.map((q) => ({ type: "question", data: q })),
@@ -342,9 +354,14 @@ export function EstudaApp({ userId, userEmail }) {
       setScreen("daily-done");
       return;
     }
+    // O dia virou com a missão fechada (fora da tela da missão): os "acréscimos"
+    // só valem pra quem continua com ela aberta. Descarta a missão e a sessão
+    // de ontem — vale a missão do dia novo.
+    const stale = dailyDateRef.current !== null && dailyDateRef.current !== todayStr();
+    if (stale) clearDaily();
     // Reaproveita o que já foi pré-carregado em segundo plano; só espera se o
     // usuário clicou antes desse carregamento terminar.
-    if (!dailyItems) {
+    if (stale || !dailyItems) {
       await prefetchDaily();
     }
     setDailySession((s) => s || { index: 0, selected: {}, answers: {}, flipped: {}, viewed: {} });
@@ -362,10 +379,7 @@ export function EstudaApp({ userId, userEmail }) {
     // Limpa a sessão concluída — se não, um eventual desalinhamento no cálculo
     // de "hoje" (ex.: logo após mudar a virada do dia) deixaria a próxima
     // entrada na Missão Diária caindo de volta no último item já respondido.
-    setDailySession(null);
-    setDailyItems(null);
-    setDailyOptionsByQuestion({});
-    dailyPrefetchRef.current = null;
+    clearDaily();
     setScreen("daily-done");
   };
 
@@ -379,12 +393,9 @@ export function EstudaApp({ userId, userEmail }) {
     } catch {
       // melhor deixar a streak como está do que travar o usuário na missão vencida
     }
-    setDailySession(null);
-    setDailyItems(null);
-    setDailyOptionsByQuestion({});
-    dailyPrefetchRef.current = null;
+    clearDaily();
     setScreen("home");
-  }, [supabase]);
+  }, [supabase, clearDaily]);
 
   useEffect(() => {
     if (screen !== "daily-session") return;
