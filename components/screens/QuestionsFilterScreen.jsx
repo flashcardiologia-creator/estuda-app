@@ -1,10 +1,32 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, Clock, Award, Timer, Type, Star, Lock, RotateCw } from "lucide-react";
+import { BarChart3, BookOpen, Clock, Award, History, Timer, Type, Lock, RotateCw } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList } from "@/components/ui/Primitives";
 import { applyQuestionFilters, deriveFilterOptions, parseInstituicao } from "@/lib/data/questions";
+import { MAX_SESSIONS } from "@/lib/data/sessions";
+
+// "Válvula, Hipertensão +2" / "Todos os temas" quando todas as opções estavam marcadas.
+function resumir(lista, totalOpcoes, rotuloTodos, max = 2) {
+  const itens = lista || [];
+  if (!itens.length) return "—";
+  if (totalOpcoes && itens.length >= totalOpcoes) return rotuloTodos;
+  const mostrados = itens.slice(0, max).join(", ");
+  return itens.length > max ? `${mostrados} +${itens.length - max}` : mostrados;
+}
+
+function resumirAnos(lista, totalOpcoes) {
+  const itens = [...(lista || [])].sort((a, b) => a - b);
+  if (!itens.length) return "—";
+  if (totalOpcoes && itens.length >= totalOpcoes) return "Todos os anos";
+  return itens.length > 3 ? `${itens[0]}–${itens[itens.length - 1]} (${itens.length} anos)` : itens.join(", ");
+}
+
+function formatarData(iso) {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("pt-BR")} ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+}
 
 // "um tema e ano", "um ano e uma instituição", "um tema, ano e uma instituição":
 // o artigo só se repete quando muda o gênero.
@@ -26,10 +48,29 @@ export function QuestionsFilterScreen({
   onStart,
   onContinue,
   hasSavedSession,
+  pastSessions = [],
+  onResumeSession,
+  onRedoSession,
+  onOpenPerformance,
   onNavigate,
 }) {
   const t = useT();
   const [open, setOpen] = useState({});
+  const [openingId, setOpeningId] = useState(null);
+  const [sessionError, setSessionError] = useState("");
+
+  // Continua (redo = false) ou refaz (redo = true) uma sessão do histórico.
+  const abrirSessao = async (row, redo) => {
+    setOpeningId(row.id);
+    setSessionError("");
+    try {
+      await (redo ? onRedoSession(row) : onResumeSession(row));
+    } catch (err) {
+      setSessionError(err.message || "Não foi possível abrir essa sessão.");
+    } finally {
+      setOpeningId(null);
+    }
+  };
   const { temas: TEMAS, anos, instituicoes } = useMemo(() => deriveFilterOptions(allQuestions), [allQuestions]);
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
@@ -111,16 +152,13 @@ export function QuestionsFilterScreen({
           </div>
         </ExpandBox>
 
-        <ExpandBox title="Favoritas" icon={<Star size={17} color={t.primary} />} open={open.fav} onToggle={() => toggle("fav")}>
+        <ExpandBox title="Modos" icon={<Lock size={17} color={t.primary} />} open={open.provas} onToggle={() => toggle("provas")}>
           <Toggle
             checked={filters.favoritasOnly}
             onChange={(v) => setFilters((f) => ({ ...f, favoritasOnly: v }))}
             label="Somente questões favoritas"
             sub={`${favorites.length} marcadas`}
           />
-        </ExpandBox>
-
-        <ExpandBox title="Modo Prova" icon={<Lock size={17} color={t.primary} />} open={open.provas} onToggle={() => toggle("provas")}>
           <Toggle
             checked={filters.modoProva}
             onChange={(v) => setFilters((f) => ({ ...f, modoProva: v }))}
@@ -133,6 +171,78 @@ export function QuestionsFilterScreen({
             label="Mostrar Respostas Antigas"
             sub="Questões já respondidas abrem resolvidas, com sua resposta e o gabarito"
           />
+        </ExpandBox>
+
+        <ExpandBox
+          title="Sessões Antigas"
+          icon={<History size={17} color={t.primary} />}
+          open={open.sessoes}
+          onToggle={() => toggle("sessoes")}
+          badge={pastSessions.length}
+        >
+          <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={onOpenPerformance}>
+            <BarChart3 size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+            Desempenho
+          </PrimaryButton>
+          {sessionError && <div style={{ fontSize: 12, color: t.red, marginTop: 10 }}>{sessionError}</div>}
+          {pastSessions.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: t.textMuted, marginTop: 12, lineHeight: 1.5 }}>
+              Suas últimas {MAX_SESSIONS} sessões aparecem aqui, da mais nova para a mais antiga, para continuar ou refazer.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+              {pastSessions.map((s) => {
+                const f = s.filters || {};
+                const incompleta = !s.finished && s.answered < s.total;
+                const busy = openingId === s.id;
+                return (
+                  <div
+                    key={s.id}
+                    style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 12, padding: "12px 14px" }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: t.text, lineHeight: 1.35 }}>
+                          {resumir(f.temas, TEMAS.length, "Todos os temas")}
+                        </div>
+                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3, lineHeight: 1.4 }}>
+                          {resumir(f.instituicoes, instituicoes.length, "Todas as provas")} · {resumirAnos(f.anos, anos.length)}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 3 }}>{formatarData(s.updated_at)}</div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: t.primary, lineHeight: 1 }}>
+                          {s.answered}/{s.total}
+                        </div>
+                        <div style={{ fontSize: 10.5, color: t.textMuted, marginTop: 3 }}>questões</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                      {incompleta && (
+                        <div style={{ flex: 1 }}>
+                          <PrimaryButton small full disabled={busy} onClick={() => abrirSessao(s, false)}>
+                            {busy ? "Abrindo..." : "Continuar"}
+                          </PrimaryButton>
+                        </div>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <PrimaryButton
+                          small
+                          full
+                          variant="ghost"
+                          color={t.name === "light" ? t.surface : undefined}
+                          disabled={busy}
+                          onClick={() => abrirSessao(s, true)}
+                        >
+                          Refazer
+                        </PrimaryButton>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </ExpandBox>
 
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>

@@ -41,6 +41,15 @@ import {
   setFavorite,
 } from "@/lib/data/questions";
 import { fetchFlashcardCounts, fetchFlashcardsByTheme, fetchAllFlashcards, recordFlashcardView } from "@/lib/data/flashcards";
+import {
+  countAnswered,
+  createQuestionSession,
+  fetchQuestionSessionFull,
+  fetchQuestionSessions,
+  packProgress,
+  saveQuestionSession,
+  unpackProgress,
+} from "@/lib/data/sessions";
 import { DROPDOWN_ALL } from "@/components/ui/Primitives";
 import { fetchDailyMissionItems, completeDailyMission, expireDailyMission } from "@/lib/data/mission";
 import {
@@ -65,6 +74,8 @@ const HIDDEN_HEADER_SCREENS = [
   "flashcards-select",
   "challenges",
 ];
+
+const nowMs = () => Date.now();
 
 const DEFAULT_FILTERS = {
   temas: [],
@@ -110,6 +121,11 @@ export function EstudaApp({ userId, userEmail }) {
   const [sessionQuestionsById, setSessionQuestionsById] = useState({});
   const [sessionOptionsByQuestion, setSessionOptionsByQuestion] = useState({});
   const [savedSession, setSavedSession] = useState(null);
+  // Sessões antigas (últimas 10, guardadas no banco) e o registro da sessão em andamento.
+  const [pastSessions, setPastSessions] = useState([]);
+  const sessionRecordRef = useRef(null);
+  // Para onde o botão Voltar das Estatísticas leva (Minha Conta, ou Questões quando vem de "Desempenho").
+  const [statsReturn, setStatsReturn] = useState("account");
 
   const [flashSession, setFlashSession] = useState(null);
 
@@ -262,6 +278,9 @@ export function EstudaApp({ userId, userEmail }) {
       fetchChallenges(supabase, userId).then(setChallenges);
       fetchFriends(supabase).then(setFriends);
     }
+    if (screen === "questions-filters") {
+      fetchQuestionSessions(supabase, userId).then(setPastSessions);
+    }
     if (screen === "flashcards-select") {
       fetchFlashcardCounts(supabase).then(({ themeCounts, difficultyCounts }) => {
         setThemeCounts(themeCounts);
@@ -351,23 +370,100 @@ export function EstudaApp({ userId, userEmail }) {
       }
     }
 
-    setSessionQuestionsById(Object.fromEntries(pool.map((q) => [q.id, q])));
-    setSessionOptionsByQuestion(options);
-    setSession({
+    const newSession = {
       ids,
       index: 0,
       selected: initialSelected,
       answers: initialAnswers,
       prefilled: initialPrefilled,
       struck: {},
-      startedAt: filters.cronometro ? Date.now() : null,
+      startedAt: filters.cronometro ? nowMs() : null,
       durationMs: filters.cronometro ? filters.minutos * 60 * 1000 : null,
+    };
+    setSessionQuestionsById(Object.fromEntries(pool.map((q) => [q.id, q])));
+    setSessionOptionsByQuestion(options);
+    setSession(newSession);
+    startSessionRecord(ids, newSession);
+    setScreen("questions-session");
+  };
+
+  // Cria o registro da sessão no histórico (as 10 últimas ficam guardadas). Se não
+  // der para guardar (ex.: SQL ainda não rodado), a sessão segue normal, só sem histórico.
+  const startSessionRecord = (ids, newSession) => {
+    sessionRecordRef.current = null;
+    createQuestionSession(supabase, userId, {
+      filters,
+      ids,
+      progress: packProgress(newSession),
+      answered: countAnswered(newSession),
+    }).then((id) => {
+      sessionRecordRef.current = id;
     });
+  };
+
+  const persistSession = useCallback(
+    (s, finished = false) => {
+      const id = sessionRecordRef.current;
+      if (!id || !s) return;
+      saveQuestionSession(supabase, id, { progress: packProgress(s), answered: countAnswered(s), finished });
+    },
+    [supabase]
+  );
+
+  // Salva o andamento da sessão aos poucos (depois de uma pausa nas ações).
+  useEffect(() => {
+    if (screen !== "questions-session" || !session) return;
+    const timer = setTimeout(() => persistSession(session), 1200);
+    return () => clearTimeout(timer);
+  }, [screen, session, persistSession]);
+
+  // Reabre uma sessão do histórico: continua de onde parou, ou (redo) refaz as mesmas
+  // questões do zero numa nova sessão.
+  const openStoredSession = async (row, redo = false) => {
+    const full = await fetchQuestionSessionFull(supabase, row.id);
+    const known = new Set(allQuestions.map((q) => q.id));
+    const ids = (full.question_ids || []).filter((id) => known.has(id));
+    if (!ids.length) throw new Error("As questões dessa sessão não estão mais disponíveis.");
+    if (textsBgRef.current) await textsBgRef.current;
+    await hydrateTexts(ids);
+    const byId = Object.fromEntries(allQuestions.map((q) => [q.id, q]));
+    const pool = ids.map((id) => (textsRef.current[id] ? { ...byId[id], ...textsRef.current[id] } : byId[id]));
+    const options = await fetchOptionsForQuestions(supabase, ids);
+    const saved = full.filters || {};
+    setFilters((f) => ({ ...f, modoProva: !!saved.modoProva, mostrarAntigas: !!saved.mostrarAntigas }));
+    const restored = redo ? null : unpackProgress(full.progress, ids);
+    const resumed = {
+      ids,
+      index: restored ? restored.index : 0,
+      selected: restored ? restored.selected : {},
+      answers: restored ? restored.answers : {},
+      prefilled: restored ? restored.prefilled : {},
+      struck: restored ? restored.struck : {},
+      startedAt: null,
+      durationMs: null,
+    };
+    setSessionQuestionsById(Object.fromEntries(pool.map((q) => [q.id, q])));
+    setSessionOptionsByQuestion(options);
+    setSession(resumed);
+    if (redo) {
+      sessionRecordRef.current = null;
+      createQuestionSession(supabase, userId, {
+        filters: { ...filters, ...saved },
+        ids,
+        progress: packProgress(resumed),
+        answered: 0,
+      }).then((id) => {
+        sessionRecordRef.current = id;
+      });
+    } else {
+      sessionRecordRef.current = full.id;
+    }
     setScreen("questions-session");
   };
 
   const continueQuestions = () => {
     if (!savedSession) return;
+    sessionRecordRef.current = savedSession.recordId ?? null;
     setSession(savedSession.session);
     setSessionQuestionsById(savedSession.questionsById);
     setSessionOptionsByQuestion(savedSession.optionsByQuestion);
@@ -375,7 +471,13 @@ export function EstudaApp({ userId, userEmail }) {
   };
 
   const backFromSession = () => {
-    setSavedSession({ session, questionsById: sessionQuestionsById, optionsByQuestion: sessionOptionsByQuestion });
+    persistSession(session);
+    setSavedSession({
+      session,
+      questionsById: sessionQuestionsById,
+      optionsByQuestion: sessionOptionsByQuestion,
+      recordId: sessionRecordRef.current,
+    });
     setSession(null);
     setScreen("questions-filters");
   };
@@ -390,6 +492,7 @@ export function EstudaApp({ userId, userEmail }) {
       const withKey = await fetchOptionsWithAnswerKey(supabase, session.ids);
       setSessionOptionsByQuestion(withKey);
     }
+    persistSession(session, true);
     setSavedSession(null);
     setScreen("questions-results");
   };
@@ -589,7 +692,10 @@ export function EstudaApp({ userId, userEmail }) {
           incomingRequests={incomingRequests}
           initialFocus={accountFocus}
           onFocusConsumed={() => setAccountFocus(null)}
-          onNavigate={setScreen}
+          onNavigate={(s) => {
+            if (s === "stats") setStatsReturn("account");
+            setScreen(s);
+          }}
           onSaveName={saveDisplayName}
           onSaveStatsVisibility={saveStatsVisibility}
           onSaveRankingVisibility={saveRankingVisibility}
@@ -608,7 +714,12 @@ export function EstudaApp({ userId, userEmail }) {
           userId={userId}
           allQuestions={allQuestions}
           challenges={challenges}
-          onNavigate={setScreen}
+          onNavigate={(s) => {
+            // O botão Voltar das Estatísticas volta para onde a pessoa veio (Minha Conta ou Questões).
+            const back = s === "account" ? statsReturn : s;
+            setStatsReturn("account");
+            setScreen(back);
+          }}
         />
       )}
 
@@ -622,6 +733,13 @@ export function EstudaApp({ userId, userEmail }) {
           onStart={startQuestions}
           onContinue={continueQuestions}
           hasSavedSession={!!savedSession}
+          pastSessions={pastSessions}
+          onResumeSession={(row) => openStoredSession(row, false)}
+          onRedoSession={(row) => openStoredSession(row, true)}
+          onOpenPerformance={() => {
+            setStatsReturn("questions-filters");
+            setScreen("stats");
+          }}
           onNavigate={setScreen}
         />
       )}

@@ -13,13 +13,11 @@ function challengeDone(answered, qtd) {
   return answered >= qtd;
 }
 
-// Aba selecionada: contorno roxo, texto branco em negrito e sem preenchimento.
-// (No tema claro, onde branco sumiria, o texto usa a cor escura.)
+// Aba selecionada: contorno e texto roxos, em negrito, sem preenchimento.
 function tabStyle(t, active) {
   const base = { flex: 1, textAlign: "center" };
   if (active) {
-    const c = t.name === "light" ? t.text : "#FFFFFF";
-    return { ...base, border: `2px solid ${t.primary}`, background: "transparent", color: c, fontWeight: 800 };
+    return { ...base, border: `2px solid ${t.primary}`, background: "transparent", color: t.primary, fontWeight: 800 };
   }
   return t.name === "light" ? { ...base, background: t.surface } : base;
 }
