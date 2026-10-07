@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart3, BookOpen, Clock, Award, History, Timer, Type, Lock, RotateCw } from "lucide-react";
+import { BarChart3, BookOpen, ChevronLeft, ChevronRight, Clock, Award, History, Timer, Trash2, Type, Lock, RotateCw } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList } from "@/components/ui/Primitives";
 import { applyQuestionFilters, deriveFilterOptions, parseInstituicao } from "@/lib/data/questions";
 import { MAX_SESSIONS } from "@/lib/data/sessions";
+
+const SESSOES_POR_PAGINA = 2;
 
 // "Válvula, Hipertensão +2" / "Todos os temas" quando todas as opções estavam marcadas.
 function resumir(lista, totalOpcoes, rotuloTodos, max = 2) {
@@ -50,25 +52,50 @@ export function QuestionsFilterScreen({
   hasSavedSession,
   pastSessions = [],
   onResumeSession,
-  onRedoSession,
+  onDeleteSession,
   onOpenPerformance,
   onNavigate,
 }) {
   const t = useT();
   const [open, setOpen] = useState({});
   const [openingId, setOpeningId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [sessionError, setSessionError] = useState("");
+  const [pagina, setPagina] = useState(0);
 
-  // Continua (redo = false) ou refaz (redo = true) uma sessão do histórico.
-  const abrirSessao = async (row, redo) => {
+  // Sessões antigas: 2 por página (até 50 sessões = 25 páginas).
+  const totalPaginas = Math.max(1, Math.ceil(pastSessions.length / SESSOES_POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas - 1);
+  const sessoesDaPagina = pastSessions.slice(paginaSegura * SESSOES_POR_PAGINA, (paginaSegura + 1) * SESSOES_POR_PAGINA);
+  const irParaPagina = (n) => {
+    setConfirmDeleteId(null);
+    setPagina(Math.min(Math.max(0, n), totalPaginas - 1));
+  };
+
+  // Continua uma sessão do histórico de onde parou.
+  const abrirSessao = async (row) => {
     setOpeningId(row.id);
     setSessionError("");
     try {
-      await (redo ? onRedoSession(row) : onResumeSession(row));
+      await onResumeSession(row);
     } catch (err) {
       setSessionError(err.message || "Não foi possível abrir essa sessão.");
     } finally {
       setOpeningId(null);
+    }
+  };
+
+  const apagarSessao = async (row) => {
+    setDeletingId(row.id);
+    setSessionError("");
+    try {
+      await onDeleteSession(row);
+      setConfirmDeleteId(null);
+    } catch (err) {
+      setSessionError(err.message || "Não foi possível deletar essa sessão.");
+    } finally {
+      setDeletingId(null);
     }
   };
   const { temas: TEMAS, anos, instituicoes } = useMemo(() => deriveFilterOptions(allQuestions), [allQuestions]);
@@ -180,69 +207,127 @@ export function QuestionsFilterScreen({
           onToggle={() => toggle("sessoes")}
           badge={pastSessions.length}
         >
-          <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={onOpenPerformance}>
-            <BarChart3 size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
-            Desempenho
-          </PrimaryButton>
-          {sessionError && <div style={{ fontSize: 12, color: t.red, marginTop: 10 }}>{sessionError}</div>}
+          {sessionError && <div style={{ fontSize: 12, color: t.red, marginBottom: 10 }}>{sessionError}</div>}
           {pastSessions.length === 0 ? (
-            <div style={{ fontSize: 12.5, color: t.textMuted, marginTop: 12, lineHeight: 1.5 }}>
-              Suas últimas {MAX_SESSIONS} sessões aparecem aqui, da mais nova para a mais antiga, para continuar ou refazer.
+            <div style={{ fontSize: 12.5, color: t.textMuted, lineHeight: 1.5 }}>
+              Suas últimas {MAX_SESSIONS} sessões aparecem aqui, da mais nova para a mais antiga, para continuar de onde parou.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-              {pastSessions.map((s) => {
-                const f = s.filters || {};
-                const incompleta = !s.finished && s.answered < s.total;
-                const busy = openingId === s.id;
-                return (
-                  <div
-                    key={s.id}
-                    style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 12, padding: "12px 14px" }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 700, color: t.text, lineHeight: 1.35 }}>
-                          {resumir(f.temas, TEMAS.length, "Todos os temas")}
+            <>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {sessoesDaPagina.map((s) => {
+                  const f = s.filters || {};
+                  const incompleta = !s.finished && s.answered < s.total;
+                  const busy = openingId === s.id || deletingId === s.id;
+                  const confirmando = confirmDeleteId === s.id;
+                  return (
+                    <div
+                      key={s.id}
+                      style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 12, padding: "12px 14px" }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: t.text, lineHeight: 1.35 }}>
+                            {resumir(f.temas, TEMAS.length, "Todos os temas")}
+                          </div>
+                          <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3, lineHeight: 1.4 }}>
+                            {resumir(f.instituicoes, instituicoes.length, "Todas as provas")} · {resumirAnos(f.anos, anos.length)}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 3 }}>{formatarData(s.updated_at)}</div>
                         </div>
-                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3, lineHeight: 1.4 }}>
-                          {resumir(f.instituicoes, instituicoes.length, "Todas as provas")} · {resumirAnos(f.anos, anos.length)}
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 17, fontWeight: 800, color: t.primary, lineHeight: 1 }}>
+                            {s.answered}/{s.total}
+                          </div>
+                          <div style={{ fontSize: 10.5, color: t.textMuted, marginTop: 3 }}>questões</div>
                         </div>
-                        <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 3 }}>{formatarData(s.updated_at)}</div>
                       </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <div style={{ fontSize: 17, fontWeight: 800, color: t.primary, lineHeight: 1 }}>
-                          {s.answered}/{s.total}
+                      {confirmando ? (
+                        <div style={{ marginTop: 10 }}>
+                          <div style={{ fontSize: 12.5, color: t.text, marginBottom: 8 }}>Deletar esta sessão?</div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <div style={{ flex: 1 }}>
+                              <PrimaryButton
+                                small
+                                full
+                                variant="ghost"
+                                color={t.name === "light" ? t.surface : undefined}
+                                disabled={busy}
+                                onClick={() => setConfirmDeleteId(null)}
+                              >
+                                Cancelar
+                              </PrimaryButton>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <PrimaryButton small full disabled={busy} color={t.red} onClick={() => apagarSessao(s)}>
+                                {deletingId === s.id ? "Deletando..." : "Sim, deletar"}
+                              </PrimaryButton>
+                            </div>
+                          </div>
                         </div>
-                        <div style={{ fontSize: 10.5, color: t.textMuted, marginTop: 3 }}>questões</div>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                      {incompleta && (
-                        <div style={{ flex: 1 }}>
-                          <PrimaryButton small full disabled={busy} onClick={() => abrirSessao(s, false)}>
-                            {busy ? "Abrindo..." : "Continuar"}
-                          </PrimaryButton>
+                      ) : (
+                        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                          {incompleta && (
+                            <div style={{ flex: 1 }}>
+                              <PrimaryButton small full disabled={busy} onClick={() => abrirSessao(s)}>
+                                {openingId === s.id ? "Abrindo..." : "Continuar"}
+                              </PrimaryButton>
+                            </div>
+                          )}
+                          <div style={{ flex: 1 }}>
+                            <PrimaryButton
+                              small
+                              full
+                              variant="ghost"
+                              color={t.name === "light" ? t.surface : undefined}
+                              disabled={busy}
+                              onClick={() => setConfirmDeleteId(s.id)}
+                            >
+                              <Trash2 size={13} style={{ marginRight: 5, verticalAlign: -2 }} />
+                              Deletar
+                            </PrimaryButton>
+                          </div>
                         </div>
                       )}
-                      <div style={{ flex: 1 }}>
-                        <PrimaryButton
-                          small
-                          full
-                          variant="ghost"
-                          color={t.name === "light" ? t.surface : undefined}
-                          disabled={busy}
-                          onClick={() => abrirSessao(s, true)}
-                        >
-                          Refazer
-                        </PrimaryButton>
-                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+
+              {totalPaginas > 1 && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12 }}>
+                  <PrimaryButton
+                    small
+                    variant="ghost"
+                    color={t.name === "light" ? t.surface : undefined}
+                    disabled={paginaSegura === 0}
+                    onClick={() => irParaPagina(paginaSegura - 1)}
+                  >
+                    <ChevronLeft size={14} style={{ verticalAlign: -3 }} /> Anterior
+                  </PrimaryButton>
+                  <span style={{ fontSize: 12.5, color: t.textMuted, fontWeight: 600, whiteSpace: "nowrap" }}>
+                    Página {paginaSegura + 1} de {totalPaginas}
+                  </span>
+                  <PrimaryButton
+                    small
+                    variant="ghost"
+                    color={t.name === "light" ? t.surface : undefined}
+                    disabled={paginaSegura >= totalPaginas - 1}
+                    onClick={() => irParaPagina(paginaSegura + 1)}
+                  >
+                    Próxima <ChevronRight size={14} style={{ verticalAlign: -3 }} />
+                  </PrimaryButton>
+                </div>
+              )}
+            </>
           )}
+
+          <div style={{ marginTop: 14 }}>
+            <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={onOpenPerformance}>
+              <BarChart3 size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+              Desempenho
+            </PrimaryButton>
+          </div>
         </ExpandBox>
 
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>

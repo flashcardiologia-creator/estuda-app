@@ -44,6 +44,7 @@ import { fetchFlashcardCounts, fetchFlashcardsByTheme, fetchAllFlashcards, recor
 import {
   countAnswered,
   createQuestionSession,
+  deleteQuestionSession,
   fetchQuestionSessionFull,
   fetchQuestionSessions,
   packProgress,
@@ -417,9 +418,8 @@ export function EstudaApp({ userId, userEmail }) {
     return () => clearTimeout(timer);
   }, [screen, session, persistSession]);
 
-  // Reabre uma sessão do histórico: continua de onde parou, ou (redo) refaz as mesmas
-  // questões do zero numa nova sessão.
-  const openStoredSession = async (row, redo = false) => {
+  // Reabre uma sessão do histórico e continua de onde parou.
+  const openStoredSession = async (row) => {
     const full = await fetchQuestionSessionFull(supabase, row.id);
     const known = new Set(allQuestions.map((q) => q.id));
     const ids = (full.question_ids || []).filter((id) => known.has(id));
@@ -431,34 +431,27 @@ export function EstudaApp({ userId, userEmail }) {
     const options = await fetchOptionsForQuestions(supabase, ids);
     const saved = full.filters || {};
     setFilters((f) => ({ ...f, modoProva: !!saved.modoProva, mostrarAntigas: !!saved.mostrarAntigas }));
-    const restored = redo ? null : unpackProgress(full.progress, ids);
-    const resumed = {
-      ids,
-      index: restored ? restored.index : 0,
-      selected: restored ? restored.selected : {},
-      answers: restored ? restored.answers : {},
-      prefilled: restored ? restored.prefilled : {},
-      struck: restored ? restored.struck : {},
-      startedAt: null,
-      durationMs: null,
-    };
+    const restored = unpackProgress(full.progress, ids);
     setSessionQuestionsById(Object.fromEntries(pool.map((q) => [q.id, q])));
     setSessionOptionsByQuestion(options);
-    setSession(resumed);
-    if (redo) {
-      sessionRecordRef.current = null;
-      createQuestionSession(supabase, userId, {
-        filters: { ...filters, ...saved },
-        ids,
-        progress: packProgress(resumed),
-        answered: 0,
-      }).then((id) => {
-        sessionRecordRef.current = id;
-      });
-    } else {
-      sessionRecordRef.current = full.id;
-    }
+    setSession({
+      ids,
+      index: restored.index,
+      selected: restored.selected,
+      answers: restored.answers,
+      prefilled: restored.prefilled,
+      struck: restored.struck,
+      startedAt: null,
+      durationMs: null,
+    });
+    sessionRecordRef.current = full.id;
     setScreen("questions-session");
+  };
+
+  const deleteSession = async (row) => {
+    await deleteQuestionSession(supabase, row.id);
+    if (sessionRecordRef.current === row.id) sessionRecordRef.current = null;
+    setPastSessions((list) => list.filter((s) => s.id !== row.id));
   };
 
   const continueQuestions = () => {
@@ -734,8 +727,8 @@ export function EstudaApp({ userId, userEmail }) {
           onContinue={continueQuestions}
           hasSavedSession={!!savedSession}
           pastSessions={pastSessions}
-          onResumeSession={(row) => openStoredSession(row, false)}
-          onRedoSession={(row) => openStoredSession(row, true)}
+          onResumeSession={openStoredSession}
+          onDeleteSession={deleteSession}
           onOpenPerformance={() => {
             setStatsReturn("questions-filters");
             setScreen("stats");
