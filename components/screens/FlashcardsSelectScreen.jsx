@@ -13,10 +13,10 @@ const TAMANHO_OPTIONS = [
 ];
 
 const DIFICULDADE_OPTIONS = [
-  { value: "todos", label: "Todos", sub: "Todos os cartões, de qualquer dificuldade" },
-  { value: "facil", label: "Fácil", sub: "Cai muito e é simples" },
-  { value: "medio", label: "Médio", sub: "Cai muito e é moderadamente difícil" },
-  { value: "dificil", label: "Difícil", sub: "Difícil e cai pouco no TEC; aparece mais em outras provas" },
+  { value: "todos", label: "Todos" },
+  { value: "facil", label: "Fácil" },
+  { value: "medio", label: "Médio" },
+  { value: "dificil", label: "Difícil" },
 ];
 
 export function FlashcardsSelectScreen({
@@ -46,7 +46,6 @@ export function FlashcardsSelectScreen({
     [themeCounts, difficultyCounts, dificuldade]
   );
   const availableCount = !tema ? 0 : tema === DROPDOWN_ALL ? totalCount : countFor(tema);
-  const dificuldadeSub = DIFICULDADE_OPTIONS.find((o) => o.value === dificuldade)?.sub;
   const sessionCount = tema ? Math.min(qtd === "Todos" ? availableCount : qtd, availableCount) : 0;
 
   return (
@@ -70,7 +69,6 @@ export function FlashcardsSelectScreen({
               </Chip>
             ))}
           </div>
-          <div style={{ fontSize: 12, color: t.textMuted, marginTop: 10 }}>{dificuldadeSub}</div>
         </ExpandBox>
 
         <ExpandBox title="Quantidade" icon={<Hash size={17} color={t.primary} />} open={open.qtd} onToggle={() => toggle("qtd")}>

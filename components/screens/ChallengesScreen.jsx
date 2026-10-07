@@ -13,13 +13,13 @@ function challengeDone(answered, qtd) {
   return answered >= qtd;
 }
 
-// Aba selecionada: contorno branco, texto branco em negrito e sem o fundo roxo.
-// (No tema claro, onde branco sumiria, usa a cor de texto escura.)
+// Aba selecionada: contorno roxo, texto branco em negrito e sem preenchimento.
+// (No tema claro, onde branco sumiria, o texto usa a cor escura.)
 function tabStyle(t, active) {
   const base = { flex: 1, textAlign: "center" };
   if (active) {
     const c = t.name === "light" ? t.text : "#FFFFFF";
-    return { ...base, border: `2px solid ${c}`, background: "transparent", color: c, fontWeight: 800 };
+    return { ...base, border: `2px solid ${t.primary}`, background: "transparent", color: c, fontWeight: 800 };
   }
   return t.name === "light" ? { ...base, background: t.surface } : base;
 }
@@ -206,7 +206,7 @@ export function ChallengesScreen({
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>
-                      {temaLabel(c.tema)} · {c.qtd} questões
+                      {temaLabel(c.tema)} · <span style={{ color: t.primary }}>{c.qtd} questões</span>
                     </div>
                   </div>
                   {myDone ? (
@@ -292,7 +292,7 @@ export function ChallengesScreen({
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>
-                      {temaLabel(c.tema)} · {c.qtd} questões
+                      {temaLabel(c.tema)} · <span style={{ color: t.primary }}>{c.qtd} questões</span>
                     </div>
                     <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3 }}>{formatChallengeDate(c.created_at)}</div>
                   </div>
