@@ -40,7 +40,7 @@ import {
   fetchFavoriteIds,
   setFavorite,
 } from "@/lib/data/questions";
-import { fetchFlashcardThemeCounts, fetchFlashcardsByTheme, fetchAllFlashcards, recordFlashcardView } from "@/lib/data/flashcards";
+import { fetchFlashcardCounts, fetchFlashcardsByTheme, fetchAllFlashcards, recordFlashcardView } from "@/lib/data/flashcards";
 import { DROPDOWN_ALL } from "@/components/ui/Primitives";
 import { fetchDailyMissionItems, completeDailyMission, expireDailyMission } from "@/lib/data/mission";
 import {
@@ -97,6 +97,7 @@ export function EstudaApp({ userId, userEmail }) {
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [stats, setStats] = useState({ answered: 0, accuracy: 0 });
   const [themeCounts, setThemeCounts] = useState({});
+  const [difficultyCounts, setDifficultyCounts] = useState({});
   const [challenges, setChallenges] = useState([]);
   const [challengeAnswering, setChallengeAnswering] = useState(false);
   const [accountFocus, setAccountFocus] = useState(null);
@@ -261,7 +262,10 @@ export function EstudaApp({ userId, userEmail }) {
       fetchFriends(supabase).then(setFriends);
     }
     if (screen === "flashcards-select") {
-      fetchFlashcardThemeCounts(supabase).then(setThemeCounts);
+      fetchFlashcardCounts(supabase).then(({ themeCounts, difficultyCounts }) => {
+        setThemeCounts(themeCounts);
+        setDifficultyCounts(difficultyCounts);
+      });
     }
   }, [screen, supabase, userId]);
 
@@ -390,8 +394,9 @@ export function EstudaApp({ userId, userEmail }) {
   };
 
   /* ---- Flashcards ---- */
-  const startFlashcards = async (tema, qtd, aleatorio, tamanho) => {
+  const startFlashcards = async (tema, qtd, aleatorio, tamanho, dificuldade = "todos") => {
     let pool = tema === DROPDOWN_ALL ? await fetchAllFlashcards(supabase) : await fetchFlashcardsByTheme(supabase, tema);
+    if (dificuldade !== "todos") pool = pool.filter((f) => f.dificuldade === dificuldade);
     // Com "Todos" embaralha sempre, mesmo sem o toggle Aleatorizar — senão uma
     // quantidade limitada ficaria presa aos primeiros temas por ordem de id,
     // em vez de misturar.
@@ -652,6 +657,7 @@ export function EstudaApp({ userId, userEmail }) {
       {screen === "flashcards-select" && (
         <FlashcardsSelectScreen
           themeCounts={themeCounts}
+          difficultyCounts={difficultyCounts}
           tamanho={flashcardFontSize}
           onSetTamanho={saveFlashcardFontSize}
           onStart={startFlashcards}

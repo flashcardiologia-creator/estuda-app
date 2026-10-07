@@ -143,10 +143,11 @@ export function QuestionsSessionScreen({
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "18px 22px 0" }}>
         <button
           onClick={onBack}
           style={{
+            flexShrink: 0,
             display: "flex",
             alignItems: "center",
             gap: 4,
@@ -162,22 +163,14 @@ export function QuestionsSessionScreen({
         >
           <ChevronLeft size={16} /> Voltar
         </button>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: t.text }}>
-            Questão {idx + 1} de {total}
-          </span>
-          <ReportButton onClick={() => setShowReport(true)} />
-        </div>
-      </div>
-
-      {timerActive && (
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
+        {timerActive && (
           <div
             style={{
+              flexShrink: 0,
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              padding: "5px 12px",
+              gap: 5,
+              padding: "5px 10px",
               borderRadius: 999,
               background: remainingMs <= 60000 ? "rgba(229,72,77,0.14)" : t.surfaceAlt,
               border: `1px solid ${remainingMs <= 60000 ? t.red : t.border}`,
@@ -195,8 +188,14 @@ export function QuestionsSessionScreen({
               {formatClock(remainingMs)}
             </span>
           </div>
+        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: t.text, whiteSpace: "nowrap" }}>
+            Questão {idx + 1} de {total}
+          </span>
+          <ReportButton onClick={() => setShowReport(true)} />
         </div>
-      )}
+      </div>
 
       <div
         ref={barTrackRef}

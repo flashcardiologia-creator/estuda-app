@@ -8,7 +8,7 @@ import { reportContentIssue } from "@/lib/data/reports";
 
 const REASONS = [
   "Enunciado ou alternativas com erro",
-  "Gabarito (resposta correta) errado",
+  "Gabarito errado",
   "Comentário/explicação errado ou confuso",
   "Imagem não aparece ou está errada",
   "Erro de português/digitação",
@@ -56,7 +56,7 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
     try {
       await reportContentIssue(supabase, userId, itemType, itemId, reason, details.trim());
       setSent(true);
-      setTimeout(onClose, 1300);
+      setTimeout(onClose, 4000);
     } catch (err) {
       setError(err.message || "Não foi possível enviar. Tente de novo.");
     } finally {
@@ -93,7 +93,7 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
 
         {sent ? (
           <div style={{ fontSize: 13.5, color: t.green, textAlign: "center", padding: "20px 0" }}>
-            Obrigado! Seu report foi enviado.
+            Obrigado, seu reporte foi enviado. Em breve, caso pertinente receberá a resposta em seu e-mail.
           </div>
         ) : (
           <>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, Hash, RotateCw, Shuffle, Type } from "lucide-react";
+import { BookOpen, Gauge, Hash, RotateCw, Shuffle, Type } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList, DROPDOWN_ALL } from "@/components/ui/Primitives";
 
@@ -12,8 +12,16 @@ const TAMANHO_OPTIONS = [
   { value: "lg", label: "Grande" },
 ];
 
+const DIFICULDADE_OPTIONS = [
+  { value: "todos", label: "Todos", sub: "Todos os cartões, de qualquer dificuldade" },
+  { value: "facil", label: "Fácil", sub: "Cai muito e é simples" },
+  { value: "medio", label: "Médio", sub: "Cai muito e é moderadamente difícil" },
+  { value: "dificil", label: "Difícil", sub: "Difícil e cai pouco no TEC; aparece mais em outras provas" },
+];
+
 export function FlashcardsSelectScreen({
   themeCounts,
+  difficultyCounts = {},
   tamanho,
   onSetTamanho,
   onStart,
@@ -26,11 +34,19 @@ export function FlashcardsSelectScreen({
   const [tema, setTema] = useState(null);
   const [qtd, setQtd] = useState("Todos");
   const [aleatorio, setAleatorio] = useState(false);
+  const [dificuldade, setDificuldade] = useState("todos");
   const [open, setOpen] = useState({});
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
-  const totalCount = useMemo(() => Object.values(themeCounts).reduce((a, b) => a + b, 0), [themeCounts]);
-  const availableCount = !tema ? 0 : tema === DROPDOWN_ALL ? totalCount : themeCounts[tema] || 0;
+  const countFor = (temaKey) =>
+    dificuldade === "todos" ? themeCounts[temaKey] || 0 : difficultyCounts[temaKey]?.[dificuldade] || 0;
+  const totalCount = useMemo(
+    () => Object.keys(themeCounts).reduce((sum, k) => sum + countFor(k), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [themeCounts, difficultyCounts, dificuldade]
+  );
+  const availableCount = !tema ? 0 : tema === DROPDOWN_ALL ? totalCount : countFor(tema);
+  const dificuldadeSub = DIFICULDADE_OPTIONS.find((o) => o.value === dificuldade)?.sub;
   const sessionCount = tema ? Math.min(qtd === "Todos" ? availableCount : qtd, availableCount) : 0;
 
   return (
@@ -39,6 +55,22 @@ export function FlashcardsSelectScreen({
       <div style={{ padding: "18px 22px" }}>
         <ExpandBox title="Tema" icon={<BookOpen size={17} color={t.primary} />} open={open.tema} onToggle={() => toggle("tema")}>
           <DropdownList options={temas} selected={tema} onChange={setTema} allLabel="Todos" />
+        </ExpandBox>
+
+        <ExpandBox
+          title="Dificuldade dos flashcards"
+          icon={<Gauge size={17} color={t.primary} />}
+          open={open.dificuldade}
+          onToggle={() => toggle("dificuldade")}
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {DIFICULDADE_OPTIONS.map((o) => (
+              <Chip key={o.value} active={dificuldade === o.value} onClick={() => setDificuldade(o.value)}>
+                {o.label}
+              </Chip>
+            ))}
+          </div>
+          <div style={{ fontSize: 12, color: t.textMuted, marginTop: 10 }}>{dificuldadeSub}</div>
         </ExpandBox>
 
         <ExpandBox title="Quantidade" icon={<Hash size={17} color={t.primary} />} open={open.qtd} onToggle={() => toggle("qtd")}>
@@ -80,7 +112,7 @@ export function FlashcardsSelectScreen({
               Continuar Sessão
             </PrimaryButton>
           )}
-          <PrimaryButton full disabled={!tema} onClick={() => onStart(tema, qtd, aleatorio, tamanho)}>
+          <PrimaryButton full disabled={!tema || sessionCount === 0} onClick={() => onStart(tema, qtd, aleatorio, tamanho, dificuldade)}>
             Iniciar Flashcards
           </PrimaryButton>
         </div>

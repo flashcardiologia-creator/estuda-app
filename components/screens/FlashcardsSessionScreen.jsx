@@ -7,6 +7,33 @@ import { PrimaryButton, Tag } from "@/components/ui/Primitives";
 import { ReportButton, ReportIssueModal } from "@/components/ui/ReportIssue";
 
 const FLASHCARD_FONT_SIZES = { sm: 16, md: 20, lg: 24 };
+const DIFICULDADE_LABEL = { facil: "Fácil", medio: "Médio", dificil: "Difícil" };
+
+// Imagem ilustrativa do card. Fica no verso (resposta) por padrão; cards cujo
+// pergunta depende da imagem (ex.: "qual o diagnóstico deste ECG?") mostram
+// a imagem nos dois lados. Se a imagem não carregar, some sem quebrar o card.
+function CardImage({ card, flipped }) {
+  const [failed, setFailed] = useState(false);
+  if (!card.imagem_url || failed) return null;
+  if (!flipped && card.imagem_lado !== "pergunta") return null;
+  return (
+    <div style={{ marginTop: 18, width: "100%" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={card.imagem_url}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={() => setFailed(true)}
+        draggable={false}
+        style={{ display: "block", margin: "0 auto", maxWidth: "100%", maxHeight: 280, borderRadius: 10, background: "#fff" }}
+      />
+      {card.imagem_credito && (
+        <div style={{ fontSize: 10.5, color: "#8a8f98", marginTop: 6, textAlign: "center" }}>{card.imagem_credito}</div>
+      )}
+    </div>
+  );
+}
 
 export function FlashcardsSessionScreen({ supabase, userId, session, setSession, onNavigate, onFinish, onView, fontSize }) {
   const t = useT();
@@ -95,7 +122,10 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
                 Resposta
               </span>
             ) : (
-              <Tag>{card.tema}</Tag>
+              <>
+                <Tag>{card.tema}</Tag>
+                {DIFICULDADE_LABEL[card.dificuldade] && <Tag>{DIFICULDADE_LABEL[card.dificuldade]}</Tag>}
+              </>
             )}
           </div>
           <div
@@ -114,6 +144,7 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
             <div style={{ fontWeight: 700, fontSize: cardFontSize, color: t.text, lineHeight: 1.4 }}>
               {flipped ? card.resposta : card.pergunta}
             </div>
+            <CardImage key={card.id} card={card} flipped={flipped} />
             <div style={{ fontSize: 13, color: flipped ? answerBorder : t.primary, marginTop: 22, fontWeight: 600 }}>
               {flipped ? "Clique para ver a pergunta" : "Clique para ver a resposta"}
             </div>
