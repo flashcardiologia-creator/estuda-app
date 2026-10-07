@@ -6,6 +6,8 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, SectionLabel } from "@/components/ui/Primitives";
 
 const MAX_FRIENDS = 3;
+// Opção "Todos": sorteia as questões de todos os temas (o banco entende o texto "Todos").
+const TEMA_TODOS = "Todos";
 
 export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
   const t = useT();
@@ -256,7 +258,7 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
                 padding: 6,
               }}
             >
-              {temas.map((tm) => {
+              {[TEMA_TODOS, ...temas.filter((x) => x !== TEMA_TODOS)].map((tm) => {
                 const active = tema === tm;
                 return (
                   <button

@@ -13,11 +13,24 @@ function challengeDone(answered, qtd) {
   return answered >= qtd;
 }
 
-// "Ana vs Bruno" em 1 contra 1; "Você, Ana e Bruno" em desafios em grupo.
-function challengeTitle(c) {
-  if (!c.isGroup) return `${c.fromName} vs ${c.toName}`;
-  const names = c.participants.map((p) => (p.isMe ? "Você" : p.name));
-  return names.slice(0, -1).join(", ") + " e " + names[names.length - 1];
+// Aba selecionada: contorno branco, texto branco em negrito e sem o fundo roxo.
+// (No tema claro, onde branco sumiria, usa a cor de texto escura.)
+function tabStyle(t, active) {
+  const base = { flex: 1, textAlign: "center" };
+  if (active) {
+    const c = t.name === "light" ? t.text : "#FFFFFF";
+    return { ...base, border: `2px solid ${c}`, background: "transparent", color: c, fontWeight: 800 };
+  }
+  return t.name === "light" ? { ...base, background: t.surface } : base;
+}
+
+function temaLabel(tema) {
+  return tema === "Todos" ? "Todos os temas" : tema;
+}
+
+// Data em que o desafio foi criado, ex.: "07/10/2026".
+function formatChallengeDate(iso) {
+  return new Date(iso).toLocaleDateString("pt-BR");
 }
 
 function ExpiresTag({ expiresAt }) {
@@ -170,18 +183,10 @@ export function ChallengesScreen({
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-          <Chip
-            active={tab === "pendentes"}
-            onClick={() => setTab("pendentes")}
-            style={{ flex: 1, textAlign: "center", ...(tab !== "pendentes" && t.name === "light" ? { background: t.surface } : {}) }}
-          >
+          <Chip active={tab === "pendentes"} onClick={() => setTab("pendentes")} style={tabStyle(t, tab === "pendentes")}>
             Pendentes ({pendentes.length})
           </Chip>
-          <Chip
-            active={tab === "concluidos"}
-            onClick={() => setTab("concluidos")}
-            style={{ flex: 1, textAlign: "center", ...(tab !== "concluidos" && t.name === "light" ? { background: t.surface } : {}) }}
-          >
+          <Chip active={tab === "concluidos"} onClick={() => setTab("concluidos")} style={tabStyle(t, tab === "concluidos")}>
             Concluídos ({concluidos.length})
           </Chip>
         </div>
@@ -200,9 +205,8 @@ export function ChallengesScreen({
               <div key={c.id} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16, marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>{challengeTitle(c)}</div>
-                    <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3 }}>
-                      {c.tema} · {c.qtd} questões
+                    <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>
+                      {temaLabel(c.tema)} · {c.qtd} questões
                     </div>
                   </div>
                   {myDone ? (
@@ -287,10 +291,10 @@ export function ChallengesScreen({
               <div key={c.id} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16, marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>{challengeTitle(c)}</div>
-                    <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3 }}>
-                      {c.tema} · {c.qtd} questões
+                    <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>
+                      {temaLabel(c.tema)} · {c.qtd} questões
                     </div>
+                    <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3 }}>{formatChallengeDate(c.created_at)}</div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <Trophy size={16} color={t.amber} />
