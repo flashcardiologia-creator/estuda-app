@@ -93,7 +93,9 @@ export function StatsScreen({ supabase, userId, allQuestions, challenges, onNavi
                   <div style={{ fontSize: 10.5, color: t.textMuted, fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: t.text }}>
                     {s.value}
-                    {s.pct != null && <span style={{ color: pctColor(s.pct, t), fontSize: "0.75em" }}> ({s.pct}%)</span>}
+                    {s.pct != null && (
+                      <span style={{ color: t.text, fontSize: "0.75em", marginLeft: 10 }}>({s.pct}%)</span>
+                    )}
                   </div>
                 </div>
               ))}

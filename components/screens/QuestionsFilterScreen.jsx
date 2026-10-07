@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart3, BookOpen, ChevronLeft, ChevronRight, Clock, Award, History, Timer, Trash2, Type, Lock, RotateCw } from "lucide-react";
+import { BarChart3, BookOpen, ChevronLeft, ChevronRight, Clock, Award, History, Settings, Trash2, Type, Lock, RotateCw } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList } from "@/components/ui/Primitives";
 import { applyQuestionFilters, deriveFilterOptions, parseInstituicao } from "@/lib/data/questions";
@@ -148,7 +148,13 @@ export function QuestionsFilterScreen({
           />
         </ExpandBox>
 
-        <ExpandBox title="Cronômetro" icon={<Timer size={17} color={t.primary} />} open={open.cron} onToggle={() => toggle("cron")}>
+        <ExpandBox title="Configurações" icon={<Settings size={17} color={t.primary} />} open={open.config} onToggle={() => toggle("config")}>
+          <Toggle
+            checked={filters.favoritasOnly}
+            onChange={(v) => setFilters((f) => ({ ...f, favoritasOnly: v }))}
+            label="Somente questões favoritas"
+            sub={`${favorites.length} marcadas`}
+          />
           <Toggle
             checked={filters.cronometro}
             onChange={(v) => setFilters((f) => ({ ...f, cronometro: v }))}
@@ -167,25 +173,21 @@ export function QuestionsFilterScreen({
               />
             </div>
           )}
-        </ExpandBox>
-
-        <ExpandBox title="Tamanho da Letra" icon={<Type size={17} color={t.primary} />} open={open.fonte} onToggle={() => toggle("fonte")}>
-          <div style={{ display: "flex", gap: 8 }}>
-            {[["sm", "Pequena"], ["md", "Média"], ["lg", "Grande"]].map(([k, l]) => (
-              <Chip key={k} active={filters.fontSize === k} onClick={() => onSetFontSize(k)}>
-                {l}
-              </Chip>
-            ))}
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: t.text, fontWeight: 600, marginBottom: 8 }}>
+              <Type size={14} color={t.primary} /> Tamanho da letra
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[["sm", "Pequena"], ["md", "Média"], ["lg", "Grande"]].map(([k, l]) => (
+                <Chip key={k} active={filters.fontSize === k} onClick={() => onSetFontSize(k)}>
+                  {l}
+                </Chip>
+              ))}
+            </div>
           </div>
         </ExpandBox>
 
         <ExpandBox title="Modos" icon={<Lock size={17} color={t.primary} />} open={open.provas} onToggle={() => toggle("provas")}>
-          <Toggle
-            checked={filters.favoritasOnly}
-            onChange={(v) => setFilters((f) => ({ ...f, favoritasOnly: v }))}
-            label="Somente questões favoritas"
-            sub={`${favorites.length} marcadas`}
-          />
           <Toggle
             checked={filters.modoProva}
             onChange={(v) => setFilters((f) => ({ ...f, modoProva: v }))}
