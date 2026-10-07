@@ -46,6 +46,7 @@ import { fetchDailyMissionItems, completeDailyMission, expireDailyMission } from
 import {
   fetchFriends,
   addFriendByName,
+  addFriendById,
   fetchIncomingFriendRequests,
   respondToFriendRequest,
 } from "@/lib/data/friends";
@@ -509,8 +510,9 @@ export function EstudaApp({ userId, userEmail }) {
     updateFlashcardFontSize(supabase, userId, size).catch(() => {});
   };
 
-  const addFriend = async (name) => {
-    const result = await addFriendByName(supabase, name);
+  const addFriend = async (target) => {
+    // target: texto digitado (nome exato ou código) ou { id, name } de uma sugestão
+    const result = typeof target === "string" ? await addFriendByName(supabase, target) : await addFriendById(supabase, target);
     if (result.status === "accepted") {
       setFriends((f) => [...f, result.friend]);
     }

@@ -13,6 +13,13 @@ function challengeDone(answered, qtd) {
   return answered >= qtd;
 }
 
+// "Ana vs Bruno" em 1 contra 1; "Você, Ana e Bruno" em desafios em grupo.
+function challengeTitle(c) {
+  if (!c.isGroup) return `${c.fromName} vs ${c.toName}`;
+  const names = c.participants.map((p) => (p.isMe ? "Você" : p.name));
+  return names.slice(0, -1).join(", ") + " e " + names[names.length - 1];
+}
+
 function ExpiresTag({ expiresAt }) {
   // Recalcula a cada minuto pra virar de hora em hora no momento certo — o
   // valor em si sempre vem do relógio real, nunca de um estado acumulado.
@@ -78,8 +85,8 @@ export function ChallengesScreen({
     };
   }, [supabase, userId, onRefreshChallenges]);
 
-  const criarDesafio = async (friendId, tema, qtd) => {
-    const id = await createChallenge(supabase, friendId, tema, qtd);
+  const criarDesafio = async (friendIds, tema, qtd) => {
+    const id = await createChallenge(supabase, friendIds, tema, qtd);
     await onRefreshChallenges();
     setShowNew(false);
     setRespondingId(id);
@@ -183,20 +190,17 @@ export function ChallengesScreen({
         {tab === "pendentes" &&
           pendentes.map((c) => {
             const myDone = challengeDone(c.myAnswered, c.qtd);
-            const theirDone = challengeDone(c.theirAnswered, c.qtd);
             const myPct = myDone ? Math.round((c.myCorrect / c.qtd) * 100) : null;
-            const theirName = c.isMine ? c.toName : c.fromName;
-            const participants = [
-              { name: "Você", done: myDone, answered: c.myAnswered },
-              { name: theirName, done: theirDone, answered: c.theirAnswered },
-            ];
+            const participants = c.participants.map((p) => ({
+              name: p.isMe ? "Você" : p.name,
+              done: challengeDone(p.answered, c.qtd),
+              answered: p.answered,
+            }));
             return (
               <div key={c.id} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16, marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>
-                      {c.fromName} vs {c.toName}
-                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>{challengeTitle(c)}</div>
                     <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3 }}>
                       {c.tema} · {c.qtd} questões
                     </div>
@@ -214,9 +218,9 @@ export function ChallengesScreen({
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>
-                  {participants.map((p) => (
+                  {participants.map((p, i) => (
                     <div
-                      key={p.name}
+                      key={`${p.name}-${i}`}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -266,23 +270,24 @@ export function ChallengesScreen({
         {tab === "concluidos" && concluidos.length === 0 && <EmptyState text="Ainda não há desafios concluídos." />}
         {tab === "concluidos" &&
           concluidos.map((c) => {
-            const sMine = c.myCorrect,
-              sTheirs = c.theirCorrect;
-            const theirName = c.isMine ? c.toName : c.fromName;
-            const myPct = Math.round((sMine / c.qtd) * 100);
-            const theirPct = Math.round((sTheirs / c.qtd) * 100);
-            const vencedor = sMine === sTheirs ? "Empate" : sMine > sTheirs ? "Você" : theirName;
-            const participants = [
-              { name: "Você", pct: myPct, correct: sMine, winner: vencedor === "Você" },
-              { name: theirName, pct: theirPct, correct: sTheirs, winner: vencedor === theirName },
-            ];
+            // vence quem fez estritamente mais acertos que todos os outros; empate no topo = "Empate"
+            const topScore = Math.max(...c.participants.map((p) => p.correct));
+            const topCount = c.participants.filter((p) => p.correct === topScore).length;
+            const winnerP = topCount === 1 ? c.participants.find((p) => p.correct === topScore) : null;
+            const vencedor = winnerP ? (winnerP.isMe ? "Você" : winnerP.name) : "Empate";
+            const participants = [...c.participants]
+              .sort((a, b) => b.correct - a.correct)
+              .map((p) => ({
+                name: p.isMe ? "Você" : p.name,
+                pct: Math.round((p.correct / c.qtd) * 100),
+                correct: p.correct,
+                winner: winnerP ? p.id === winnerP.id : false,
+              }));
             return (
               <div key={c.id} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16, marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>
-                      {c.fromName} vs {c.toName}
-                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>{challengeTitle(c)}</div>
                     <div style={{ fontSize: 12, color: t.textMuted, marginTop: 3 }}>
                       {c.tema} · {c.qtd} questões
                     </div>
@@ -296,9 +301,9 @@ export function ChallengesScreen({
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>
-                  {participants.map((p) => (
+                  {participants.map((p, i) => (
                     <div
-                      key={p.name}
+                      key={`${p.name}-${i}`}
                       style={{
                         display: "flex",
                         alignItems: "center",

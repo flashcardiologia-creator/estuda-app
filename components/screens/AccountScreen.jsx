@@ -5,7 +5,7 @@ import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Tras
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
-import { fetchFriendComparison, removeFriend } from "@/lib/data/friends";
+import { fetchFriendComparison, removeFriend, searchProfilesByPrefix } from "@/lib/data/friends";
 
 function PasswordField({ value, onChange, placeholder, visible, onToggleVisible }) {
   const t = useT();
@@ -94,6 +94,7 @@ export function AccountScreen({
   const [friendError, setFriendError] = useState("");
   const [friendInfo, setFriendInfo] = useState("");
   const [addingFriend, setAddingFriend] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
   const [respondingId, setRespondingId] = useState(null);
   const [codeCopied, setCodeCopied] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
@@ -109,6 +110,25 @@ export function AccountScreen({
   useEffect(() => {
     if (nameEditing) nameInputRef.current?.focus();
   }, [nameEditing]);
+
+  const friendQuery = newFriend.trim();
+  const visibleSuggestions = friendQuery.length >= 2 && !/^\d+$/.test(friendQuery) ? suggestions : [];
+
+  // Sugestões de amigos enquanto digita: busca nomes que começam com o texto
+  // (a partir de 2 letras, com pequeno atraso para não consultar a cada tecla).
+  useEffect(() => {
+    const q = newFriend.trim();
+    if (q.length < 2 || /^\d+$/.test(q)) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const found = await searchProfilesByPrefix(supabase, q);
+      if (!cancelled) setSuggestions(found);
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [newFriend, supabase]);
 
   const copyCode = async () => {
     try {
@@ -189,14 +209,17 @@ export function AccountScreen({
     }
   };
 
-  const addFriend = async () => {
+  // `picked` = sugestão tocada ({ id, name }); sem ele, usa o que foi digitado.
+  const addFriend = async (picked) => {
     const v = sanitizeName(newFriend).trim();
-    if (!v) return;
+    const target = picked?.id ? picked : v;
+    if (!target) return;
     setAddingFriend(true);
     setFriendError("");
     setFriendInfo("");
+    setSuggestions([]);
     try {
-      const result = await onAddFriend(v);
+      const result = await onAddFriend(target);
       setFriendInfo(
         result.status === "accepted"
           ? `Vocês agora são amigos!`
@@ -588,7 +611,7 @@ export function AccountScreen({
               value={newFriend}
               maxLength={MAX_NAME_LEN}
               onChange={(e) => setNewFriend(sanitizeName(e.target.value))}
-              placeholder="Nome exato ou código do amigo"
+              placeholder="Digite o nome ou o código do amigo"
               className="friend-search-input"
               style={{
                 flex: 1,
@@ -600,10 +623,53 @@ export function AccountScreen({
                 fontSize: 16,
               }}
             />
-            <PrimaryButton small disabled={!newFriend.trim() || addingFriend} onClick={addFriend}>
+            <PrimaryButton small disabled={!newFriend.trim() || addingFriend} onClick={() => addFriend()}>
               <Plus size={14} />
             </PrimaryButton>
           </div>
+          {visibleSuggestions.length > 0 && (
+            <div
+              style={{
+                marginBottom: 8,
+                border: `1px solid ${t.border}`,
+                borderRadius: 10,
+                background: t.surface,
+                overflow: "hidden",
+              }}
+            >
+              {visibleSuggestions.map((s, i) => {
+                const typed = newFriend.trim().length;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => addFriend(s)}
+                    disabled={addingFriend}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      background: "transparent",
+                      border: "none",
+                      borderTop: i === 0 ? "none" : `1px solid ${t.border}`,
+                      color: t.text,
+                      fontSize: 14,
+                      cursor: addingFriend ? "default" : "pointer",
+                    }}
+                  >
+                    <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <strong style={{ color: t.primary }}>{s.name.slice(0, typed)}</strong>
+                      {s.name.slice(typed)}
+                    </span>
+                    <Plus size={14} color={t.textMuted} style={{ flexShrink: 0 }} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {friendError && (
             <div style={{ fontSize: 12, color: t.red, marginBottom: 8 }}>{friendError}</div>
           )}

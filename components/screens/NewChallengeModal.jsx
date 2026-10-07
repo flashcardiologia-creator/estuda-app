@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Swords, Users, BookOpen, ListChecks, X, ChevronDown } from "lucide-react";
+import { Swords, Users, BookOpen, ListChecks, X, ChevronDown, Check } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, SectionLabel } from "@/components/ui/Primitives";
 
+const MAX_FRIENDS = 3;
+
 export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
   const t = useT();
-  const [friendId, setFriendId] = useState(friends[0]?.id || "");
+  const [friendIds, setFriendIds] = useState(friends[0] ? [friends[0].id] : []);
   const [tema, setTema] = useState(temas[0] || "");
   const [qtd, setQtd] = useState(5);
   const [creating, setCreating] = useState(false);
@@ -17,7 +19,18 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
   const [temaMenuOpen, setTemaMenuOpen] = useState(false);
   const temaFieldRef = useRef(null);
 
-  const selectedFriend = friends.find((f) => f.id === friendId) || null;
+  const selectedFriends = friendIds.map((id) => friends.find((f) => f.id === id)).filter(Boolean);
+
+  const toggleFriend = (id) => {
+    setError("");
+    if (friendIds.includes(id)) {
+      setFriendIds(friendIds.filter((x) => x !== id));
+    } else if (friendIds.length >= MAX_FRIENDS) {
+      setError(`Você pode chamar no máximo ${MAX_FRIENDS} amigos.`);
+    } else {
+      setFriendIds([...friendIds, id]);
+    }
+  };
 
   useEffect(() => {
     if (!friendMenuOpen && !temaMenuOpen) return;
@@ -37,7 +50,7 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
     setCreating(true);
     setError("");
     try {
-      await onCreate(friendId, tema, qtd);
+      await onCreate(friendIds, tema, qtd);
     } catch (err) {
       setError(err.message || "Não foi possível criar o desafio.");
     } finally {
@@ -65,7 +78,7 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
         </div>
 
         <div style={{ marginBottom: 18, position: "relative" }} ref={friendFieldRef}>
-          <SectionLabel icon={<Users size={13} />}>Amigo</SectionLabel>
+          <SectionLabel icon={<Users size={13} />}>{`Amigos (${selectedFriends.length}/${MAX_FRIENDS})`}</SectionLabel>
           <button
             onClick={() => setFriendMenuOpen((v) => !v)}
             style={{
@@ -82,29 +95,45 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
               boxSizing: "border-box",
             }}
           >
-            {selectedFriend ? (
-              <>
-                <div
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: "50%",
-                    background: t.primarySoft,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: t.primary,
-                    flexShrink: 0,
-                  }}
-                >
-                  {selectedFriend.name[0]}
-                </div>
-                <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: t.text }}>{selectedFriend.name}</span>
-              </>
+            {selectedFriends.length > 0 ? (
+              <div style={{ flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {selectedFriends.map((f) => (
+                  <span
+                    key={f.id}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "3px 9px 3px 4px",
+                      borderRadius: 999,
+                      background: t.primarySoft,
+                      color: t.primary,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      maxWidth: "100%",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        background: "rgba(255,255,255,0.16)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 10,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {f.name[0]}
+                    </span>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+                  </span>
+                ))}
+              </div>
             ) : (
-              <span style={{ flex: 1, fontSize: 13.5, color: t.textMuted }}>Selecione um amigo</span>
+              <span style={{ flex: 1, fontSize: 13.5, color: t.textMuted }}>Selecione até {MAX_FRIENDS} amigos</span>
             )}
             <ChevronDown
               size={16}
@@ -132,14 +161,12 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
               }}
             >
               {friends.map((f) => {
-                const active = friendId === f.id;
+                const active = friendIds.includes(f.id);
+                const full = !active && friendIds.length >= MAX_FRIENDS;
                 return (
                   <button
                     key={f.id}
-                    onClick={() => {
-                      setFriendId(f.id);
-                      setFriendMenuOpen(false);
-                    }}
+                    onClick={() => toggleFriend(f.id)}
                     style={{
                       width: "100%",
                       display: "flex",
@@ -149,7 +176,8 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
                       borderRadius: 9,
                       border: "none",
                       background: active ? t.primarySoft : "transparent",
-                      cursor: "pointer",
+                      cursor: full ? "default" : "pointer",
+                      opacity: full ? 0.45 : 1,
                       textAlign: "left",
                       boxSizing: "border-box",
                     }}
@@ -171,7 +199,8 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
                     >
                       {f.name[0]}
                     </div>
-                    <span style={{ fontSize: 13.5, fontWeight: 600, color: active ? t.primary : t.text }}>{f.name}</span>
+                    <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: active ? t.primary : t.text }}>{f.name}</span>
+                    {active && <Check size={15} color={t.primary} style={{ flexShrink: 0 }} />}
                   </button>
                 );
               })}
@@ -294,8 +323,8 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
             </PrimaryButton>
           </div>
           <div style={{ flex: 1 }}>
-            <PrimaryButton full disabled={!friendId || !tema || creating} onClick={criar}>
-              Desafiar
+            <PrimaryButton full disabled={friendIds.length === 0 || !tema || creating} onClick={criar}>
+              {friendIds.length > 1 ? "Desafiar grupo" : "Desafiar"}
             </PrimaryButton>
           </div>
         </div>
