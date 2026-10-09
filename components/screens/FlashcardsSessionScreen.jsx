@@ -1,20 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Trash2 } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag } from "@/components/ui/Primitives";
 import { ReportButton, ReportIssueModal } from "@/components/ui/ReportIssue";
 
 const FLASHCARD_FONT_SIZES = { sm: 16, md: 20, lg: 24 };
 const DIFICULDADE_LABEL = { facil: "Fácil", medio: "Médio", dificil: "Difícil" };
-
-// "3. Diagnóstico" -> "Aula 3 · Diagnóstico" (módulo da sequência didática do tema).
-function aulaLabel(aula) {
-  if (!aula) return "";
-  const m = /^\s*(\d+)\.\s*(.*)$/.exec(aula);
-  return m ? `Aula ${m[1]} · ${m[2]}` : aula;
-}
 
 // Imagem ilustrativa do card. Fica no verso (resposta) por padrão; cards cujo
 // pergunta depende da imagem (ex.: "qual o diagnóstico deste ECG?") mostram
@@ -42,9 +35,12 @@ function CardImage({ card, flipped }) {
   );
 }
 
-export function FlashcardsSessionScreen({ supabase, userId, session, setSession, onNavigate, onFinish, onView, fontSize }) {
+export function FlashcardsSessionScreen({ supabase, userId, session, setSession, onNavigate, onFinish, onView, onTrash, fontSize }) {
   const t = useT();
   const [showReport, setShowReport] = useState(false);
+  const [confirmTrash, setConfirmTrash] = useState(false);
+  const [trashing, setTrashing] = useState(false);
+  const [trashError, setTrashError] = useState("");
   const total = session.ids.length;
   const idx = session.index;
   const card = session.cardsById[session.ids[idx]];
@@ -54,7 +50,7 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
 
   const flip = () => {
     const nextFlipped = !flipped;
-    if (nextFlipped) onView?.(card.id);
+    if (nextFlipped && !card.custom) onView?.(card.id);
     setSession((s) => ({
       ...s,
       flipped: { ...s.flipped, [card.id]: nextFlipped },
@@ -68,6 +64,20 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
       const flipped = dir < 0 ? { ...s.flipped, [targetId]: false } : s.flipped;
       return { ...s, index: newIndex, flipped };
     });
+
+  // Manda o flashcard para a lixeira (só desta pessoa) depois da confirmação.
+  const sendCardToTrash = async () => {
+    setTrashing(true);
+    setTrashError("");
+    try {
+      await onTrash(card);
+      setConfirmTrash(false);
+    } catch (err) {
+      setTrashError(err.message || "Não foi possível mandar para a lixeira.");
+    } finally {
+      setTrashing(false);
+    }
+  };
 
   const answerBg = t.name === "light" ? "linear-gradient(135deg, #A9DDBD 0%, #C7C7CE 100%)" : "rgba(19,46,36,0.5)";
   const answerBorder = t.name === "light" ? "#16A34A" : "#2FB380";
@@ -97,7 +107,7 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
           <span style={{ fontSize: 15, fontWeight: 700, color: t.text }}>
             Flashcard {idx + 1} de {total}
           </span>
-          <ReportButton onClick={() => setShowReport(true)} />
+          {!card.custom && <ReportButton onClick={() => setShowReport(true)} />}
         </div>
       </div>
 
@@ -125,9 +135,38 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
             }}
           >
             {flipped ? (
-              <span style={{ fontWeight: 700, fontSize: 12.5, color: answerBorder, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Resposta
-              </span>
+              <>
+                <span style={{ fontWeight: 700, fontSize: 12.5, color: answerBorder, textTransform: "uppercase", letterSpacing: 0.5, flex: 1 }}>
+                  Resposta
+                </span>
+                {onTrash && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTrashError("");
+                      setConfirmTrash(true);
+                    }}
+                    title="Mandar para a lixeira"
+                    aria-label="Mandar para a lixeira"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 32,
+                      height: 32,
+                      borderRadius: 10,
+                      border: `1px solid ${t.red}`,
+                      background: "transparent",
+                      color: t.red,
+                      cursor: "pointer",
+                      padding: 0,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Trash2 size={16} color="#E5484D" />
+                  </button>
+                )}
+              </>
             ) : (
               <>
                 <Tag>{card.tema}</Tag>
@@ -148,11 +187,6 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
               transition: "background .2s",
             }}
           >
-            {aulaLabel(card.aula) && (
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: t.textMuted, letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 14 }}>
-                {aulaLabel(card.aula)}
-              </div>
-            )}
             <div style={{ fontWeight: 700, fontSize: cardFontSize, color: t.text, lineHeight: 1.4 }}>
               {flipped ? card.resposta : card.pergunta}
             </div>
@@ -187,6 +221,36 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
           itemId={card.id}
           onClose={() => setShowReport(false)}
         />
+      )}
+
+      {confirmTrash && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 20 }}
+        >
+          <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 380, width: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <Trash2 size={20} color="#E5484D" />
+              <h3 style={{ fontSize: 16.5, color: t.text, margin: 0 }}>Mandar para a lixeira?</h3>
+            </div>
+            <p style={{ fontSize: 13.5, color: t.textMuted, lineHeight: 1.6, margin: 0 }}>
+              Você acredita que este flashcard é desnecessário e quer mandá-lo para a lixeira? Ele deixa de aparecer só para você, e dá para
+              restaurá-lo depois em <b style={{ color: t.text }}>Personalizado → Lixeira</b>.
+            </p>
+            {trashError && <div style={{ fontSize: 12.5, color: t.red, marginTop: 12 }}>{trashError}</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <div style={{ flex: 1 }}>
+                <PrimaryButton full variant="ghost" disabled={trashing} onClick={() => setConfirmTrash(false)}>
+                  Cancelar
+                </PrimaryButton>
+              </div>
+              <div style={{ flex: 1 }}>
+                <PrimaryButton full disabled={trashing} color={t.red} onClick={sendCardToTrash}>
+                  {trashing ? "Enviando..." : "Mandar para a lixeira"}
+                </PrimaryButton>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

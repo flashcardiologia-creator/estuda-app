@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, Gauge, Hash, RotateCw, Shuffle, Type } from "lucide-react";
+import { BookOpen, Gauge, Hash, Plus, RotateCw, Shuffle, Trash2, Type, UserCog } from "lucide-react";
+import { CreateFlashcardModal, TrashModal } from "@/components/screens/FlashcardPersonalModals";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList, DROPDOWN_ALL } from "@/components/ui/Primitives";
 
@@ -28,8 +29,14 @@ export function FlashcardsSelectScreen({
   onNavigate,
   hasSavedFlashSession,
   onContinueFlashcards,
+  onCreateCustom,
+  onLoadTrash,
+  onRestore,
+  onDeleteForever,
 }) {
   const t = useT();
+  const [showCreate, setShowCreate] = useState(false);
+  const [showTrash, setShowTrash] = useState(false);
   const temas = useMemo(() => Object.keys(themeCounts).sort(), [themeCounts]);
   const [tema, setTema] = useState(null);
   const [qtd, setQtd] = useState("Todos");
@@ -100,6 +107,22 @@ export function FlashcardsSelectScreen({
           <Toggle checked={aleatorio} onChange={setAleatorio} sub="Embaralha os cartões antes de iniciar" />
         </ExpandBox>
 
+        <ExpandBox title="Personalizado" icon={<UserCog size={17} color={t.primary} />} open={open.personal} onToggle={() => toggle("personal")}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <PrimaryButton full onClick={() => setShowCreate(true)}>
+              <Plus size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+              Criar Flashcards
+            </PrimaryButton>
+            <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={() => setShowTrash(true)}>
+              <Trash2 size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+              Lixeira
+            </PrimaryButton>
+          </div>
+          <div style={{ fontSize: 12, color: t.textMuted, marginTop: 10, lineHeight: 1.5 }}>
+            Os flashcards que você cria e os que manda para a lixeira valem só para a sua conta.
+          </div>
+        </ExpandBox>
+
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center" }}>
             {tema ? `${sessionCount} cartões nesta sessão` : "Selecione um tema"}
@@ -115,6 +138,9 @@ export function FlashcardsSelectScreen({
           </PrimaryButton>
         </div>
       </div>
+
+      {showCreate && <CreateFlashcardModal temas={temas} onCreate={onCreateCustom} onClose={() => setShowCreate(false)} />}
+      {showTrash && <TrashModal onLoad={onLoadTrash} onRestore={onRestore} onDeleteForever={onDeleteForever} onClose={() => setShowTrash(false)} />}
     </div>
   );
 }

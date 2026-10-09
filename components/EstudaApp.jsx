@@ -51,6 +51,7 @@ import {
   saveQuestionSession,
   unpackProgress,
 } from "@/lib/data/sessions";
+import { createCustomFlashcard, deleteCustomForever, fetchTrash, restoreFromTrash, sendToTrash } from "@/lib/data/personal";
 import { DROPDOWN_ALL } from "@/components/ui/Primitives";
 import { fetchDailyMissionItems, completeDailyMission, expireDailyMission } from "@/lib/data/mission";
 import {
@@ -283,7 +284,7 @@ export function EstudaApp({ userId, userEmail }) {
       fetchQuestionSessions(supabase, userId).then(setPastSessions);
     }
     if (screen === "flashcards-select") {
-      fetchFlashcardCounts(supabase).then(({ themeCounts, difficultyCounts }) => {
+      fetchFlashcardCounts(supabase, { trash: true, custom: true }).then(({ themeCounts, difficultyCounts }) => {
         setThemeCounts(themeCounts);
         setDifficultyCounts(difficultyCounts);
       });
@@ -492,7 +493,12 @@ export function EstudaApp({ userId, userEmail }) {
 
   /* ---- Flashcards ---- */
   const startFlashcards = async (tema, qtd, aleatorio, tamanho, dificuldade = "todos") => {
-    let pool = tema === DROPDOWN_ALL ? await fetchAllFlashcards(supabase) : await fetchFlashcardsByTheme(supabase, tema);
+    // Personalização: tira o que a pessoa mandou para a lixeira e inclui os flashcards que ela criou.
+    const personal = { trash: true, custom: true };
+    let pool =
+      tema === DROPDOWN_ALL
+        ? await fetchAllFlashcards(supabase, personal)
+        : await fetchFlashcardsByTheme(supabase, tema, personal);
     if (dificuldade !== "todos") pool = pool.filter((f) => f.dificuldade === dificuldade);
     // Com "Todos" os temas e quantidade limitada, embaralha sempre (senão ficaria
     // presa aos primeiros temas). Nos demais casos, sem Aleatorizar, segue a ordem
@@ -514,6 +520,47 @@ export function EstudaApp({ userId, userEmail }) {
   const finishFlashcards = () => {
     setFlashSession(null);
     setScreen("home");
+  };
+
+  // Recarrega as contagens por tema/dificuldade (depois de criar, mandar para a lixeira ou restaurar).
+  const refreshFlashcardCounts = useCallback(async () => {
+    const { themeCounts, difficultyCounts } = await fetchFlashcardCounts(supabase, { trash: true, custom: true });
+    setThemeCounts(themeCounts);
+    setDifficultyCounts(difficultyCounts);
+  }, [supabase]);
+
+  const createCustomCard = async (data) => {
+    const card = await createCustomFlashcard(supabase, userId, data);
+    await refreshFlashcardCounts();
+    return card;
+  };
+
+  const restoreCard = async (card) => {
+    await restoreFromTrash(supabase, userId, card.id);
+    await refreshFlashcardCounts();
+  };
+
+  const deleteCustomCardForever = async (card) => {
+    await deleteCustomForever(supabase, userId, card.id);
+    await refreshFlashcardCounts();
+  };
+
+  // Manda o flashcard atual para a lixeira (só dessa pessoa) e o tira da sessão em andamento.
+  const trashCurrentFlashcard = async (card) => {
+    await sendToTrash(supabase, userId, card);
+    const remaining = flashSession.ids.filter((id) => id !== card.id);
+    if (remaining.length === 0) {
+      finishFlashcards();
+      return;
+    }
+    setFlashSession((s) => {
+      const ids = s.ids.filter((id) => id !== card.id);
+      const removedAt = s.ids.indexOf(card.id);
+      const index = Math.min(removedAt < s.index ? s.index - 1 : s.index, ids.length - 1);
+      const { [card.id]: _f, ...flipped } = s.flipped;
+      const { [card.id]: _c, ...cardsById } = s.cardsById;
+      return { ...s, ids, index, flipped, cardsById };
+    });
   };
 
   const viewFlashcard = useCallback(
@@ -778,6 +825,10 @@ export function EstudaApp({ userId, userEmail }) {
           onNavigate={setScreen}
           hasSavedFlashSession={!!flashSession}
           onContinueFlashcards={() => setScreen("flashcards-session")}
+          onCreateCustom={createCustomCard}
+          onLoadTrash={() => fetchTrash(supabase, userId)}
+          onRestore={restoreCard}
+          onDeleteForever={deleteCustomCardForever}
         />
       )}
 
@@ -790,6 +841,7 @@ export function EstudaApp({ userId, userEmail }) {
           onNavigate={setScreen}
           onFinish={finishFlashcards}
           onView={viewFlashcard}
+          onTrash={trashCurrentFlashcard}
           fontSize={flashcardFontSize}
         />
       )}
