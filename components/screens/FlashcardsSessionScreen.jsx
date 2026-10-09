@@ -9,6 +9,13 @@ import { ReportButton, ReportIssueModal } from "@/components/ui/ReportIssue";
 const FLASHCARD_FONT_SIZES = { sm: 16, md: 20, lg: 24 };
 const DIFICULDADE_LABEL = { facil: "Fácil", medio: "Médio", dificil: "Difícil" };
 
+// "3. Diagnóstico" -> "Aula 3 · Diagnóstico" (módulo da sequência didática do tema).
+function aulaLabel(aula) {
+  if (!aula) return "";
+  const m = /^\s*(\d+)\.\s*(.*)$/.exec(aula);
+  return m ? `Aula ${m[1]} · ${m[2]}` : aula;
+}
+
 // Imagem ilustrativa do card. Fica no verso (resposta) por padrão; cards cujo
 // pergunta depende da imagem (ex.: "qual o diagnóstico deste ECG?") mostram
 // a imagem nos dois lados. Se a imagem não carregar, some sem quebrar o card.
@@ -141,6 +148,11 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
               transition: "background .2s",
             }}
           >
+            {aulaLabel(card.aula) && (
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: t.textMuted, letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 14 }}>
+                {aulaLabel(card.aula)}
+              </div>
+            )}
             <div style={{ fontWeight: 700, fontSize: cardFontSize, color: t.text, lineHeight: 1.4 }}>
               {flipped ? card.resposta : card.pergunta}
             </div>

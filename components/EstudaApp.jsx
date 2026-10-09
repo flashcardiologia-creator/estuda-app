@@ -40,7 +40,7 @@ import {
   fetchFavoriteIds,
   setFavorite,
 } from "@/lib/data/questions";
-import { fetchFlashcardCounts, fetchFlashcardsByTheme, fetchAllFlashcards, recordFlashcardView } from "@/lib/data/flashcards";
+import { fetchFlashcardCounts, fetchFlashcardsByTheme, fetchAllFlashcards, recordFlashcardView, sortLesson } from "@/lib/data/flashcards";
 import {
   countAnswered,
   createQuestionSession,
@@ -494,10 +494,11 @@ export function EstudaApp({ userId, userEmail }) {
   const startFlashcards = async (tema, qtd, aleatorio, tamanho, dificuldade = "todos") => {
     let pool = tema === DROPDOWN_ALL ? await fetchAllFlashcards(supabase) : await fetchFlashcardsByTheme(supabase, tema);
     if (dificuldade !== "todos") pool = pool.filter((f) => f.dificuldade === dificuldade);
-    // Com "Todos" embaralha sempre, mesmo sem o toggle Aleatorizar — senão uma
-    // quantidade limitada ficaria presa aos primeiros temas por ordem de id,
-    // em vez de misturar.
-    if (aleatorio || tema === DROPDOWN_ALL) pool = shuffle(pool);
+    // Com "Todos" os temas e quantidade limitada, embaralha sempre (senão ficaria
+    // presa aos primeiros temas). Nos demais casos, sem Aleatorizar, segue a ordem
+    // de aula: por tema, na sequência didática (ordem).
+    if (aleatorio || (tema === DROPDOWN_ALL && qtd !== "Todos")) pool = shuffle(pool);
+    else pool = sortLesson(pool);
     if (qtd !== "Todos") pool = pool.slice(0, qtd);
     setFlashSession({
       ids: pool.map((f) => f.id),
