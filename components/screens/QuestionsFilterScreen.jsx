@@ -101,6 +101,46 @@ export function QuestionsFilterScreen({
   const { temas: TEMAS, anos, instituicoes } = useMemo(() => deriveFilterOptions(allQuestions), [allQuestions]);
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
+  // Anos e instituições se filtram entre si: escolhendo só o INCOR, os anos mostram apenas os
+  // que têm prova do INCOR; escolhendo certos anos, as instituições mostram só as que têm prova
+  // nesses anos. O que já estava marcado e deixou de existir sai da seleção.
+  const { yearsByInst, instByYear } = useMemo(() => {
+    const yi = new Map();
+    const iy = new Map();
+    for (const q of allQuestions) {
+      if (!yi.has(q.instituicao)) yi.set(q.instituicao, new Set());
+      yi.get(q.instituicao).add(q.ano);
+      if (!iy.has(q.ano)) iy.set(q.ano, new Set());
+      iy.get(q.ano).add(q.instituicao);
+    }
+    return { yearsByInst: yi, instByYear: iy };
+  }, [allQuestions]);
+
+  const anosDisponiveis = useMemo(
+    () => (filters.instituicoes.length ? anos.filter((a) => filters.instituicoes.some((i) => yearsByInst.get(i)?.has(a))) : anos),
+    [anos, filters.instituicoes, yearsByInst]
+  );
+  const instituicoesDisponiveis = useMemo(
+    () => (filters.anos.length ? instituicoes.filter((i) => filters.anos.some((a) => instByYear.get(a)?.has(i))) : instituicoes),
+    [instituicoes, filters.anos, instByYear]
+  );
+
+  const changeInstituicoes = (novas) =>
+    setFilters((f) => {
+      if (!novas.length) return { ...f, instituicoes: novas };
+      const anosOk = new Set();
+      novas.forEach((i) => yearsByInst.get(i)?.forEach((y) => anosOk.add(y)));
+      return { ...f, instituicoes: novas, anos: f.anos.filter((a) => anosOk.has(a)) };
+    });
+
+  const changeAnos = (novos) =>
+    setFilters((f) => {
+      if (!novos.length) return { ...f, anos: novos };
+      const instOk = new Set();
+      novos.forEach((a) => instByYear.get(a)?.forEach((i) => instOk.add(i)));
+      return { ...f, anos: novos, instituicoes: f.instituicoes.filter((i) => instOk.has(i)) };
+    });
+
   const previewCount = useMemo(
     () => applyQuestionFilters(allQuestions, filters, favorites).length,
     [allQuestions, filters, favorites]
@@ -129,9 +169,9 @@ export function QuestionsFilterScreen({
 
         <ExpandBox title="Anos" icon={<Clock size={17} color={t.primary} />} open={open.anos} onToggle={() => toggle("anos")} badge={filters.anos.length}>
           <DropdownList
-            options={anos}
+            options={anosDisponiveis}
             selected={filters.anos}
-            onChange={(anos) => setFilters((f) => ({ ...f, anos }))}
+            onChange={changeAnos}
             multi
             allLabel="Todos"
           />
@@ -139,9 +179,9 @@ export function QuestionsFilterScreen({
 
         <ExpandBox title="Instituições" icon={<Award size={17} color={t.primary} />} open={open.instituicoes} onToggle={() => toggle("instituicoes")} badge={filters.instituicoes.length}>
           <DropdownList
-            options={instituicoes}
+            options={instituicoesDisponiveis}
             selected={filters.instituicoes}
-            onChange={(instituicoes) => setFilters((f) => ({ ...f, instituicoes }))}
+            onChange={changeInstituicoes}
             multi
             allLabel="Todos"
             groupBy={parseInstituicao}

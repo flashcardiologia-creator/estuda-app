@@ -5,6 +5,7 @@ import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Tras
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
+import { ContactBox } from "@/components/screens/ContactBox";
 import { fetchFriendComparison, removeFriend, searchProfilesByPrefix } from "@/lib/data/friends";
 
 function PasswordField({ value, onChange, placeholder, visible, onToggleVisible }) {
@@ -799,6 +800,8 @@ export function AccountScreen({
             ))}
           </div>
         </ExpandBox>
+
+        <ContactBox supabase={supabase} userId={userId} userEmail={userEmail} />
 
         <div style={{ marginTop: 20 }}>
           <PrimaryButton full variant="ghost" onClick={onSignOut}>
