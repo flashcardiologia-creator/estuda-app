@@ -51,7 +51,7 @@ import {
   saveQuestionSession,
   unpackProgress,
 } from "@/lib/data/sessions";
-import { createCustomFlashcard, deleteCustomForever, fetchTrash, restoreFromTrash, sendToTrash } from "@/lib/data/personal";
+import { createCustomFlashcard, deleteCustomForever, fetchTrash, restoreFromTrash, sendToTrash, setFlashcardFavorite } from "@/lib/data/personal";
 import { DROPDOWN_ALL } from "@/components/ui/Primitives";
 import { fetchDailyMissionItems, completeDailyMission, expireDailyMission } from "@/lib/data/mission";
 import {
@@ -111,7 +111,8 @@ export function EstudaApp({ userId, userEmail }) {
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [stats, setStats] = useState({ answered: 0, accuracy: 0 });
   const [themeCounts, setThemeCounts] = useState({});
-  const [difficultyCounts, setDifficultyCounts] = useState({});
+  const [favoriteCounts, setFavoriteCounts] = useState({});
+  const [flashFavorites, setFlashFavorites] = useState(() => new Set());
   const [challenges, setChallenges] = useState([]);
   const [challengeAnswering, setChallengeAnswering] = useState(false);
   const [accountFocus, setAccountFocus] = useState(null);
@@ -284,9 +285,10 @@ export function EstudaApp({ userId, userEmail }) {
       fetchQuestionSessions(supabase, userId).then(setPastSessions);
     }
     if (screen === "flashcards-select") {
-      fetchFlashcardCounts(supabase, { trash: true, custom: true }).then(({ themeCounts, difficultyCounts }) => {
+      fetchFlashcardCounts(supabase, { trash: true, custom: true }).then(({ themeCounts, favoriteCounts, favorites }) => {
         setThemeCounts(themeCounts);
-        setDifficultyCounts(difficultyCounts);
+        setFavoriteCounts(favoriteCounts);
+        setFlashFavorites(favorites);
       });
     }
   }, [screen, supabase, userId]);
@@ -492,14 +494,14 @@ export function EstudaApp({ userId, userEmail }) {
   };
 
   /* ---- Flashcards ---- */
-  const startFlashcards = async (tema, qtd, aleatorio, tamanho, dificuldade = "todos") => {
+  const startFlashcards = async (tema, qtd, aleatorio, tamanho, favoritasOnly = false) => {
     // Personalização: tira o que a pessoa mandou para a lixeira e inclui os flashcards que ela criou.
     const personal = { trash: true, custom: true };
     let pool =
       tema === DROPDOWN_ALL
         ? await fetchAllFlashcards(supabase, personal)
         : await fetchFlashcardsByTheme(supabase, tema, personal);
-    if (dificuldade !== "todos") pool = pool.filter((f) => f.dificuldade === dificuldade);
+    if (favoritasOnly) pool = pool.filter((f) => flashFavorites.has(f.id));
     // Com "Todos" os temas e quantidade limitada, embaralha sempre (senão ficaria
     // presa aos primeiros temas). Nos demais casos, sem Aleatorizar, segue a ordem
     // de aula: por tema, na sequência didática (ordem).
@@ -522,12 +524,33 @@ export function EstudaApp({ userId, userEmail }) {
     setScreen("home");
   };
 
-  // Recarrega as contagens por tema/dificuldade (depois de criar, mandar para a lixeira ou restaurar).
+  // Recarrega as contagens por tema/favoritos (depois de criar, mandar para a lixeira ou restaurar).
   const refreshFlashcardCounts = useCallback(async () => {
-    const { themeCounts, difficultyCounts } = await fetchFlashcardCounts(supabase, { trash: true, custom: true });
+    const { themeCounts, favoriteCounts, favorites } = await fetchFlashcardCounts(supabase, { trash: true, custom: true });
     setThemeCounts(themeCounts);
-    setDifficultyCounts(difficultyCounts);
+    setFavoriteCounts(favoriteCounts);
+    setFlashFavorites(favorites);
   }, [supabase]);
+
+  // Estrela do flashcard (só da própria pessoa): atualiza na hora e desfaz se der erro.
+  const toggleFlashcardFavorite = async (card) => {
+    const next = !flashFavorites.has(card.id);
+    const apply = (on) => {
+      setFlashFavorites((s) => {
+        const copy = new Set(s);
+        if (on) copy.add(card.id);
+        else copy.delete(card.id);
+        return copy;
+      });
+      setFavoriteCounts((c) => ({ ...c, [card.tema]: Math.max(0, (c[card.tema] || 0) + (on ? 1 : -1)) }));
+    };
+    apply(next);
+    try {
+      await setFlashcardFavorite(supabase, userId, card.id, next);
+    } catch {
+      apply(!next);
+    }
+  };
 
   const createCustomCard = async (data) => {
     const card = await createCustomFlashcard(supabase, userId, data);
@@ -818,7 +841,7 @@ export function EstudaApp({ userId, userEmail }) {
       {screen === "flashcards-select" && (
         <FlashcardsSelectScreen
           themeCounts={themeCounts}
-          difficultyCounts={difficultyCounts}
+          favoriteCounts={favoriteCounts}
           tamanho={flashcardFontSize}
           onSetTamanho={saveFlashcardFontSize}
           onStart={startFlashcards}
@@ -842,6 +865,8 @@ export function EstudaApp({ userId, userEmail }) {
           onFinish={finishFlashcards}
           onView={viewFlashcard}
           onTrash={trashCurrentFlashcard}
+          favorites={flashFavorites}
+          onToggleFavorite={toggleFlashcardFavorite}
           fontSize={flashcardFontSize}
         />
       )}

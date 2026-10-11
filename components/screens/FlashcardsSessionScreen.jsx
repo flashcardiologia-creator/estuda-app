@@ -1,13 +1,50 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, Trash2 } from "lucide-react";
+import { ChevronLeft, Star, Trash2 } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag } from "@/components/ui/Primitives";
 import { ReportButton, ReportIssueModal } from "@/components/ui/ReportIssue";
 
 const FLASHCARD_FONT_SIZES = { sm: 16, md: 20, lg: 24 };
-const DIFICULDADE_LABEL = { facil: "Fácil", medio: "Médio", dificil: "Difícil" };
+const STAR_COLOR = "#F5B50A";
+const INCIDENCE = {
+  1: { label: "Cai pouco", color: "#3DA5D9" },
+  2: { label: "Cai com frequência", color: "#F5A524" },
+  3: { label: "Cai muito", color: "#E5484D" },
+};
+
+// Barra de 3 espaços: quanto mais o assunto do card aparece nas questões do tema e nas provas
+// em geral, mais espaços se enchem (e mais quente fica a cor).
+function IncidenceBar({ level }) {
+  const t = useT();
+  const info = INCIDENCE[level];
+  if (!info) return null;
+  return (
+    <div
+      title={`Incidência em prova: ${info.label}`}
+      aria-label={`Incidência em prova: ${info.label}`}
+      style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}
+    >
+      <div style={{ display: "flex", gap: 3 }}>
+        {[1, 2, 3].map((slot) => (
+          <span
+            key={slot}
+            style={{
+              width: 20,
+              height: 7,
+              borderRadius: 4,
+              background: slot <= level ? info.color : "transparent",
+              border: `1px solid ${slot <= level ? info.color : t.border}`,
+              boxSizing: "border-box",
+            }}
+          />
+        ))}
+      </div>
+      <span style={{ fontSize: 10.5, fontWeight: 700, color: info.color, letterSpacing: 0.3 }}>{info.label}</span>
+    </div>
+  );
+}
 
 // Imagem ilustrativa do card. Fica no verso (resposta) por padrão; cards cujo
 // pergunta depende da imagem (ex.: "qual o diagnóstico deste ECG?") mostram
@@ -35,7 +72,19 @@ function CardImage({ card, flipped }) {
   );
 }
 
-export function FlashcardsSessionScreen({ supabase, userId, session, setSession, onNavigate, onFinish, onView, onTrash, fontSize }) {
+export function FlashcardsSessionScreen({
+  supabase,
+  userId,
+  session,
+  setSession,
+  onNavigate,
+  onFinish,
+  onView,
+  onTrash,
+  favorites,
+  onToggleFavorite,
+  fontSize,
+}) {
   const t = useT();
   const [showReport, setShowReport] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
@@ -46,6 +95,7 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
   const card = session.cardsById[session.ids[idx]];
   const flipped = session.flipped[card.id] || false;
   const viewed = !!(session.viewed && session.viewed[card.id]);
+  const isFavorite = !!favorites?.has(card.id);
   const cardFontSize = FLASHCARD_FONT_SIZES[fontSize || session.fontSize] || FLASHCARD_FONT_SIZES.md;
 
   const flip = () => {
@@ -166,11 +216,38 @@ export function FlashcardsSessionScreen({ supabase, userId, session, setSession,
                     <Trash2 size={16} color="#E5484D" />
                   </button>
                 )}
+                {onToggleFavorite && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFavorite(card);
+                    }}
+                    title={isFavorite ? "Remover dos favoritos" : "Favoritar"}
+                    aria-label={isFavorite ? "Remover dos favoritos" : "Favoritar"}
+                    aria-pressed={!!isFavorite}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 32,
+                      height: 32,
+                      borderRadius: 10,
+                      border: `1px solid ${isFavorite ? STAR_COLOR : t.border}`,
+                      background: "transparent",
+                      cursor: "pointer",
+                      padding: 0,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Star size={17} color={isFavorite ? STAR_COLOR : t.textMuted} fill={isFavorite ? STAR_COLOR : "none"} />
+                  </button>
+                )}
               </>
             ) : (
               <>
                 <Tag>{card.tema}</Tag>
-                {DIFICULDADE_LABEL[card.dificuldade] && <Tag>{DIFICULDADE_LABEL[card.dificuldade]}</Tag>}
+                <span style={{ flex: 1 }} />
+                <IncidenceBar level={card.incidencia} />
               </>
             )}
           </div>

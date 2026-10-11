@@ -8,7 +8,7 @@ import { CONTACT_MAX, sendContactMessage } from "@/lib/data/contact";
 
 const ASSUNTOS = ["Dúvida", "Sugestão", "Problema", "Outro"];
 
-export function ContactBox({ supabase, userId, userEmail }) {
+export function ContactBox({ supabase, userId }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [assunto, setAssunto] = useState("Dúvida");
@@ -36,11 +36,8 @@ export function ContactBox({ supabase, userId, userEmail }) {
     <ExpandBox title="Contato" icon={<MessageSquare size={17} color={t.primary} />} open={open} onToggle={() => setOpen((o) => !o)}>
       {sent ? (
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: t.green, marginBottom: 8 }}>
-            <Check size={16} /> Mensagem enviada!
-          </div>
-          <div style={{ fontSize: 13, color: t.textMuted, lineHeight: 1.6, marginBottom: 14 }}>
-            Obrigado pelo contato. Se precisar de resposta, ela chega no seu e-mail{userEmail ? ` (${userEmail})` : ""}.
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: t.green, marginBottom: 14 }}>
+            <Check size={16} /> Obrigado pelo contato.
           </div>
           <PrimaryButton full variant="ghost" onClick={() => setSent(false)}>
             Enviar outra mensagem

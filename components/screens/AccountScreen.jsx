@@ -801,7 +801,7 @@ export function AccountScreen({
           </div>
         </ExpandBox>
 
-        <ContactBox supabase={supabase} userId={userId} userEmail={userEmail} />
+        <ContactBox supabase={supabase} userId={userId} />
 
         <div style={{ marginTop: 20 }}>
           <PrimaryButton full variant="ghost" onClick={onSignOut}>
