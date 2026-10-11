@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, Target } from "lucide-react";
+import { Check, ChevronLeft, Layers, ListChecks, Target, Zap } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag, Flame_ } from "@/components/ui/Primitives";
 import { QuestionCard } from "@/components/screens/QuestionCard";
@@ -256,7 +256,131 @@ function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate,
   );
 }
 
-export function DailyDoneScreen({ supabase, streak, friends, onNavigate }) {
+const BONUS_OPTIONS = [
+  { id: "mix", big: "5+5", title: "5 questões + 5 flashcards", sub: "Mistura rápida para fixar o que você viu", Icon: Layers, gradient: "linear-gradient(135deg, #7C5CFC 0%, #4F46E5 100%)" },
+  { id: "questions", big: "10", title: "10 questões", sub: "Treino focado, só de questões", Icon: ListChecks, gradient: "linear-gradient(135deg, #F2A93B 0%, #E5484D 100%)" },
+];
+const bonusKey = (userId) => `flashcardio_bonus_choice_${userId}`;
+
+// Rodada bônus depois da missão. A escolha fica salva neste aparelho e vale para os dias seguintes, até a pessoa trocar.
+function BonusRound({ userId, onStartBonus }) {
+  const t = useT();
+  const [choice, setChoice] = useState(() => {
+    try {
+      const saved = localStorage.getItem(bonusKey(userId));
+      return BONUS_OPTIONS.some((o) => o.id === saved) ? saved : null;
+    } catch {
+      return null;
+    }
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const pick = (id) => {
+    setChoice(id);
+    try {
+      localStorage.setItem(bonusKey(userId), id);
+    } catch {
+      // sem armazenamento: a escolha só vale nesta tela
+    }
+  };
+
+  const start = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await onStartBonus(choice);
+    } catch {
+      setError("Não foi possível preparar a rodada agora. Tente de novo.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 28, textAlign: "left" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 800, letterSpacing: 1, color: t.amber }}>
+        <Zap size={14} fill={t.amber} /> RODADA BÔNUS
+      </div>
+      <p style={{ fontSize: 13.5, color: t.textMuted, textAlign: "center", margin: "8px 0 14px", lineHeight: 1.5 }}>
+        Quer treinar mais um pouco? Escolha como.
+      </p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {BONUS_OPTIONS.map(({ id, big, title, sub, Icon, gradient }) => {
+          const selected = choice === id;
+          return (
+            <button
+              key={id}
+              onClick={() => pick(id)}
+              disabled={busy}
+              aria-pressed={selected}
+              style={{
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                width: "100%",
+                textAlign: "left",
+                border: "none",
+                borderRadius: 18,
+                padding: "16px 16px",
+                background: gradient,
+                color: "#fff",
+                cursor: busy ? "default" : "pointer",
+                opacity: choice && !selected ? 0.6 : 1,
+                boxShadow: selected ? `0 0 0 2px ${t.bg}, 0 0 0 4px ${t.primary}, 0 10px 24px rgba(0,0,0,0.28)` : "0 6px 16px rgba(0,0,0,0.2)",
+                transition: "opacity .15s, box-shadow .15s, transform .15s",
+                transform: selected ? "scale(1.01)" : "scale(1)",
+              }}
+            >
+              <span
+                style={{
+                  flexShrink: 0,
+                  minWidth: 64,
+                  height: 56,
+                  padding: "0 8px",
+                  borderRadius: 14,
+                  background: "rgba(255,255,255,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 25,
+                  fontWeight: 800,
+                  letterSpacing: -0.5,
+                }}
+              >
+                {big}
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 15.5, fontWeight: 700 }}>{title}</span>
+                <span style={{ display: "block", fontSize: 12.5, opacity: 0.88, marginTop: 3, lineHeight: 1.4 }}>{sub}</span>
+              </span>
+              {selected ? (
+                <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 13, background: "#fff", color: "#1a1a2e", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Check size={16} strokeWidth={3} />
+                </span>
+              ) : (
+                <Icon size={22} style={{ flexShrink: 0, opacity: 0.85 }} />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ fontSize: 11.5, color: t.textMuted, textAlign: "center", marginTop: 10, lineHeight: 1.5 }}>
+        Sua escolha fica salva e vale nos próximos dias, até você trocar.
+      </div>
+      {error && <div style={{ fontSize: 12.5, color: t.red, textAlign: "center", marginTop: 8 }}>{error}</div>}
+      <div style={{ marginTop: 14 }}>
+        <PrimaryButton full disabled={!choice || busy} onClick={start}>
+          {busy ? "Preparando…" : "Começar rodada bônus"}
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate, onStartBonus }) {
   const t = useT();
   const [friendsStatus, setFriendsStatus] = useState(null);
 
@@ -282,8 +406,11 @@ export function DailyDoneScreen({ supabase, streak, friends, onNavigate }) {
         <br />
         Volte amanhã para manter a chama acesa.
       </p>
+      {onStartBonus && <BonusRound userId={userId} onStartBonus={onStartBonus} />}
       <div style={{ marginTop: 20 }}>
-        <PrimaryButton onClick={() => onNavigate("home")}>Voltar ao início</PrimaryButton>
+        <PrimaryButton variant={onStartBonus ? "ghost" : "primary"} color={onStartBonus && t.name === "light" ? t.surface : undefined} onClick={() => onNavigate("home")}>
+          Voltar ao início
+        </PrimaryButton>
       </div>
 
       {friendsStatus && friendsStatus.length > 0 && (

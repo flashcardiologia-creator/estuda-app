@@ -1,13 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Layers } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { Tag, PrimaryButton } from "@/components/ui/Primitives";
 
-export function QuestionsResultsScreen({ session, questionsById, optionsByQuestion, filters, onNavigate }) {
+export function QuestionsResultsScreen({ session, questionsById, optionsByQuestion, filters, bonusFlash, onStartBonusFlash, onNavigate }) {
   const t = useT();
   const [expanded, setExpanded] = useState({});
+  const [flashBusy, setFlashBusy] = useState(false);
+  const [flashError, setFlashError] = useState("");
+  const startFlash = async () => {
+    setFlashBusy(true);
+    setFlashError("");
+    try {
+      await onStartBonusFlash();
+    } catch {
+      setFlashError("Não foi possível carregar os flashcards agora. Tente de novo.");
+      setFlashBusy(false);
+    }
+  };
   const total = session.ids.length;
   const answeredCount = Object.keys(session.answers).length;
   const correctCount = Object.values(session.answers).filter((a) => a.correct).length;
@@ -117,8 +129,36 @@ export function QuestionsResultsScreen({ session, questionsById, optionsByQuesti
           </div>
         )}
 
-        <div style={{ marginTop: 26 }}>
-          <PrimaryButton full onClick={() => onNavigate("home")}>Voltar ao início</PrimaryButton>
+        {bonusFlash && (
+          <div
+            style={{
+              marginTop: 26,
+              borderRadius: 18,
+              padding: 18,
+              color: "#fff",
+              background: "linear-gradient(135deg, #7C5CFC 0%, #4F46E5 100%)",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12, fontWeight: 800, letterSpacing: 1 }}>
+              <Layers size={14} /> RODADA BÔNUS · PARTE 2
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginTop: 8 }}>Agora, 5 flashcards</div>
+            <div style={{ fontSize: 12.5, opacity: 0.9, marginTop: 4 }}>Para fechar a rodada e fixar o conteúdo.</div>
+            {flashError && <div style={{ fontSize: 12.5, marginTop: 8 }}>{flashError}</div>}
+            <div style={{ marginTop: 14 }}>
+              <PrimaryButton full disabled={flashBusy} color="#fff" textColor="#4F46E5" onClick={startFlash}>
+                {flashBusy ? "Preparando…" : "Começar os 5 flashcards"}
+              </PrimaryButton>
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginTop: bonusFlash ? 14 : 26 }}>
+          <PrimaryButton full variant={bonusFlash ? "ghost" : "primary"} color={bonusFlash && t.name === "light" ? t.surface : undefined} onClick={() => onNavigate("home")}>
+            Voltar ao início
+          </PrimaryButton>
         </div>
       </div>
     </div>
