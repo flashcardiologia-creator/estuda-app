@@ -40,8 +40,8 @@ function ShareGlyph({ x, y, color = "#0A84FF" }) {
 function AppIcon({ x, y, size = 30 }) {
   return (
     <g transform={`translate(${x} ${y})`}>
-      <rect width={size} height={size} rx={size * 0.22} fill="#050B1E" />
-      <g transform={`translate(${size * 0.2} ${size * 0.2}) scale(${(size * 0.6) / 24})`} fill="#F5A524" stroke="#F5A524" strokeWidth="1.2" strokeLinejoin="round">
+      <rect width={size} height={size} rx={size * 0.22} fill="#0F1830" />
+      <g transform={`translate(${size * 0.2} ${size * 0.2}) scale(${(size * 0.6) / 24})`} fill="#F2A93B" stroke="#F2A93B" strokeWidth="1.2" strokeLinejoin="round">
         <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
       </g>
     </g>
@@ -51,8 +51,8 @@ function AppIcon({ x, y, size = 30 }) {
 function SitePage({ y0 = 70 }) {
   return (
     <g>
-      <rect x="12" y={y0} width="126" height="70" rx="8" fill="#050B1E" />
-      <g transform={`translate(52 ${y0 + 14}) scale(1.1)`} fill="#F5A524" stroke="#F5A524" strokeWidth="1" strokeLinejoin="round">
+      <rect x="12" y={y0} width="126" height="70" rx="8" fill="#0F1830" />
+      <g transform={`translate(52 ${y0 + 14}) scale(1.1)`} fill="#F2A93B" stroke="#F2A93B" strokeWidth="1" strokeLinejoin="round">
         <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
       </g>
       <text x="75" y={y0 + 56} textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff" fontFamily="system-ui, sans-serif">FlashCardio</text>
