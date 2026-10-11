@@ -271,6 +271,14 @@ export function EstudaApp({ userId, userEmail }) {
     };
   }, [supabase, userId, loadAttempt, hydrateTexts, recoverFromLoadFailure]);
 
+  // Toda tela nova (e cada questão/flashcard seguinte) abre do topo, e não na altura em que a anterior estava.
+  const questionIndex = session?.index;
+  const flashIndex = flashSession?.index;
+  const dailyIndex = dailySession?.index;
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [screen, questionIndex, flashIndex, dailyIndex]);
+
   useEffect(() => {
     if (screen === "account") {
       fetchStats(supabase, userId).then(setStats);

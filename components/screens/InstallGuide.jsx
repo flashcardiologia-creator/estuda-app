@@ -222,7 +222,7 @@ const STEPS = {
   ios: [
     { title: "Abra no Safari", text: "Entre no endereço do FlashCardio usando o Safari, o navegador azul do iPhone. Em outros navegadores essa opção pode não aparecer.", Art: IosOpen },
     { title: "Toque em Compartilhar", text: "Na barra de baixo, toque no botão de compartilhar: um quadrado com uma seta para cima.", Art: IosShare },
-    { title: "Adicionar à Tela de Início", text: "Role a lista para baixo, se precisar, e toque em “Adicionar à Tela de Início”.", Art: IosMenu },
+    { title: "Adicionar à Tela de Início", text: "Role a lista para baixo e toque em “Adicionar à Tela de Início”. Se essa opção não aparecer de primeira, pode ser necessário tocar em “Ver Mais” no fim da lista.", Art: IosMenu },
     { title: "Confirme em Adicionar", text: "Se quiser, mude o nome. Depois toque em “Adicionar”, no canto superior direito.", Art: IosAdd },
     { title: "Pronto!", text: "O ícone do FlashCardio aparece na tela inicial. Abra por ele, como qualquer aplicativo, em tela cheia.", Art: HomeDone },
   ],
@@ -243,7 +243,6 @@ export function InstallGuide({ onBack }) {
     const ua = navigator.userAgent || "";
     return /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) ? "ios" : "android";
   });
-  const host = window.location.host;
   const steps = STEPS[os];
 
   return (
@@ -257,12 +256,6 @@ export function InstallGuide({ onBack }) {
         <Chip active={os === "android"} onClick={() => setOs("android")}>Android</Chip>
         <Chip active={os === "ios"} onClick={() => setOs("ios")}>iPhone (iOS)</Chip>
       </div>
-
-      {host && (
-        <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center", marginBottom: 16 }}>
-          Endereço: <b style={{ color: t.text }}>{host}</b>
-        </div>
-      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {steps.map((s, i) => (
