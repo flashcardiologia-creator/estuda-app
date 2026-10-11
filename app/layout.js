@@ -12,6 +12,7 @@ export const metadata = {
   title: "FlashCardio",
   description: "Flashcards e questões para estudar todos os dias.",
   manifest: "/manifest.json",
+  icons: { apple: "/icons/apple-touch-icon.png" },
   appleWebApp: {
     capable: true,
     title: "FlashCardio",

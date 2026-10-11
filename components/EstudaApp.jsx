@@ -800,10 +800,6 @@ export function EstudaApp({ userId, userEmail }) {
           pastSessions={pastSessions}
           onResumeSession={openStoredSession}
           onDeleteSession={deleteSession}
-          onOpenPerformance={() => {
-            setStatsReturn("questions-filters");
-            setScreen("stats");
-          }}
           onNavigate={setScreen}
         />
       )}

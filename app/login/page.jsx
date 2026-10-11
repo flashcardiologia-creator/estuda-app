@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Flame, Eye, EyeOff } from "lucide-react";
+import { Flame, Eye, EyeOff, Smartphone } from "lucide-react";
+import { InstallGuide } from "@/components/screens/InstallGuide";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
@@ -33,6 +34,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+  const [showInstall, setShowInstall] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("error") === "link_invalido") {
@@ -113,11 +115,14 @@ function LoginForm() {
   };
 
   return (
-    <div style={{ minHeight: "calc(100vh / var(--z, 1))", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: 20 }}>
+    <div className="login-screen" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: 20, boxSizing: "border-box" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <Flame size={38} color={t.amber} fill={t.amber} />
         <h1 style={{ fontSize: 30, fontWeight: 700, color: t.text, margin: 0 }}>FlashCardio</h1>
       </div>
+      {showInstall ? (
+        <InstallGuide onBack={() => setShowInstall(false)} />
+      ) : (
       <div style={{ width: "100%", maxWidth: 380, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: 30 }}>
         {mode !== "login" && (
           <p style={{ fontSize: 13, color: t.textMuted, margin: "0 0 20px", textAlign: "center" }}>
@@ -243,7 +248,17 @@ function LoginForm() {
             </button>
           )}
         </div>
+
+        {mode !== "forgot" && (
+          <div style={{ marginTop: 14 }}>
+            <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={() => setShowInstall(true)}>
+              <Smartphone size={15} style={{ marginRight: 6, verticalAlign: -3 }} />
+              Baixar aplicativo
+            </PrimaryButton>
+          </div>
+        )}
       </div>
+      )}
     </div>
   );
 }

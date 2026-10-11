@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart3, BookOpen, ChevronLeft, ChevronRight, Clock, Award, History, Settings, Trash2, Lock, RotateCw } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Clock, Award, History, Settings, Trash2, Lock, RotateCw } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList } from "@/components/ui/Primitives";
 import { applyQuestionFilters, deriveFilterOptions, parseInstituicao } from "@/lib/data/questions";
@@ -53,7 +53,6 @@ export function QuestionsFilterScreen({
   pastSessions = [],
   onResumeSession,
   onDeleteSession,
-  onOpenPerformance,
   onNavigate,
 }) {
   const t = useT();
@@ -64,7 +63,7 @@ export function QuestionsFilterScreen({
   const [sessionError, setSessionError] = useState("");
   const [pagina, setPagina] = useState(0);
 
-  // Sessões antigas: 2 por página (até 50 sessões = 25 páginas).
+  // Sessões antigas: 2 por página (até 10 sessões = 5 páginas).
   const totalPaginas = Math.max(1, Math.ceil(pastSessions.length / SESSOES_POR_PAGINA));
   const paginaSegura = Math.min(pagina, totalPaginas - 1);
   const sessoesDaPagina = pastSessions.slice(paginaSegura * SESSOES_POR_PAGINA, (paginaSegura + 1) * SESSOES_POR_PAGINA);
@@ -167,16 +166,6 @@ export function QuestionsFilterScreen({
           />
         </ExpandBox>
 
-        <ExpandBox title="Anos" icon={<Clock size={17} color={t.primary} />} open={open.anos} onToggle={() => toggle("anos")} badge={filters.anos.length}>
-          <DropdownList
-            options={anosDisponiveis}
-            selected={filters.anos}
-            onChange={changeAnos}
-            multi
-            allLabel="Todos"
-          />
-        </ExpandBox>
-
         <ExpandBox title="Instituições" icon={<Award size={17} color={t.primary} />} open={open.instituicoes} onToggle={() => toggle("instituicoes")} badge={filters.instituicoes.length}>
           <DropdownList
             options={instituicoesDisponiveis}
@@ -185,6 +174,16 @@ export function QuestionsFilterScreen({
             multi
             allLabel="Todos"
             groupBy={parseInstituicao}
+          />
+        </ExpandBox>
+
+        <ExpandBox title="Anos" icon={<Clock size={17} color={t.primary} />} open={open.anos} onToggle={() => toggle("anos")} badge={filters.anos.length}>
+          <DropdownList
+            options={anosDisponiveis}
+            selected={filters.anos}
+            onChange={changeAnos}
+            multi
+            allLabel="Todos"
           />
         </ExpandBox>
 
@@ -361,13 +360,6 @@ export function QuestionsFilterScreen({
               )}
             </>
           )}
-
-          <div style={{ marginTop: 14 }}>
-            <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={onOpenPerformance}>
-              <BarChart3 size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
-              Desempenho
-            </PrimaryButton>
-          </div>
         </ExpandBox>
 
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
