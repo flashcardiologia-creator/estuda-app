@@ -53,7 +53,7 @@ import {
   saveQuestionSession,
   unpackProgress,
 } from "@/lib/data/sessions";
-import { createCustomFlashcard, deleteCustomForever, fetchFlashcardFavorites, fetchTrash, restoreFromTrash, sendToTrash, setFlashcardFavorite } from "@/lib/data/personal";
+import { createCustomFlashcard, deleteCustomForever, fetchTrash, restoreFromTrash, sendToTrash, setFlashcardFavorite } from "@/lib/data/personal";
 import { DROPDOWN_ALL } from "@/components/ui/Primitives";
 import { fetchDailyMissionItems, completeDailyMission, expireDailyMission } from "@/lib/data/mission";
 import {
@@ -103,8 +103,6 @@ export function EstudaApp({ userId, userEmail }) {
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [pushPrompt, setPushPrompt] = useState(null);
-  // Rodada bônus depois da missão diária: { flash: true } quando falta a parte dos 5 flashcards.
-  const [bonus, setBonus] = useState(null);
   const [profile, setProfile] = useState(null);
   const [allQuestions, setAllQuestions] = useState([]);
   // Textos (enunciado/comentários) já baixados, por id; e a promessa do download
@@ -380,7 +378,6 @@ export function EstudaApp({ userId, userEmail }) {
 
   /* ---- Questões ---- */
   const startQuestions = async () => {
-    setBonus(null);
     const filtered = applyQuestionFilters(allQuestions, filters, favorites);
     // Garante os textos (enunciado/comentários) das questões escolhidas: espera o
     // download em segundo plano e baixa na hora só o que ainda faltar.
@@ -427,44 +424,6 @@ export function EstudaApp({ userId, userEmail }) {
     setSession(newSession);
     startSessionRecord(ids, newSession);
     setScreen("questions-session");
-  };
-
-  // Rodada bônus: "questions" = 10 questões; "mix" = 5 questões e, ao terminar, 5 flashcards.
-  // Sorteia de todos os temas, sem usar os filtros nem o modo prova, e não entra no histórico de sessões.
-  const startBonus = async (mode) => {
-    const count = mode === "mix" ? 5 : 10;
-    const ids = shuffle(allQuestions)
-      .slice(0, count)
-      .map((q) => q.id);
-    if (textsBgRef.current) await textsBgRef.current;
-    await hydrateTexts(ids);
-    const byId = Object.fromEntries(allQuestions.map((q) => [q.id, q]));
-    const pool = ids.map((id) => (textsRef.current[id] ? { ...byId[id], ...textsRef.current[id] } : byId[id]));
-    const options = await fetchOptionsForQuestions(supabase, ids);
-    sessionRecordRef.current = null;
-    setSessionQuestionsById(Object.fromEntries(pool.map((q) => [q.id, q])));
-    setSessionOptionsByQuestion(options);
-    setSession({ ids, index: 0, selected: {}, answers: {}, prefilled: {}, struck: {}, startedAt: null, durationMs: null });
-    setBonus({ flash: mode === "mix" });
-    setScreen("questions-session");
-  };
-
-  // Segunda parte da rodada "5 + 5": 5 flashcards sorteados de todos os temas (sem os da lixeira da pessoa).
-  const startBonusFlashcards = async () => {
-    const [all, favorites] = await Promise.all([fetchAllFlashcards(supabase, { trash: true, custom: true }), fetchFlashcardFavorites(supabase)]);
-    const pool = shuffle(all).slice(0, 5);
-    setFlashFavorites(favorites);
-    setFlashSession({
-      ids: pool.map((f) => f.id),
-      index: 0,
-      flipped: {},
-      viewed: {},
-      cardsById: Object.fromEntries(pool.map((f) => [f.id, f])),
-      fontSize: flashcardFontSize || "md",
-    });
-    setBonus(null);
-    setSession(null);
-    setScreen("flashcards-session");
   };
 
   // Cria o registro da sessão no histórico (as 10 últimas ficam guardadas). Se não
@@ -560,7 +519,7 @@ export function EstudaApp({ userId, userEmail }) {
   };
 
   const finishQuestions = async () => {
-    if (filters.modoProva && !bonus) {
+    if (filters.modoProva) {
       const withKey = await fetchOptionsWithAnswerKey(supabase, session.ids);
       setSessionOptionsByQuestion(withKey);
     }
@@ -806,9 +765,6 @@ export function EstudaApp({ userId, userEmail }) {
   }
 
   const showHeader = !HIDDEN_HEADER_SCREENS.includes(screen) && !challengeAnswering;
-  // A rodada bônus ignora os filtros da pessoa: sem modo prova, respostas antigas nem cronômetro.
-  const sessionFilters = bonus ? { ...filters, modoProva: false, mostrarAntigas: false, cronometro: false } : filters;
-
   return (
     <div>
       {pushPrompt && <PushPrompt supabase={supabase} userId={userId} onClose={() => setPushPrompt(null)} />}
@@ -892,7 +848,7 @@ export function EstudaApp({ userId, userEmail }) {
           setSession={setSession}
           questionsById={sessionQuestionsById}
           optionsByQuestion={sessionOptionsByQuestion}
-          filters={sessionFilters}
+          filters={filters}
           favorites={favorites}
           onToggleFav={toggleFav}
           onAnswer={answerQuestion}
@@ -906,12 +862,9 @@ export function EstudaApp({ userId, userEmail }) {
           session={session}
           questionsById={sessionQuestionsById}
           optionsByQuestion={sessionOptionsByQuestion}
-          filters={sessionFilters}
-          bonusFlash={!!bonus?.flash}
-          onStartBonusFlash={startBonusFlashcards}
+          filters={filters}
           onNavigate={(s) => {
             setSession(null);
-            setBonus(null);
             setScreen(s);
           }}
         />
@@ -968,7 +921,7 @@ export function EstudaApp({ userId, userEmail }) {
       )}
 
       {screen === "daily-done" && (
-        <DailyDoneScreen supabase={supabase} userId={userId} streak={profile.streak} friends={friends} onNavigate={setScreen} onStartBonus={startBonus} />
+        <DailyDoneScreen supabase={supabase} userId={userId} streak={profile.streak} friends={friends} onNavigate={setScreen} />
       )}
 
       {screen === "challenges" && (
