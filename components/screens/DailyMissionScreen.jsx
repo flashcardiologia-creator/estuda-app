@@ -258,7 +258,7 @@ function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate,
 }
 
 const MISSION_FORMATS = [
-  { id: "mix", big: "5+5", title: "5 questões + 5 flashcards", sub: "Variado: questões e flashcards do mesmo assunto", Icon: Layers, gradient: "linear-gradient(135deg, #7C5CFC 0%, #4F46E5 100%)" },
+  { id: "mix", big: "5+5", title: "5 questões + 5 flashcards", sub: "Questões e flashcards do mesmo assunto", Icon: Layers, gradient: "linear-gradient(135deg, #7C5CFC 0%, #4F46E5 100%)" },
   { id: "questions", big: "10", title: "10 questões", sub: "Só questões, para treinar mais prova", Icon: ListChecks, gradient: "linear-gradient(135deg, #F2A93B 0%, #E5484D 100%)" },
 ];
 
