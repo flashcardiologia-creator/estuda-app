@@ -806,7 +806,7 @@ export function EstudaApp({ userId, userEmail }) {
         />
       )}
 
-      {screen === "ranking" && <RankingScreen supabase={supabase} onNavigate={setScreen} />}
+      {screen === "ranking" && <RankingScreen supabase={supabase} userId={userId} onNavigate={setScreen} />}
 
       {screen === "stats" && (
         <StatsScreen

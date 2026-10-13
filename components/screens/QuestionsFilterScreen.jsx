@@ -334,7 +334,7 @@ export function QuestionsFilterScreen({
               </div>
 
               {totalPaginas > 1 && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "8px 10px", marginTop: 12 }}>
                   <PrimaryButton
                     small
                     variant="ghost"

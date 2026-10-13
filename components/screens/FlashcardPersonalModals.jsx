@@ -9,7 +9,7 @@ import { MAX_PERGUNTA, MAX_RESPOSTA } from "@/lib/data/personal";
 function ModalShell({ title, icon, onClose, children }) {
   const t = useT();
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 20 }}>
+    <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 20 }}>
       <div
         style={{
           background: t.surface,

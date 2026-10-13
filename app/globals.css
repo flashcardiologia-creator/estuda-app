@@ -45,11 +45,27 @@ html {
   min-height: calc(100dvh / var(--z, 1));
 }
 
-html,
-body {
+/* Janelas (modais) por cima da tela: se o conteúdo for maior que a altura visível (celular pequeno,
+   deitado ou com o teclado aberto), a janela rola em vez de cortar em cima e embaixo. */
+.modal-overlay {
+  overflow-y: auto !important;
+  align-items: safe center !important;
+  overscroll-behavior: contain;
+}
+
+/* Atenção (Android/Chrome): NÃO pôr "overflow-x: hidden" em html E body junto com
+   "overscroll-behavior-y: none". Essa combinação transforma o body num contêiner de rolagem
+   próprio que engole o gesto e a tela deixa de rolar. O corte horizontal fica só no html
+   (hidden) e no body usa "clip", que não cria contêiner de rolagem. */
+html {
   max-width: 100vw;
   overflow-x: hidden;
   overscroll-behavior-y: none;
+}
+
+body {
+  max-width: 100vw;
+  overflow-x: clip;
 }
 
 body {

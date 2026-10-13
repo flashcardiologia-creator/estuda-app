@@ -248,13 +248,13 @@ export function AccountScreen({
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 60 }}>
       <ScreenHeader title="Minha Conta" onBack={() => onNavigate("home")} />
       <div style={{ padding: "18px 22px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 24, marginTop: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginBottom: 24, marginTop: 20 }}>
           {[
             { label: "Maior Sequência", value: profile.best_streak, icon: <Trophy size={16} color={t.amber} /> },
             { label: "Respondidas", value: stats.answered, icon: <BookOpen size={16} color={t.primary} /> },
             { label: "Acerto", value: `${stats.accuracy}%`, icon: <Award size={16} color={t.green} /> },
           ].map((s) => (
-            <div key={s.label} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 14 }}>
+            <div key={s.label} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "14px 12px", minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                 {s.icon}
                 <span style={{ fontSize: 11.5, color: t.textMuted, fontWeight: 600 }}>{s.label}</span>
@@ -538,12 +538,12 @@ export function AccountScreen({
             <Toggle
               checked={!!profile.ranking_visible}
               onChange={toggleRankingVisibility}
-              label="Aparecer no ranking"
+              label="Mostrar meu nome no ranking"
               labelStyle={{ fontSize: 13.5, color: t.text, fontWeight: 700 }}
               sub={
                 savingRankingVisibility
                   ? "Salvando…"
-                  : "Seu nome e estatísticas aparecerão no ranking geral do app"
+                  : "Desligado, você continua no ranking, mas aparece como Anônimo"
               }
               style={{ padding: 0 }}
             />
@@ -619,6 +619,7 @@ export function AccountScreen({
               className="friend-search-input"
               style={{
                 flex: 1,
+                minWidth: 0,
                 padding: "9px 12px",
                 borderRadius: 10,
                 border: `1px solid ${t.border}`,
@@ -853,7 +854,7 @@ function FriendDetailModal({ supabase, friend, onClose, onRemoved }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
+    <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
       <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 420, width: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

@@ -45,8 +45,9 @@ export function QuestionCard({
         {onToggleFav && (
           <button
             onClick={() => onToggleFav(q.id)}
-            style={{ marginLeft: "auto", background: "transparent", border: "none", cursor: "pointer" }}
+            style={{ margin: "-10px -10px -10px auto", padding: 10, background: "transparent", border: "none", cursor: "pointer", display: "flex" }}
             title="Favoritar"
+            aria-label={isFav ? "Remover dos favoritos" : "Favoritar"}
           >
             <Star size={19} color={isFav ? t.amber : t.textMuted} fill={isFav ? t.amber : "none"} />
           </button>
@@ -158,8 +159,8 @@ export function QuestionCard({
                   style={{
                     marginLeft: "auto",
                     flexShrink: 0,
-                    width: 26,
-                    height: 26,
+                    width: 34,
+                    height: 34,
                     borderRadius: "50%",
                     border: `1.5px solid ${isStruck ? t.textMuted : t.border}`,
                     background: isStruck ? t.border : "transparent",
@@ -223,8 +224,8 @@ export function QuestionCard({
                   background: t.surfaceAlt,
                   border: `1px solid ${t.border}`,
                   borderRadius: 8,
-                  padding: "5px 10px",
-                  fontSize: 11,
+                  padding: "9px 14px",
+                  fontSize: 11.5,
                   fontWeight: 700,
                   color: t.textMuted,
                   cursor: "pointer",

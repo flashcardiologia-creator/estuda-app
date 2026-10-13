@@ -24,8 +24,8 @@ export function ReportButton({ onClick }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        width: 26,
-        height: 26,
+        width: 34,
+        height: 34,
         borderRadius: "50%",
         background: "transparent",
         border: `1px solid ${t.border}`,
@@ -72,6 +72,7 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: "fixed",
         inset: 0,
