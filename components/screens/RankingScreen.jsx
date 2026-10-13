@@ -16,39 +16,51 @@ const TABS = [
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
+const chipBase = {
+  display: "inline-block",
+  marginLeft: 8,
+  padding: "2px 8px",
+  borderRadius: 999,
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: 0.4,
+  verticalAlign: 1,
+};
+
 function PhraseChip({ phrase, t }) {
+  return <span style={{ ...chipBase, color: t.amber, background: `${t.amber}26` }}>{phrase}</span>;
+}
+
+// Na própria linha, o botão fica na frente do nome: "SUA FRASE" enquanto não há frase escolhida
+// e, depois, a própria frase (tocar nela abre a escolha de novo).
+function MyPhraseButton({ phrase, t, onClick }) {
   return (
-    <span
+    <button
+      onClick={onClick}
+      aria-label={phrase ? `Sua frase: ${phrase}. Tocar para trocar` : "Escolher sua frase"}
       style={{
-        display: "inline-block",
-        marginLeft: 8,
-        padding: "2px 8px",
-        borderRadius: 999,
-        fontSize: 11,
-        fontWeight: 800,
-        letterSpacing: 0.4,
-        color: t.amber,
-        background: `${t.amber}26`,
-        verticalAlign: 1,
+        ...chipBase,
+        cursor: "pointer",
+        fontFamily: "inherit",
+        ...(phrase
+          ? { color: t.amber, background: `${t.amber}26`, border: "none" }
+          : { color: t.primary, background: "transparent", border: `1px dashed ${t.primary}` }),
       }}
     >
-      {phrase}
-    </span>
+      {phrase || "SUA FRASE"}
+    </button>
   );
 }
 
 function RankRow({ r, rank, tab, config, t, onPickPhrase }) {
   return (
     <div
-      onClick={r.is_me ? onPickPhrase : undefined}
-      role={r.is_me ? "button" : undefined}
       style={{
         padding: "12px 14px",
         borderRadius: 14,
         marginBottom: 8,
         background: r.is_me ? t.primarySoft : t.surface,
         border: `1.5px solid ${r.is_me ? t.primary : t.border}`,
-        cursor: r.is_me ? "pointer" : "default",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -59,15 +71,10 @@ function RankRow({ r, rank, tab, config, t, onPickPhrase }) {
           <div style={{ fontSize: 14, fontWeight: 700, color: r.is_anonymous && !r.is_me ? t.textMuted : t.text }}>
             {r.name}
             {r.is_me ? " (você)" : ""}
-            {r.phrase && <PhraseChip phrase={r.phrase} t={t} />}
+            {r.is_me ? <MyPhraseButton phrase={r.phrase} t={t} onClick={onPickPhrase} /> : r.phrase && <PhraseChip phrase={r.phrase} t={t} />}
           </div>
           {r.is_me && r.is_anonymous && (
             <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 2 }}>Os outros veem você como Anônimo</div>
-          )}
-          {r.is_me && (
-            <div style={{ fontSize: 11.5, color: t.primary, marginTop: 2, fontWeight: 600 }}>
-              {r.phrase ? "Toque para trocar sua frase" : "Toque para escolher uma frase de comemoração"}
-            </div>
           )}
         </div>
         <div style={{ fontSize: 15, fontWeight: 800, color: t.primary }}>{config.format(r[config.field])}</div>

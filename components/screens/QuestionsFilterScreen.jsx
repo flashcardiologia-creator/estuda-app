@@ -306,13 +306,6 @@ export function QuestionsFilterScreen({
                         </div>
                       ) : (
                         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                          {incompleta && (
-                            <div style={{ flex: 1 }}>
-                              <PrimaryButton small full disabled={busy} onClick={() => abrirSessao(s)}>
-                                {openingId === s.id ? "Abrindo..." : "Continuar"}
-                              </PrimaryButton>
-                            </div>
-                          )}
                           <div style={{ flex: 1 }}>
                             <PrimaryButton
                               small
@@ -326,6 +319,13 @@ export function QuestionsFilterScreen({
                               Deletar
                             </PrimaryButton>
                           </div>
+                          {incompleta && (
+                            <div style={{ flex: 1 }}>
+                              <PrimaryButton small full disabled={busy} onClick={() => abrirSessao(s)}>
+                                {openingId === s.id ? "Abrindo..." : "Continuar"}
+                              </PrimaryButton>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
