@@ -90,6 +90,7 @@ const DEFAULT_FILTERS = {
   mostrarAntigas: false,
   cronometro: false,
   minutos: 20,
+  quantidade: "Todas",
   fontSize: "md",
 };
 
@@ -378,13 +379,15 @@ export function EstudaApp({ userId, userEmail }) {
 
   /* ---- Questões ---- */
   const startQuestions = async () => {
-    const filtered = applyQuestionFilters(allQuestions, filters, favorites);
+    // Sorteia primeiro e só depois corta na quantidade escolhida (5, 10, ... ou "Todas").
+    const sorted = shuffle(applyQuestionFilters(allQuestions, filters, favorites));
+    const filtered = Number.isInteger(filters.quantidade) ? sorted.slice(0, filters.quantidade) : sorted;
     // Garante os textos (enunciado/comentários) das questões escolhidas: espera o
     // download em segundo plano e baixa na hora só o que ainda faltar.
     if (textsBgRef.current) await textsBgRef.current;
     await hydrateTexts(filtered.map((q) => q.id));
     const pool = filtered.map((q) => (textsRef.current[q.id] ? { ...q, ...textsRef.current[q.id] } : q));
-    const ids = shuffle(pool).map((q) => q.id);
+    const ids = pool.map((q) => q.id);
     const [options, hist] = await Promise.all([
       fetchOptionsForQuestions(supabase, ids),
       fetchAttemptHistory(supabase, userId, ids),

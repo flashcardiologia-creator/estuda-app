@@ -128,10 +128,7 @@ function PhrasePicker({ current, saving, error, onChoose, onClose, t }) {
         onClick={(e) => e.stopPropagation()}
         style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 400, width: "100%" }}
       >
-        <h3 style={{ fontSize: 16.5, color: t.text, margin: "0 0 6px" }}>Sua frase no ranking</h3>
-        <p style={{ fontSize: 13, color: t.textMuted, lineHeight: 1.5, margin: "0 0 16px" }}>
-          Ela aparece ao lado do seu nome para todo mundo. Escolha uma para comemorar.
-        </p>
+        <h3 style={{ fontSize: 16.5, color: t.text, margin: "0 0 16px" }}>Sua frase no ranking</h3>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {RANKING_PHRASES.map((p) => (
             <Chip key={p} active={current === p} onClick={() => !saving && onChoose(p)}>

@@ -5,6 +5,9 @@
 -- o seu próprio nome). Para as outras pessoas não dá para descobrir quem é o anônimo: o código
 -- da pessoa (id) também não é enviado.
 --
+-- A conta administradora (flashcardiologia@gmail.com) vê "Anônimo (Nome)" nas linhas anônimas;
+-- as demais pessoas continuam vendo só "Anônimo".
+--
 -- Também cria a "frase" do ranking: ao tocar no próprio nome, a pessoa escolhe uma frase de
 -- comemoração (BORA!, VEMNIMIM, PEGA EU, CONFIA...) que aparece ao lado do nome para todos.
 -- Só valem as frases da lista abaixo (não é texto livre).
@@ -14,9 +17,16 @@
 alter table public.profiles add column if not exists ranking_phrase text;
 
 alter table public.profiles drop constraint if exists profiles_ranking_phrase_check;
+
+-- quem já tinha escolhido uma frase que saiu da lista fica sem frase
+update public.profiles
+set ranking_phrase = null
+where ranking_phrase is not null
+  and ranking_phrase not in ('BORA!', 'VEMNIMIM', 'PEGA EU', 'CONFIA', 'TÔ ON', 'FOCO', 'SEGURA', 'SÓ VAI', 'AMANHÃ TEM MAIS');
+
 alter table public.profiles add constraint profiles_ranking_phrase_check check (
   ranking_phrase is null or ranking_phrase in (
-    'BORA!', 'VEMNIMIM', 'PEGA EU', 'CONFIA', 'TÔ ON', 'FOCO', 'SEGURA', 'NÃO TEM PRA NINGUÉM', 'SÓ VAI', 'AMANHÃ TEM MAIS'
+    'BORA!', 'VEMNIMIM', 'PEGA EU', 'CONFIA', 'TÔ ON', 'FOCO', 'SEGURA', 'SÓ VAI', 'AMANHÃ TEM MAIS'
   )
 );
 
@@ -41,15 +51,22 @@ stable
 as $$
 declare
   v_user_id uuid := auth.uid();
+  v_is_admin boolean := false;
 begin
   if v_user_id is null then
     raise exception 'not_authenticated';
   end if;
 
+  -- Conta administradora: vê o nome de quem está como "Anônimo", entre parênteses.
+  select coalesce(u.email = 'flashcardiologia@gmail.com', false) into v_is_admin
+  from auth.users u where u.id = v_user_id;
+
   return query
   with eligible as (
     select p.id as uid,
-           case when p.id = v_user_id or p.ranking_visible then p.name else 'Anônimo' end as shown_name,
+           case when p.id = v_user_id or p.ranking_visible then p.name
+                when v_is_admin then 'Anônimo (' || p.name || ')'
+                else 'Anônimo' end as shown_name,
            (p.id = v_user_id) as is_me,
            (not p.ranking_visible) as is_anon,
            p.ranking_phrase as phrase

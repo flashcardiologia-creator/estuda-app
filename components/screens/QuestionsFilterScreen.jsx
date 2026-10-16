@@ -8,6 +8,7 @@ import { applyQuestionFilters, deriveFilterOptions, parseInstituicao } from "@/l
 import { MAX_SESSIONS } from "@/lib/data/sessions";
 
 const SESSOES_POR_PAGINA = 2;
+const QTD_OPTIONS = [5, 10, 15, 20, 25, 50, 100, "Todas"];
 
 // "Válvula, Hipertensão +2" / "Todos os temas" quando todas as opções estavam marcadas.
 function resumir(lista, totalOpcoes, rotuloTodos, max = 2) {
@@ -144,6 +145,8 @@ export function QuestionsFilterScreen({
     () => applyQuestionFilters(allQuestions, filters, favorites).length,
     [allQuestions, filters, favorites]
   );
+  // Quantas questões entram de fato na sessão (limitada pela quantidade escolhida).
+  const sessionCount = Number.isInteger(filters.quantidade) ? Math.min(filters.quantidade, previewCount) : previewCount;
 
   // Filtros obrigatórios que estão sem nenhuma seleção (ordem: tema, ano, instituição).
   const faltando = [
@@ -188,6 +191,16 @@ export function QuestionsFilterScreen({
         </ExpandBox>
 
         <ExpandBox title="Configurações" icon={<Settings size={17} color={t.primary} />} open={open.config} onToggle={() => toggle("config")}>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: t.text, fontWeight: 600, marginBottom: 8 }}>Quantidade de questões</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {QTD_OPTIONS.map((o) => (
+                <Chip key={o} active={filters.quantidade === o} onClick={() => setFilters((f) => ({ ...f, quantidade: o }))}>
+                  {o}
+                </Chip>
+              ))}
+            </div>
+          </div>
           <Toggle
             checked={filters.favoritasOnly}
             onChange={(v) => setFilters((f) => ({ ...f, favoritasOnly: v }))}
@@ -364,7 +377,11 @@ export function QuestionsFilterScreen({
 
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center" }}>
-            {faltando.length ? `Selecione ao menos ${juntarFaltando(faltando)}` : `${previewCount} questões encontradas`}
+            {faltando.length
+              ? `Selecione ao menos ${juntarFaltando(faltando)}`
+              : sessionCount < previewCount
+                ? `${sessionCount} questões nesta sessão (de ${previewCount} encontradas)`
+                : `${previewCount} questões encontradas`}
           </div>
           {hasSavedSession && (
             <PrimaryButton full variant="ghost" color={t.name === "light" ? t.surface : undefined} onClick={onContinue}>
