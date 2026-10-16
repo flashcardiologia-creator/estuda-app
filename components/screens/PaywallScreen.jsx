@@ -1,10 +1,38 @@
 "use client";
 
-import { useState } from "react";
-import { Lock, Flame, Swords, BarChart3, CreditCard } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Lock, Flame, Swords, BarChart3, CreditCard, ShieldCheck } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, ScreenHeader } from "@/components/ui/Primitives";
 import { PLANS, formatBRL } from "@/lib/billing";
+import { canOpenModal, openCheckoutModal } from "@/lib/mpCheckout";
+
+// Aviso de que o pagamento é feito pelo Mercado Pago, antes de a pessoa clicar em assinar.
+// A logo fica em public/mercadopago-logo.png; sem o arquivo, aparece só o texto.
+function MercadoPagoNotice({ t }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, border: `1px solid ${t.border}`, background: t.surfaceAlt, borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/mercadopago-logo.png"
+        alt="Mercado Pago"
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+        style={{ height: 30, width: "auto", maxWidth: 110, background: "#fff", borderRadius: 8, padding: "4px 8px", flexShrink: 0 }}
+      />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13.5, color: t.text }}>
+          <ShieldCheck size={15} color={t.green} /> Pagamento feito pelo Mercado Pago
+        </div>
+        <div style={{ fontSize: 12.5, lineHeight: 1.45, color: t.textMuted, marginTop: 2 }}>
+          Ao tocar em Assinar, a janela do Mercado Pago abre aqui mesmo para você pagar com Pix ou cartão. O FlashCardio não vê os dados do seu cartão.
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const FREE_ITEMS = [
   { icon: Flame, text: "Missão diária" },
@@ -17,8 +45,30 @@ const fmtDate = (iso) => new Date(iso).toLocaleDateString("pt-BR");
 // Tela exibida no lugar de Questões e Flashcards para quem não tem assinatura ativa.
 export function PaywallScreen({ access, onBack }) {
   const t = useT();
+  const router = useRouter();
   const [paying, setPaying] = useState(null);
+  const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState("");
+
+  // Depois de abrir a janela do Mercado Pago, consulta o acesso a cada poucos segundos. Quando o
+  // pagamento é aprovado, recarrega o app limpo (o conteúdo é lido de outro jeito para assinantes).
+  useEffect(() => {
+    if (!waiting) return;
+    if (access.active) {
+      window.location.replace("/");
+      return;
+    }
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries += 1;
+      router.refresh();
+      if (tries >= 45) {
+        clearInterval(timer);
+        setWaiting(false);
+      }
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [waiting, access.active, router]);
   const section = { background: t.surface, border: `1px solid ${t.border}`, borderRadius: 16, padding: "16px 18px" };
   const label = { fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: t.textMuted, marginBottom: 10 };
 
@@ -29,6 +79,17 @@ export function PaywallScreen({ access, onBack }) {
       const res = await fetch("/api/pagamento/criar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: planId }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.url) throw new Error("falhou");
+      // Preferência: janela do Mercado Pago aqui mesmo, sem sair do site nem abrir o app do Mercado Pago.
+      if (canOpenModal() && data.id) {
+        try {
+          await openCheckoutModal(data.id);
+          setPaying(null);
+          setWaiting(true);
+          return;
+        } catch {
+          // cai no redirecionamento abaixo
+        }
+      }
       window.location.assign(data.url);
     } catch {
       setError("Não foi possível abrir o pagamento agora. Tente de novo em instantes.");
@@ -65,6 +126,7 @@ export function PaywallScreen({ access, onBack }) {
 
         <div style={section}>
           <div style={label}>Escolha o plano</div>
+          <MercadoPagoNotice t={t} />
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {Object.values(PLANS).map((p) => (
               <div key={p.id} style={{ border: `1px solid ${t.border}`, background: t.surfaceAlt, borderRadius: 14, padding: "14px 16px" }}>
@@ -84,6 +146,11 @@ export function PaywallScreen({ access, onBack }) {
             ))}
           </div>
           {error && <div style={{ fontSize: 12.5, color: t.red, marginTop: 12 }}>{error}</div>}
+          {waiting && (
+            <div style={{ fontSize: 13, lineHeight: 1.5, color: t.text, background: t.primarySoft, borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
+              Janela do Mercado Pago aberta. Assim que o pagamento for aprovado, seu acesso é liberado sozinho.
+            </div>
+          )}
           <p style={{ margin: "12px 0 0", fontSize: 12.5, lineHeight: 1.5, color: t.textMuted }}>
             Pagamento por Pix ou cartão, pelo Mercado Pago. No cartão você pode parcelar em até 12x, com juros do parcelamento mostrados antes de
             confirmar. O acesso é liberado automaticamente assim que o pagamento é aprovado. Não há renovação automática.

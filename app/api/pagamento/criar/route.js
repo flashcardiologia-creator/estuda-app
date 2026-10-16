@@ -74,5 +74,6 @@ export async function POST(request) {
   const data = await res.json();
   const url = data.init_point;
   if (!url) return NextResponse.json({ error: "gateway_error" }, { status: 502 });
-  return NextResponse.json({ url });
+  // `id` abre o pagamento numa janela dentro do próprio site; `url` é o plano B (página do Mercado Pago).
+  return NextResponse.json({ url, id: data.id });
 }
