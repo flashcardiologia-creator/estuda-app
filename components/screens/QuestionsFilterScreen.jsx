@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, ChevronLeft, ChevronRight, Clock, Award, History, Settings, Trash2, Lock, RotateCw } from "lucide-react";
+import { BookOpen, Hash, ChevronLeft, ChevronRight, Clock, Award, History, Settings, Trash2, Lock, RotateCw } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList } from "@/components/ui/Primitives";
 import { applyQuestionFilters, deriveFilterOptions, parseInstituicao } from "@/lib/data/questions";
@@ -190,17 +190,17 @@ export function QuestionsFilterScreen({
           />
         </ExpandBox>
 
-        <ExpandBox title="Configurações" icon={<Settings size={17} color={t.primary} />} open={open.config} onToggle={() => toggle("config")}>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 13, color: t.text, fontWeight: 600, marginBottom: 8 }}>Quantidade de questões</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {QTD_OPTIONS.map((o) => (
-                <Chip key={o} active={filters.quantidade === o} onClick={() => setFilters((f) => ({ ...f, quantidade: o }))}>
-                  {o}
-                </Chip>
-              ))}
-            </div>
+        <ExpandBox title="Quantidade" icon={<Hash size={17} color={t.primary} />} open={open.qtd} onToggle={() => toggle("qtd")}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {QTD_OPTIONS.map((o) => (
+              <Chip key={o} active={filters.quantidade === o} onClick={() => setFilters((f) => ({ ...f, quantidade: o }))}>
+                {o}
+              </Chip>
+            ))}
           </div>
+        </ExpandBox>
+
+        <ExpandBox title="Configurações" icon={<Settings size={17} color={t.primary} />} open={open.config} onToggle={() => toggle("config")}>
           <Toggle
             checked={filters.favoritasOnly}
             onChange={(v) => setFilters((f) => ({ ...f, favoritasOnly: v }))}
