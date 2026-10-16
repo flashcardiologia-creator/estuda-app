@@ -67,6 +67,18 @@ async function handle(request) {
       console.error("[mercadopago] usuário não encontrado para o pagamento", paymentId);
       return ok({ ignored: true });
     }
+    // Quem pagou os juros do parcelamento: fee_payer "payer" = comprador (o esperado); "collector" = nós.
+    // Fica anotado no pagamento e no log para conferir depois de um pagamento de teste.
+    const installments = Number(pay.installments) || 1;
+    const financing = (Array.isArray(pay.fee_details) ? pay.fee_details : []).filter((f) => /financ/i.test(String(f?.type || "")));
+    const financingPayer = financing.length ? financing.map((f) => f.fee_payer).join("+") : "sem juros";
+    const totalPaid = Number(pay.transaction_details?.total_paid_amount);
+    const detail = `${installments}x; comprador pagou ${Number.isFinite(totalPaid) ? `R$ ${totalPaid.toFixed(2)}` : "?"}; juros: ${financingPayer}`;
+    console.log(`[mercadopago] pagamento ${paymentId} aprovado: ${planId}, ${detail}`);
+    if (financing.some((f) => f?.fee_payer === "collector")) {
+      console.warn(`[mercadopago] ATENÇÃO: juros do parcelamento do pagamento ${paymentId} ficaram por conta do vendedor`);
+    }
+
     // grant_access ignora o pagamento repetido (mesmo p_external_ref), então reenvios não dão dias extras.
     const { error } = await admin.rpc("grant_access", {
       p_email: email,
@@ -76,7 +88,7 @@ async function handle(request) {
       p_method: "mercado_pago",
       p_external_ref: ref,
       p_days: null,
-      p_notes: `Mercado Pago ${pay.payment_method_id || ""} #${paymentId}`.trim(),
+      p_notes: `Mercado Pago ${pay.payment_method_id || ""} #${paymentId}; ${detail}`.replace(/\s+/g, " ").trim(),
     });
     if (error) {
       console.error("[mercadopago] falha ao liberar acesso:", error.message);

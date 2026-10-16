@@ -137,11 +137,13 @@ export function PaywallScreen({ access, onBack }) {
                   {p.id === "anual" ? " · " : ""}
                   {p.days} dias de acesso, contados do dia do pagamento
                 </div>
-                <div style={{ fontSize: 14.5, fontWeight: 800, color: t.primary, margin: "6px 0 12px" }}>
-                  {p.id === "anual"
-                    ? `Equivale a ${formatBRL(Math.round(p.priceCents / 12))} por mês`
-                    : `${formatBRL(p.priceCents)} por mês`}
-                </div>
+                {p.id === "anual" ? (
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: t.primary, margin: "6px 0 12px" }}>
+                    Equivale a {formatBRL(Math.round(p.priceCents / 12))} por mês
+                  </div>
+                ) : (
+                  <div style={{ height: 12 }} />
+                )}
                 <PrimaryButton full disabled={!!paying} onClick={() => pay(p.id)}>
                   <CreditCard size={15} style={{ marginRight: 7, verticalAlign: -3 }} />
                   {paying === p.id ? "Abrindo pagamento…" : `Assinar ${p.label.toLowerCase()}`}
@@ -156,8 +158,9 @@ export function PaywallScreen({ access, onBack }) {
             </div>
           )}
           <p style={{ margin: "12px 0 0", fontSize: 12.5, lineHeight: 1.5, color: t.textMuted }}>
-            Pagamento por Pix ou cartão, pelo Mercado Pago. No cartão você pode parcelar em até 12x, com juros do parcelamento mostrados antes de
-            confirmar. O acesso é liberado automaticamente assim que o pagamento é aprovado. Não há renovação automática.
+            Pagamento por Pix ou cartão, pelo Mercado Pago. No cartão, o plano mensal é pago à vista e o anual pode ser parcelado em até{" "}
+            {PLANS.anual.maxInstallments}x, com os juros do parcelamento mostrados antes de confirmar. O acesso é liberado automaticamente assim que
+            o pagamento é aprovado. Não há renovação automática.
           </p>
         </div>
 

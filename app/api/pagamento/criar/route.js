@@ -49,9 +49,9 @@ export async function POST(request) {
     },
     statement_descriptor: "FLASHCARDIO",
     // Só Pix e cartão: boleto e pagamento em lotérica demoram dias para confirmar.
-    // Parcelamento no cartão em até 12x. Os juros do parcelamento são do comprador: isso é configurado
+    // Parcelamento no cartão limitado por plano (lib/billing.js). Os juros do parcelamento são do comprador: isso é configurado
     // na conta do Mercado Pago (Custos > pagamentos online), deixando "sem acréscimo" desligado.
-    payment_methods: { excluded_payment_types: [{ id: "ticket" }, { id: "atm" }], installments: 12 },
+    payment_methods: { excluded_payment_types: [{ id: "ticket" }, { id: "atm" }], installments: plan.maxInstallments },
   };
   // O retorno automático só funciona com endereço https público.
   if (site.startsWith("https://")) preference.auto_return = "approved";
