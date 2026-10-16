@@ -123,8 +123,11 @@ export function DropdownList({
   // agrupadas numa linha expansível (ex.: INCOR) cujas subopções aparecem
   // ao clicar, com um "Todos" do grupo no topo.
   groupBy,
+  // false = a opção marcada não ganha fundo colorido: só o check na caixa e o texto em roxo.
+  selectedBackground = true,
 }) {
   const [expanded, setExpanded] = React.useState({});
+  const bg = selectedBackground;
   const emptyIsAll = multi && emptyMeansAll && selected.length === 0;
   const allSelected = multi
     ? options.length > 0 && (selected.length === options.length || emptyIsAll)
@@ -175,7 +178,7 @@ export function DropdownList({
 
   return (
     <div className="dropdown-scroll" style={{ maxHeight: 280, overflowY: "scroll", paddingRight: 2 }}>
-      <DropdownItem label={allLabel} active={allSelected} multi={multi} onClick={handleAll} />
+      <DropdownItem label={allLabel} active={allSelected} multi={multi} selectedBackground={bg} onClick={handleAll} />
       {entries.map((entry) => {
         if (entry.type === "item") {
           return (
@@ -183,7 +186,7 @@ export function DropdownList({
               key={entry.opt}
               label={entry.opt}
               active={isOptionActive(entry.opt)}
-              multi={multi}
+              multi={multi} selectedBackground={bg}
               onClick={() => handleOption(entry.opt)}
             />
           );
@@ -196,7 +199,7 @@ export function DropdownList({
               label={entry.name}
               active={activeCount === entry.subs.length}
               partial={activeCount > 0 && activeCount < entry.subs.length}
-              multi={multi}
+              multi={multi} selectedBackground={bg}
               onClick={() => setExpanded((e) => ({ ...e, [entry.name]: !e[entry.name] }))}
               trailing={<ChevronDown size={16} style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }} />}
             />
@@ -207,7 +210,7 @@ export function DropdownList({
                   indent={26}
                   active={activeCount === entry.subs.length}
                   partial={activeCount > 0 && activeCount < entry.subs.length}
-                  multi={multi}
+                  multi={multi} selectedBackground={bg}
                   onClick={() => handleGroupAll(entry.subs)}
                 />
                 {entry.subs.map((opt) => (
@@ -216,7 +219,7 @@ export function DropdownList({
                     label={groupBy(opt).sub}
                     indent={26}
                     active={isOptionActive(opt)}
-                    multi={multi}
+                    multi={multi} selectedBackground={bg}
                     onClick={() => handleOption(opt)}
                   />
                 ))}
@@ -229,7 +232,7 @@ export function DropdownList({
   );
 }
 
-function DropdownItem({ label, active, partial, multi, onClick, indent = 0, trailing }) {
+function DropdownItem({ label, active, partial, multi, onClick, indent = 0, trailing, selectedBackground = true }) {
   const t = useT();
   const highlighted = active || partial;
   return (
@@ -244,7 +247,7 @@ function DropdownItem({ label, active, partial, multi, onClick, indent = 0, trai
         paddingLeft: 10 + indent,
         borderRadius: 8,
         border: "none",
-        background: highlighted ? t.primarySoft : "transparent",
+        background: highlighted && selectedBackground ? t.primarySoft : "transparent",
         color: highlighted ? t.primary : t.text,
         fontFamily: FONT_BODY,
         fontSize: 14,

@@ -10,6 +10,7 @@ import { PrimaryButton } from "@/components/ui/Primitives";
 import { updateDisplayName } from "@/lib/data/profile";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { sendTermsAcceptance } from "@/lib/legal/client";
+import { LegalModal } from "@/components/screens/LegalModal";
 
 export default function LoginPage() {
   return (
@@ -23,6 +24,8 @@ function LoginForm() {
   const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
+  // Voltou do pagamento sem estar logado neste navegador: avisa que o pagamento foi recebido.
+  const paymentReturn = ["ok", "pendente"].includes(searchParams.get("pagamento") || "");
   const supabase = createClient();
 
   const [mode, setMode] = useState("login");
@@ -37,6 +40,14 @@ function LoginForm() {
   const [info, setInfo] = useState("");
   const [showInstall, setShowInstall] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // Termos / Política abrem numa janela por cima do cadastro: não saem da tela, então nada se perde.
+  const [legal, setLegal] = useState(null);
+  const openLegal = (e, which) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setLegal(which);
+  };
+  const legalLinkStyle = { background: "transparent", border: "none", padding: 0, font: "inherit", color: t.primary, fontWeight: 600, cursor: "pointer", textDecoration: "underline" };
 
   useEffect(() => {
     if (searchParams.get("error") === "link_invalido") {
@@ -214,13 +225,13 @@ function LoginForm() {
               />
               <span>
                 Li e concordo com os{" "}
-                <a href="/termos" target="_blank" rel="noopener noreferrer" style={{ color: t.primary, fontWeight: 600 }}>
+                <button type="button" onClick={(e) => openLegal(e, "termos")} style={legalLinkStyle}>
                   Termos de Uso
-                </a>{" "}
+                </button>{" "}
                 e a{" "}
-                <a href="/privacidade" target="_blank" rel="noopener noreferrer" style={{ color: t.primary, fontWeight: 600 }}>
+                <button type="button" onClick={(e) => openLegal(e, "privacidade")} style={legalLinkStyle}>
                   Política de Privacidade
-                </a>
+                </button>
                 .
               </span>
             </label>
@@ -242,6 +253,11 @@ function LoginForm() {
 
           {error && <div style={{ fontSize: 12.5, color: t.red }}>{error}</div>}
           {info && <div style={{ fontSize: 12.5, color: t.green }}>{info}</div>}
+          {mode === "login" && paymentReturn && (
+            <div style={{ fontSize: 12.5, lineHeight: 1.5, color: t.green }}>
+              Pagamento recebido. Entre na sua conta: o acesso é liberado automaticamente assim que o pagamento é aprovado.
+            </div>
+          )}
 
           <div style={{ marginTop: 8 }}>
             <PrimaryButton full type="submit" disabled={loading}>
@@ -290,6 +306,7 @@ function LoginForm() {
         )}
       </div>
       )}
+      {legal && <LegalModal initial={legal} onClose={() => setLegal(null)} closeLabel="Voltar ao cadastro" />}
     </div>
   );
 }

@@ -2,6 +2,22 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { MP_API, PLANS, isPlan } from "@/lib/billing";
 
+const DEFAULT_SITE = "https://www.flashcardiologia.com";
+
+// Só aceita como endereço de retorno o próprio site (ou localhost, em teste): o cabeçalho Origin vem do
+// navegador e não pode virar um endereço qualquer.
+function trustedOrigin(origin) {
+  try {
+    const u = new URL(origin);
+    const host = u.hostname;
+    const configured = process.env.SITE_URL ? new URL(process.env.SITE_URL).hostname : null;
+    if (host === "localhost" || host.endsWith("flashcardiologia.com") || (configured && host === configured)) return u.origin;
+  } catch {
+    // sem Origin válido
+  }
+  return null;
+}
+
 // Cria a cobrança no Mercado Pago (Checkout Pro) para quem está logado e devolve o link de pagamento.
 // O valor vem de lib/billing.js, nunca do navegador. A liberação do acesso acontece no webhook
 // (app/auth/mercadopago/route.js), quando o Mercado Pago confirma o pagamento.
@@ -27,7 +43,10 @@ export async function POST(request) {
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
 
-  const site = (process.env.SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
+  // A volta do pagamento precisa cair no MESMO endereço em que a pessoa está logada: o login fica em
+  // cookies de cada endereço (www.flashcardiologia.com não compartilha com o endereço do Netlify, por
+  // exemplo). Por isso vale primeiro o endereço de onde veio o pedido (cabeçalho Origin).
+  const site = (trustedOrigin(request.headers.get("origin")) || process.env.SITE_URL || DEFAULT_SITE).replace(/\/$/, "");
   const preference = {
     items: [
       {

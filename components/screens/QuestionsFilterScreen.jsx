@@ -165,6 +165,7 @@ export function QuestionsFilterScreen({
             selected={filters.temas}
             onChange={(temas) => setFilters((f) => ({ ...f, temas }))}
             multi
+            selectedBackground={false}
             allLabel="Todos"
           />
         </ExpandBox>
@@ -175,6 +176,7 @@ export function QuestionsFilterScreen({
             selected={filters.instituicoes}
             onChange={changeInstituicoes}
             multi
+            selectedBackground={false}
             allLabel="Todos"
             groupBy={parseInstituicao}
           />
@@ -186,6 +188,7 @@ export function QuestionsFilterScreen({
             selected={filters.anos}
             onChange={changeAnos}
             multi
+            selectedBackground={false}
             allLabel="Todos"
           />
         </ExpandBox>

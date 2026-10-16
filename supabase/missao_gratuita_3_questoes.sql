@@ -1,10 +1,10 @@
--- Missão diária do plano gratuito: 3 questões, nenhum flashcard e sem contar dias seguidos.
+-- Missão diária do plano gratuito: 3 questões, nenhum flashcard e sem contar dias seguidos (sequência congelada).
 -- Rode uma vez no SQL Editor do Supabase (depois do assinaturas_fase2.sql). Pode rodar de novo.
 --
 -- Quem tem assinatura ativa continua com 5 questões + 5 flashcards, ou 10 questões, conforme o
 -- formato escolhido. Quem não tem recebe só 3 questões, a partir do próximo sorteio: a missão já
 -- sorteada hoje não muda.
--- Sem assinatura, concluir a missão também não conta dias seguidos: a sequência fica em 0 (parte 2).
+-- Sem assinatura, concluir a missão também não conta dias seguidos: a sequência fica congelada, sem somar nem zerar (parte 2).
 
 create or replace function public.pick_daily_mission(p_mode text default 'mix')
 returns table(question_ids uuid[], flashcard_ids uuid[])
@@ -90,7 +90,7 @@ end;
 $$;
 
 -- ============================================================
--- 2) Sem assinatura, a sequência (dias seguidos) não anda: fica em 0
+-- 2) Sem assinatura, a sequência (dias seguidos) fica congelada: não soma e não zera
 --    Funciona como gatilho no perfil, sem mexer na função que conclui a missão.
 --    A missão ainda conta como feita no dia (last_mission_date), só não soma dias.
 -- ============================================================
@@ -103,7 +103,7 @@ as $$
 begin
   if (new.streak is distinct from old.streak or new.best_streak is distinct from old.best_streak)
      and not public._has_access(new.id) then
-    new.streak := 0;
+    new.streak := old.streak;
     new.best_streak := old.best_streak;
   end if;
   return new;

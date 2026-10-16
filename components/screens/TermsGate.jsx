@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
 import { sendTermsAcceptance } from "@/lib/legal/client";
+import { LegalModal } from "@/components/screens/LegalModal";
 
 // Tela exibida depois do login a quem ainda não aceitou a versão atual dos Termos e da Política.
 export function TermsGate({ returning }) {
@@ -39,7 +40,14 @@ export function TermsGate({ returning }) {
     router.refresh();
   };
 
-  const link = { color: t.primary, fontWeight: 600 };
+  // Os textos abrem numa janela por cima desta tela (sem sair dela).
+  const [legal, setLegal] = useState(null);
+  const openLegal = (e, which) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setLegal(which);
+  };
+  const link = { background: "transparent", border: "none", padding: 0, font: "inherit", color: t.primary, fontWeight: 600, cursor: "pointer", textDecoration: "underline" };
 
   return (
     <div className="login-screen" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: 20, boxSizing: "border-box" }}>
@@ -65,13 +73,13 @@ export function TermsGate({ returning }) {
           />
           <span>
             Li e concordo com os{" "}
-            <a href="/termos" target="_blank" rel="noopener noreferrer" style={link}>
+            <button type="button" onClick={(e) => openLegal(e, "termos")} style={link}>
               Termos de Uso
-            </a>{" "}
+            </button>{" "}
             e a{" "}
-            <a href="/privacidade" target="_blank" rel="noopener noreferrer" style={link}>
+            <button type="button" onClick={(e) => openLegal(e, "privacidade")} style={link}>
               Política de Privacidade
-            </a>
+            </button>
             .
           </span>
         </label>
@@ -87,6 +95,7 @@ export function TermsGate({ returning }) {
           </button>
         </div>
       </div>
+      {legal && <LegalModal initial={legal} onClose={() => setLegal(null)} closeLabel="Voltar" />}
     </div>
   );
 }

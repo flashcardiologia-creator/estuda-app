@@ -244,8 +244,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
         return;
       }
       if (cancelled) return;
-      // Sem assinatura a missão não conta dias seguidos: a sequência fica sempre em 0.
-      const correctedStreak = access.active ? effectiveStreak(profileData.streak, profileData.last_mission_date) : 0;
+      // Sem assinatura a sequência fica congelada: não soma nem zera. Ao assinar de novo, segue de onde parou.
+      const correctedStreak = access.active ? effectiveStreak(profileData.streak, profileData.last_mission_date) : profileData.streak;
       if (correctedStreak !== profileData.streak) {
         profileData = { ...profileData, streak: correctedStreak };
         resetStreak(supabase, userId).catch(() => {});
@@ -669,7 +669,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
 
   const finishDaily = async () => {
     const { streak, last_mission_date } = await completeDailyMission(supabase);
-    setProfile((p) => ({ ...p, streak: access.active ? streak : 0, last_mission_date }));
+    setProfile((p) => ({ ...p, streak: access.active ? streak : p.streak, last_mission_date }));
     // Limpa a sessão concluída — se não, um eventual desalinhamento no cálculo
     // de "hoje" (ex.: logo após mudar a virada do dia) deixaria a próxima
     // entrada na Missão Diária caindo de volta no último item já respondido.
@@ -684,7 +684,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
   const expireDaily = useCallback(async () => {
     try {
       const { streak } = await expireDailyMission(supabase);
-      setProfile((p) => ({ ...p, streak: access.active ? streak : 0 }));
+      setProfile((p) => ({ ...p, streak: access.active ? streak : p.streak }));
     } catch {
       // melhor deixar a streak como está do que travar o usuário na missão vencida
     }
