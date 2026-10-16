@@ -12,23 +12,24 @@ import { canOpenModal, openCheckoutModal } from "@/lib/mpCheckout";
 // Logo oficial do Mercado Pago em public/mercadopago-logo.svg (baixada de mercadopago.com.br).
 function MercadoPagoNotice({ t }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, border: `1px solid ${t.border}`, background: t.surfaceAlt, borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/mercadopago-logo.svg"
-        alt="Mercado Pago"
-        onError={(e) => {
-          e.currentTarget.style.display = "none";
-        }}
-        style={{ height: 40, width: "auto", flexShrink: 0 }}
-      />
-      <div style={{ minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13.5, color: t.text }}>
-          <ShieldCheck size={15} color={t.green} /> Pagamento feito pelo Mercado Pago
+    <div style={{ border: `1px solid ${t.border}`, background: t.surfaceAlt, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/mercadopago-logo.svg"
+          alt="Mercado Pago"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+          style={{ display: "block", height: 38, width: "auto", flexShrink: 0 }}
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0, fontWeight: 700, fontSize: 14.5, lineHeight: 1.3, color: t.text }}>
+          <ShieldCheck size={18} color={t.green} style={{ flexShrink: 0 }} />
+          <span>Pagamento seguro pelo Mercado Pago</span>
         </div>
-        <div style={{ fontSize: 12.5, lineHeight: 1.45, color: t.textMuted, marginTop: 2 }}>
-          Ao tocar em Assinar, a janela do Mercado Pago abre aqui mesmo para você pagar com Pix ou cartão. O FlashCardio não vê os dados do seu cartão.
-        </div>
+      </div>
+      <div style={{ fontSize: 12.5, lineHeight: 1.5, color: t.textMuted, marginTop: 10 }}>
+        Ao tocar em Assinar, a janela do Mercado Pago abre aqui mesmo para você pagar com Pix ou cartão. O FlashCardio não vê os dados do seu cartão.
       </div>
     </div>
   );
@@ -95,24 +96,26 @@ export function PaywallScreen({ access, onBack }) {
     <div style={{ maxWidth: 620, margin: "0 auto", paddingBottom: 80 }}>
       <ScreenHeader title="Assinatura" onBack={onBack} />
       <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ textAlign: "center", padding: "10px 0 4px" }}>
-          <div
-            style={{
-              width: 54,
-              height: 54,
-              borderRadius: "50%",
-              background: t.primarySoft,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 12,
-            }}
-          >
-            <Lock size={24} color={t.primary} />
+        <div style={{ padding: "6px 0 2px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                flexShrink: 0,
+                borderRadius: "50%",
+                background: t.primarySoft,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Lock size={22} color={t.primary} />
+            </div>
+            <h2 style={{ margin: 0, fontSize: 19, lineHeight: 1.3, fontWeight: 700, color: t.text }}>Questões e flashcards são para assinantes</h2>
           </div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: t.text }}>Questões e flashcards são para assinantes</h2>
           {access.lastExpiredAt && (
-            <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.55, color: t.textMuted }}>
+            <p style={{ margin: "10px 0 0", fontSize: 14, lineHeight: 1.55, color: t.textMuted }}>
               Sua assinatura venceu em {fmtDate(access.lastExpiredAt)}. Renove para voltar a estudar sem limites.
             </p>
           )}
