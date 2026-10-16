@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Clock, Plus, Trophy } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { ScreenHeader, Chip, PrimaryButton, Tag, EmptyState } from "@/components/ui/Primitives";
+import { ScreenHeader, PrimaryButton, Tag, EmptyState } from "@/components/ui/Primitives";
 import { NewChallengeModal } from "@/components/screens/NewChallengeModal";
 import { ChallengeAnswerFlow } from "@/components/screens/ChallengeAnswerFlow";
 import { createChallenge, fetchFreeChallengeTema } from "@/lib/data/challenges";
@@ -11,15 +11,6 @@ import { todayStr, dateStrAt } from "@/lib/util";
 
 function challengeDone(answered, qtd) {
   return answered >= qtd;
-}
-
-// Aba selecionada: contorno e texto roxos, em negrito, sem preenchimento.
-function tabStyle(t, active) {
-  const base = { flex: 1, textAlign: "center" };
-  if (active) {
-    return { ...base, border: `2px solid ${t.primary}`, background: "transparent", color: t.primary, fontWeight: 800 };
-  }
-  return t.name === "light" ? { ...base, background: t.surface } : base;
 }
 
 function temaLabel(tema) {
@@ -361,13 +352,42 @@ export function ChallengesScreen({
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-          <Chip active={tab === "pendentes"} onClick={() => setTab("pendentes")} style={tabStyle(t, tab === "pendentes")}>
-            Pendentes ({pendentes.length})
-          </Chip>
-          <Chip active={tab === "concluidos"} onClick={() => setTab("concluidos")} style={tabStyle(t, tab === "concluidos")}>
-            Concluídos ({concluidos.length})
-          </Chip>
+        {/* Abas sublinhadas: a ativa fica em roxo com um traço embaixo; a contagem vai pequena, no alto, ao lado do nome. */}
+        <div role="tablist" style={{ display: "flex", borderBottom: `1px solid ${t.border}`, marginBottom: 16 }}>
+          {[
+            { id: "pendentes", label: "Pendentes", count: pendentes.length },
+            { id: "concluidos", label: "Concluídos", count: concluidos.length },
+          ].map(({ id, label, count }) => {
+            const on = tab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setTab(id)}
+                style={{
+                  flex: 1,
+                  position: "relative",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "12px 0 13px",
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: on ? t.primary : t.textMuted,
+                }}
+              >
+                {label}
+                <sup style={{ fontSize: 11, fontWeight: 800, marginLeft: 3, color: on ? t.primary : t.textMuted }}>{count}</sup>
+                {on && (
+                  <span
+                    style={{ position: "absolute", left: "18%", right: "18%", bottom: -1, height: 3, borderRadius: "3px 3px 0 0", background: t.primary }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {tab === "pendentes" && pendentes.length === 0 && <EmptyState text="Nenhum desafio pendente. Chame um amigo para jogar!" />}
