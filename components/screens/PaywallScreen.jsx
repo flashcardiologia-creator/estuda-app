@@ -1,10 +1,10 @@
 "use client";
 
-import { Lock, Flame, Swords, BarChart3, Mail } from "lucide-react";
+import { useState } from "react";
+import { Lock, Flame, Swords, BarChart3, CreditCard } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, ScreenHeader } from "@/components/ui/Primitives";
-
-const CONTACT_EMAIL = "flashcardiologia@gmail.com";
+import { PLANS, formatBRL } from "@/lib/billing";
 
 const FREE_ITEMS = [
   { icon: Flame, text: "Missão diária" },
@@ -12,19 +12,29 @@ const FREE_ITEMS = [
   { icon: BarChart3, text: "Ranking e estatísticas" },
 ];
 
-const PLANS = [
-  { name: "Mensal", detail: "30 dias de acesso, contados do dia do pagamento" },
-  { name: "Anual", detail: "365 dias de acesso, contados do dia do pagamento" },
-];
-
 const fmtDate = (iso) => new Date(iso).toLocaleDateString("pt-BR");
 
 // Tela exibida no lugar de Questões e Flashcards para quem não tem assinatura ativa.
 export function PaywallScreen({ access, onBack }) {
   const t = useT();
-  const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Assinatura FlashCardio")}`;
+  const [paying, setPaying] = useState(null);
+  const [error, setError] = useState("");
   const section = { background: t.surface, border: `1px solid ${t.border}`, borderRadius: 16, padding: "16px 18px" };
   const label = { fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: t.textMuted, marginBottom: 10 };
+
+  const pay = async (planId) => {
+    setError("");
+    setPaying(planId);
+    try {
+      const res = await fetch("/api/pagamento/criar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: planId }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error("falhou");
+      window.location.assign(data.url);
+    } catch {
+      setError("Não foi possível abrir o pagamento agora. Tente de novo em instantes.");
+      setPaying(null);
+    }
+  };
 
   return (
     <div style={{ maxWidth: 620, margin: "0 auto", paddingBottom: 80 }}>
@@ -54,15 +64,30 @@ export function PaywallScreen({ access, onBack }) {
         </div>
 
         <div style={section}>
-          <div style={label}>Planos</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {PLANS.map((p) => (
-              <div key={p.name} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <span style={{ fontWeight: 700, fontSize: 15, color: t.text }}>{p.name}</span>
-                <span style={{ fontSize: 13, color: t.textMuted }}>{p.detail}</span>
+          <div style={label}>Escolha o plano</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {Object.values(PLANS).map((p) => (
+              <div key={p.id} style={{ border: `1px solid ${t.border}`, background: t.surfaceAlt, borderRadius: 14, padding: "14px 16px" }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 700, fontSize: 16, color: t.text }}>{p.label}</span>
+                  <span style={{ fontWeight: 800, fontSize: 18, color: t.text }}>{formatBRL(p.priceCents)}</span>
+                </div>
+                <div style={{ fontSize: 13, color: t.textMuted, margin: "4px 0 12px", lineHeight: 1.5 }}>
+                  {p.days} dias de acesso, contados do dia do pagamento
+                  {p.id === "anual" && ` · equivale a ${formatBRL(Math.round(p.priceCents / 12))} por mês`}
+                </div>
+                <PrimaryButton full disabled={!!paying} onClick={() => pay(p.id)}>
+                  <CreditCard size={15} style={{ marginRight: 7, verticalAlign: -3 }} />
+                  {paying === p.id ? "Abrindo pagamento…" : `Assinar ${p.label.toLowerCase()}`}
+                </PrimaryButton>
               </div>
             ))}
           </div>
+          {error && <div style={{ fontSize: 12.5, color: t.red, marginTop: 12 }}>{error}</div>}
+          <p style={{ margin: "12px 0 0", fontSize: 12.5, lineHeight: 1.5, color: t.textMuted }}>
+            Pagamento por Pix ou cartão, pelo Mercado Pago. No cartão você pode parcelar em até 12x, com juros do parcelamento mostrados antes de
+            confirmar. O acesso é liberado automaticamente assim que o pagamento é aprovado. Não há renovação automática.
+          </p>
         </div>
 
         <div style={section}>
@@ -75,21 +100,6 @@ export function PaywallScreen({ access, onBack }) {
               </div>
             ))}
           </div>
-        </div>
-
-        <div style={section}>
-          <div style={label}>Como assinar</div>
-          <p style={{ margin: "0 0 14px", fontSize: 14, lineHeight: 1.55, color: t.text }}>
-            O pagamento é feito por transferência bancária. Escreva para o e-mail abaixo com o plano que você quer, e liberamos o acesso assim que o
-            pagamento for confirmado.
-          </p>
-          <p style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: t.text, overflowWrap: "anywhere", userSelect: "all" }}>{CONTACT_EMAIL}</p>
-          <a href={mailto} style={{ textDecoration: "none" }}>
-            <PrimaryButton full>
-              <Mail size={15} style={{ marginRight: 7, verticalAlign: -3 }} />
-              Pedir a assinatura por e-mail
-            </PrimaryButton>
-          </a>
         </div>
 
         <PrimaryButton full variant="ghost" onClick={onBack}>

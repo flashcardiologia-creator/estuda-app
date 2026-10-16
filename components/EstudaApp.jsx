@@ -19,6 +19,7 @@ import { ChallengesScreen } from "@/components/screens/ChallengesScreen";
 import { RankingScreen } from "@/components/screens/RankingScreen";
 import { StatsScreen } from "@/components/screens/StatsScreen";
 import { PaywallScreen } from "@/components/screens/PaywallScreen";
+import { PaymentReturn } from "@/components/screens/PaymentReturn";
 import { FREE_CHALLENGES_PER_DAY, LOCKED_SCREENS, PAID_CHALLENGES_PER_DAY } from "@/lib/access";
 
 import {
@@ -97,7 +98,7 @@ const DEFAULT_FILTERS = {
   fontSize: "md",
 };
 
-export function EstudaApp({ userId, userEmail, access }) {
+export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
   const t = useT();
   const router = useRouter();
   const [supabase] = useState(() => {
@@ -783,6 +784,7 @@ export function EstudaApp({ userId, userEmail, access }) {
   return (
     <div>
       {pushPrompt && <PushPrompt supabase={supabase} userId={userId} onClose={() => setPushPrompt(null)} />}
+      <PaymentReturn status={paymentReturn} active={access.active} />
       {showHeader && <Header streak={profile.streak} onNavigate={setScreen} missionDone={missionDone} />}
 
       {(paywalled || screen === "plans") && <PaywallScreen access={access} onBack={() => setScreen("home")} />}
