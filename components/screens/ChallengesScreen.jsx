@@ -204,6 +204,7 @@ export function ChallengesScreen({
   onGoToAccountFriends,
   onAnsweringChange,
   fontSize,
+  dailyLimit = 5,
 }) {
   const t = useT();
   const [tab, setTab] = useState("pendentes");
@@ -303,10 +304,10 @@ export function ChallengesScreen({
               >
                 Desafios criados hoje
               </span>
-              <span style={{ fontSize: 11.5, color: t.primary, fontWeight: 800 }}>{dailyCount}/5</span>
+              <span style={{ fontSize: 11.5, color: t.primary, fontWeight: 800 }}>{dailyCount}/{dailyLimit}</span>
             </div>
             <div style={{ display: "flex", gap: 5 }}>
-              {Array.from({ length: 5 }).map((_, i) => (
+              {Array.from({ length: dailyLimit }).map((_, i) => (
                 <div
                   key={i}
                   style={{
@@ -324,13 +325,26 @@ export function ChallengesScreen({
           </div>
           <PrimaryButton
             small
-            disabled={dailyCount >= 5}
+            disabled={dailyCount >= dailyLimit}
             onClick={() => (friends.length === 0 ? setShowNoFriends(true) : setShowNew(true))}
           >
             <Plus size={14} style={{ marginRight: 5, verticalAlign: -2 }} />
             Novo Desafio
           </PrimaryButton>
         </div>
+
+        {dailyLimit < 5 && (
+          <div style={{ fontSize: 12.5, lineHeight: 1.5, color: t.textMuted, margin: "-6px 2px 18px" }}>
+            No plano gratuito você cria {dailyLimit} desafio por dia. Quem assina cria até 5.{" "}
+            <button
+              type="button"
+              onClick={() => onNavigate("plans")}
+              style={{ background: "transparent", border: "none", padding: 0, color: t.primary, fontWeight: 600, fontSize: 12.5, cursor: "pointer" }}
+            >
+              Ver planos
+            </button>
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
           <Chip active={tab === "pendentes"} onClick={() => setTab("pendentes")} style={tabStyle(t, tab === "pendentes")}>

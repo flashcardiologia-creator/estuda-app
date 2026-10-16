@@ -31,7 +31,7 @@ function PendingChallengesBadge({ count, bg }) {
   );
 }
 
-export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily, pendingChallengesCount = 0 }) {
+export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily, pendingChallengesCount = 0, locked = false }) {
   const t = useT();
   return (
     <div style={{ padding: "8px 20px 60px", maxWidth: 620, margin: "0 auto" }}>
@@ -59,8 +59,8 @@ export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily, pending
           statusText={missionDone ? (t.name === "dark" ? "✓ Concluída" : "Concluída") : "Não realizada"}
           statusColor={missionDone ? (t.name === "dark" ? "#22C55E" : "#16A34A") : t.name === "dark" ? t.red : "#DC2626"}
         />
-        <HomeBox icon={<BookOpen />} title="Questões" onClick={() => onNavigate("questions-filters")} accentColor="#3B82F6" />
-        <HomeBox icon={<Rocket />} title="Flashcards" onClick={() => onNavigate("flashcards-select")} accentColor={t.amber} />
+        <HomeBox icon={<BookOpen />} title="Questões" showLock={locked} onClick={() => onNavigate("questions-filters")} accentColor="#3B82F6" />
+        <HomeBox icon={<Rocket />} title="Flashcards" showLock={locked} onClick={() => onNavigate("flashcards-select")} accentColor={t.amber} />
         <HomeBox icon={<Trophy />} title="Trials" locked accentColor="#C1443A" />
         <div style={{ position: "relative" }}>
           <HomeBox icon={<Swords />} title="Desafios" onClick={() => onNavigate("challenges")} accentColor="#9B6BFF" />

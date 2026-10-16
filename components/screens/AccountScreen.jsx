@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { PLAN_LABEL } from "@/lib/access";
 import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy, Shield, KeyRound, Eye, EyeOff, ChevronRight, Swords, Rocket } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
@@ -73,6 +74,7 @@ export function AccountScreen({
   onRespondRequest,
   onRefreshFriends,
   onSignOut,
+  access,
 }) {
   const t = useT();
   const [name, setName] = useState(profile.name);
@@ -424,6 +426,58 @@ export function AccountScreen({
               {userEmail}
             </div>
           </div>
+
+          {access?.enforced && (
+            <div style={{ marginBottom: 18 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 10.5,
+                  color: t.textMuted,
+                  fontWeight: 700,
+                  letterSpacing: 0.5,
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                Assinatura
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  padding: "11px 13px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.border}`,
+                  background: t.surfaceAlt,
+                  fontSize: 14,
+                  color: t.text,
+                  boxSizing: "border-box",
+                }}
+              >
+                <span style={{ minWidth: 0 }}>
+                  {access.active
+                    ? `${PLAN_LABEL[access.plan] || "Ativa"} · até ${new Date(access.expiresAt).toLocaleDateString("pt-BR")}${
+                        access.daysLeft != null ? ` (${access.daysLeft} ${access.daysLeft === 1 ? "dia" : "dias"})` : ""
+                      }`
+                    : access.lastExpiredAt
+                    ? `Venceu em ${new Date(access.lastExpiredAt).toLocaleDateString("pt-BR")}`
+                    : "Plano gratuito"}
+                </span>
+                {!access.active && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("plans")}
+                    style={{ background: "transparent", border: "none", padding: 0, color: t.primary, fontWeight: 600, fontSize: 13, cursor: "pointer", flexShrink: 0 }}
+                  >
+                    Ver planos
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <div>
             <label

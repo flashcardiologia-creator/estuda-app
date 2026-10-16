@@ -18,6 +18,8 @@ import { DailyMissionScreen, DailyDoneScreen } from "@/components/screens/DailyM
 import { ChallengesScreen } from "@/components/screens/ChallengesScreen";
 import { RankingScreen } from "@/components/screens/RankingScreen";
 import { StatsScreen } from "@/components/screens/StatsScreen";
+import { PaywallScreen } from "@/components/screens/PaywallScreen";
+import { FREE_CHALLENGES_PER_DAY, LOCKED_SCREENS, PAID_CHALLENGES_PER_DAY } from "@/lib/access";
 
 import {
   fetchProfile,
@@ -77,6 +79,7 @@ const HIDDEN_HEADER_SCREENS = [
   "questions-filters",
   "flashcards-select",
   "challenges",
+  "plans",
 ];
 
 const nowMs = () => Date.now();
@@ -94,10 +97,15 @@ const DEFAULT_FILTERS = {
   fontSize: "md",
 };
 
-export function EstudaApp({ userId, userEmail }) {
+export function EstudaApp({ userId, userEmail, access }) {
   const t = useT();
   const router = useRouter();
-  const [supabase] = useState(() => createClient());
+  const [supabase] = useState(() => {
+    const client = createClient();
+    // Sem assinatura ativa o app não lê as tabelas de questões/flashcards direto (ver lib/data/content.js).
+    client.contentOpen = access.active;
+    return client;
+  });
 
   const [screen, setScreen] = useState("home");
   const [loading, setLoading] = useState(true);
@@ -258,8 +266,9 @@ export function EstudaApp({ userId, userEmail }) {
           if (!cancelled) setChallenges(data);
         })
         .catch(() => {});
-      // Os textos longos das questões chegam em segundo plano, em lotes de 300.
-      const ids = questions.map((q) => q.id);
+      // Os textos longos das questões chegam em segundo plano, em lotes de 300. Sem assinatura não há
+      // o que baixar: a missão e os desafios buscam só as questões deles.
+      const ids = supabase.contentOpen === false ? [] : questions.map((q) => q.id);
       textsBgRef.current = (async () => {
         for (let i = 0; i < ids.length && !cancelled; i += 300) {
           try {
@@ -767,15 +776,21 @@ export function EstudaApp({ userId, userEmail }) {
     );
   }
 
+  // Sem assinatura ativa, Questões e Flashcards mostram a tela de assinatura no lugar.
+  // A Missão diária e os Desafios têm as próprias telas e continuam livres.
+  const paywalled = !access.active && LOCKED_SCREENS.includes(screen);
   const showHeader = !HIDDEN_HEADER_SCREENS.includes(screen) && !challengeAnswering;
   return (
     <div>
       {pushPrompt && <PushPrompt supabase={supabase} userId={userId} onClose={() => setPushPrompt(null)} />}
       {showHeader && <Header streak={profile.streak} onNavigate={setScreen} missionDone={missionDone} />}
 
+      {(paywalled || screen === "plans") && <PaywallScreen access={access} onBack={() => setScreen("home")} />}
+
       {screen === "home" && (
         <HomeScreen
           name={profile.name}
+          locked={!access.active}
           onNavigate={setScreen}
           missionDone={missionDone}
           onOpenDaily={() => (missionDone ? setScreen("daily-done") : startDaily())}
@@ -793,6 +808,7 @@ export function EstudaApp({ userId, userEmail }) {
           allQuestions={allQuestions}
           friends={friends}
           incomingRequests={incomingRequests}
+          access={access}
           initialFocus={accountFocus}
           onFocusConsumed={() => setAccountFocus(null)}
           onNavigate={(s) => {
@@ -826,7 +842,7 @@ export function EstudaApp({ userId, userEmail }) {
         />
       )}
 
-      {screen === "questions-filters" && (
+      {!paywalled && screen === "questions-filters" && (
         <QuestionsFilterScreen
           allQuestions={allQuestions}
           favorites={favorites}
@@ -843,7 +859,7 @@ export function EstudaApp({ userId, userEmail }) {
         />
       )}
 
-      {screen === "questions-session" && session && (
+      {!paywalled && screen === "questions-session" && session && (
         <QuestionsSessionScreen
           supabase={supabase}
           userId={userId}
@@ -860,7 +876,7 @@ export function EstudaApp({ userId, userEmail }) {
         />
       )}
 
-      {screen === "questions-results" && session && (
+      {!paywalled && screen === "questions-results" && session && (
         <QuestionsResultsScreen
           session={session}
           questionsById={sessionQuestionsById}
@@ -873,7 +889,7 @@ export function EstudaApp({ userId, userEmail }) {
         />
       )}
 
-      {screen === "flashcards-select" && (
+      {!paywalled && screen === "flashcards-select" && (
         <FlashcardsSelectScreen
           themeCounts={themeCounts}
           favoriteCounts={favoriteCounts}
@@ -890,7 +906,7 @@ export function EstudaApp({ userId, userEmail }) {
         />
       )}
 
-      {screen === "flashcards-session" && flashSession && (
+      {!paywalled && screen === "flashcards-session" && flashSession && (
         <FlashcardsSessionScreen
           supabase={supabase}
           userId={userId}
@@ -937,6 +953,7 @@ export function EstudaApp({ userId, userEmail }) {
           onRefreshChallenges={refreshChallenges}
           onNavigate={setScreen}
           onGoToAccountFriends={goToAccountFriends}
+          dailyLimit={access.active ? PAID_CHALLENGES_PER_DAY : FREE_CHALLENGES_PER_DAY}
           onAnsweringChange={setChallengeAnswering}
           fontSize={filters.fontSize}
         />

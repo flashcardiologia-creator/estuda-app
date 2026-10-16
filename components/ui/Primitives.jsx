@@ -442,7 +442,9 @@ export function ScreenHeader({ title, onBack, label = "Voltar" }) {
   );
 }
 
-export function HomeBox({ icon, title, onClick, accentColor, locked, loading, heroBg, statusText, statusColor }) {
+// locked = bloqueado e esmaecido (sem clique). showLock = só o cadeado, o clique continua valendo
+// (usado para conteúdo de assinantes: o clique leva à tela de assinatura).
+export function HomeBox({ icon, title, onClick, accentColor, locked, showLock, loading, heroBg, statusText, statusColor }) {
   const t = useT();
   const grayBorder = t.name === "light" && !heroBg;
   const darkTitleOnHero = heroBg && t.name === "light";
@@ -473,7 +475,7 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, loading, he
       onMouseEnter={(e) => !disabled && (e.currentTarget.style.filter = "brightness(1.08)")}
       onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
     >
-      {locked && (
+      {(locked || showLock) && (
         <div style={{ position: "absolute", top: 14, right: 16 }}>
           <Lock size={14} color={t.textMuted} />
         </div>

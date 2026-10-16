@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { EstudaApp } from "@/components/EstudaApp";
 import { TermsGate } from "@/components/screens/TermsGate";
 import { LEGAL_VERSION, TERMS_GATE_ENABLED } from "@/lib/legal/content";
+import { OPEN_ACCESS, parseAccess } from "@/lib/access";
 
 export default async function Page() {
   const supabase = await createClient();
@@ -27,5 +28,11 @@ export default async function Page() {
     }
   }
 
-  return <EstudaApp userId={user.id} userEmail={user.email} />;
+  // Situação da assinatura. Se a consulta falhar (por exemplo, o SQL ainda não foi rodado),
+  // o app abre liberado em vez de travar todo mundo.
+  const { data: accessRows, error: accessError } = await supabase.rpc("my_access");
+  if (accessError) console.error("[acesso] my_access falhou:", accessError.message);
+  const access = accessError ? OPEN_ACCESS : parseAccess(accessRows?.[0]);
+
+  return <EstudaApp userId={user.id} userEmail={user.email} access={access} />;
 }
