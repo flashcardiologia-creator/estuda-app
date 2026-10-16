@@ -2,25 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Flame, Swords, BarChart3, CreditCard, ShieldCheck } from "lucide-react";
+import { Lock, CreditCard, ShieldCheck } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, ScreenHeader } from "@/components/ui/Primitives";
 import { PLANS, formatBRL } from "@/lib/billing";
 import { canOpenModal, openCheckoutModal } from "@/lib/mpCheckout";
 
 // Aviso de que o pagamento é feito pelo Mercado Pago, antes de a pessoa clicar em assinar.
-// A logo fica em public/mercadopago-logo.png; sem o arquivo, aparece só o texto.
+// Logo oficial do Mercado Pago em public/mercadopago-logo.svg (baixada de mercadopago.com.br).
 function MercadoPagoNotice({ t }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, border: `1px solid ${t.border}`, background: t.surfaceAlt, borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/mercadopago-logo.png"
+        src="/mercadopago-logo.svg"
         alt="Mercado Pago"
         onError={(e) => {
           e.currentTarget.style.display = "none";
         }}
-        style={{ height: 30, width: "auto", maxWidth: 110, background: "#fff", borderRadius: 8, padding: "4px 8px", flexShrink: 0 }}
+        style={{ height: 40, width: "auto", flexShrink: 0 }}
       />
       <div style={{ minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13.5, color: t.text }}>
@@ -33,12 +33,6 @@ function MercadoPagoNotice({ t }) {
     </div>
   );
 }
-
-const FREE_ITEMS = [
-  { icon: Flame, text: "Missão diária" },
-  { icon: Swords, text: "1 desafio por dia" },
-  { icon: BarChart3, text: "Ranking e estatísticas" },
-];
 
 const fmtDate = (iso) => new Date(iso).toLocaleDateString("pt-BR");
 
@@ -117,11 +111,11 @@ export function PaywallScreen({ access, onBack }) {
             <Lock size={24} color={t.primary} />
           </div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: t.text }}>Questões e flashcards são para assinantes</h2>
-          <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.55, color: t.textMuted }}>
-            {access.lastExpiredAt
-              ? `Sua assinatura venceu em ${fmtDate(access.lastExpiredAt)}. Renove para voltar a estudar sem limites.`
-              : "Assine para estudar com todo o banco de questões e flashcards."}
-          </p>
+          {access.lastExpiredAt && (
+            <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.55, color: t.textMuted }}>
+              Sua assinatura venceu em {fmtDate(access.lastExpiredAt)}. Renove para voltar a estudar sem limites.
+            </p>
+          )}
         </div>
 
         <div style={section}>
@@ -134,9 +128,16 @@ export function PaywallScreen({ access, onBack }) {
                   <span style={{ fontWeight: 700, fontSize: 16, color: t.text }}>{p.label}</span>
                   <span style={{ fontWeight: 800, fontSize: 18, color: t.text }}>{formatBRL(p.priceCents)}</span>
                 </div>
-                <div style={{ fontSize: 13, color: t.textMuted, margin: "4px 0 12px", lineHeight: 1.5 }}>
+                <div style={{ fontSize: 13, color: t.textMuted, margin: "4px 0 0", lineHeight: 1.5 }}>
+                  {p.id === "anual" ? "Pagamento único de " : ""}
+                  {p.id === "anual" ? formatBRL(p.priceCents) : ""}
+                  {p.id === "anual" ? " · " : ""}
                   {p.days} dias de acesso, contados do dia do pagamento
-                  {p.id === "anual" && ` · equivale a ${formatBRL(Math.round(p.priceCents / 12))} por mês`}
+                </div>
+                <div style={{ fontSize: 14.5, fontWeight: 800, color: t.primary, margin: "6px 0 12px" }}>
+                  {p.id === "anual"
+                    ? `Equivale a ${formatBRL(Math.round(p.priceCents / 12))} por mês`
+                    : `${formatBRL(p.priceCents)} por mês`}
                 </div>
                 <PrimaryButton full disabled={!!paying} onClick={() => pay(p.id)}>
                   <CreditCard size={15} style={{ marginRight: 7, verticalAlign: -3 }} />
@@ -155,18 +156,6 @@ export function PaywallScreen({ access, onBack }) {
             Pagamento por Pix ou cartão, pelo Mercado Pago. No cartão você pode parcelar em até 12x, com juros do parcelamento mostrados antes de
             confirmar. O acesso é liberado automaticamente assim que o pagamento é aprovado. Não há renovação automática.
           </p>
-        </div>
-
-        <div style={section}>
-          <div style={label}>Continua livre para você</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            {FREE_ITEMS.map(({ icon: Icon, text }) => (
-              <div key={text} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: t.text }}>
-                <Icon size={17} color={t.primary} />
-                {text}
-              </div>
-            ))}
-          </div>
         </div>
 
         <PrimaryButton full variant="ghost" onClick={onBack}>
