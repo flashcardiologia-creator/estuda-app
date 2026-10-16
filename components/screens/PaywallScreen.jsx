@@ -68,6 +68,7 @@ export function PaywallScreen({ access, onBack }) {
   const label = { fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: t.textMuted, marginBottom: 10 };
 
   const pay = async (planId) => {
+    if (paying) return;
     setError("");
     setPaying(planId);
     try {
@@ -112,7 +113,7 @@ export function PaywallScreen({ access, onBack }) {
             >
               <Lock size={22} color={t.primary} />
             </div>
-            <h2 style={{ margin: 0, fontSize: 19, lineHeight: 1.3, fontWeight: 700, color: t.text }}>Questões e flashcards são para assinantes</h2>
+            <h2 style={{ margin: 0, fontSize: 19, lineHeight: 1.3, fontWeight: 700, color: t.text }}>Conteúdo para assinante</h2>
           </div>
           {access.lastExpiredAt && (
             <p style={{ margin: "10px 0 0", fontSize: 14, lineHeight: 1.55, color: t.textMuted }}>
@@ -144,7 +145,8 @@ export function PaywallScreen({ access, onBack }) {
                 ) : (
                   <div style={{ height: 12 }} />
                 )}
-                <PrimaryButton full disabled={!!paying} onClick={() => pay(p.id)}>
+                {/* Só o plano clicado fica ativo ("Abrindo pagamento…"); o outro fica desativado até abrir. */}
+                <PrimaryButton full disabled={!!paying && paying !== p.id} onClick={() => pay(p.id)}>
                   <CreditCard size={15} style={{ marginRight: 7, verticalAlign: -3 }} />
                   {paying === p.id ? "Abrindo pagamento…" : `Assinar ${p.label.toLowerCase()}`}
                 </PrimaryButton>
@@ -163,10 +165,6 @@ export function PaywallScreen({ access, onBack }) {
             o pagamento é aprovado. Não há renovação automática.
           </p>
         </div>
-
-        <PrimaryButton full variant="ghost" onClick={onBack}>
-          Voltar ao início
-        </PrimaryButton>
       </div>
     </div>
   );
