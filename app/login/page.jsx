@@ -9,6 +9,7 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
 import { updateDisplayName } from "@/lib/data/profile";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
+import { sendTermsAcceptance } from "@/lib/legal/client";
 
 export default function LoginPage() {
   return (
@@ -35,6 +36,7 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [showInstall, setShowInstall] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("error") === "link_invalido") {
@@ -86,12 +88,18 @@ function LoginForm() {
           setError("As senhas não coincidem.");
           return;
         }
+        if (!acceptedTerms) {
+          setError("Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.");
+          return;
+        }
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { name: trimmedName } },
         });
         if (error) throw error;
+        // Se o registro falhar, a tela de aceite após o login pede o aceite de novo.
+        if (data.user) await sendTermsAcceptance({ context: "signup", user: { id: data.user.id, email } });
         if (data.session) {
           await updateDisplayName(supabase, data.user.id, trimmedName);
           router.push("/");
@@ -126,7 +134,7 @@ function LoginForm() {
       <div style={{ width: "100%", maxWidth: 380, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: 30 }}>
         {mode !== "login" && (
           <p style={{ fontSize: 13, color: t.textMuted, margin: "0 0 20px", textAlign: "center" }}>
-            {mode === "signup" && "Crie sua conta gratuita"}
+            {mode === "signup" && "Crie sua conta agora"}
             {mode === "forgot" && "Informe seu e-mail para receber o link de redefinição"}
           </p>
         )}
@@ -196,6 +204,28 @@ function LoginForm() {
             </div>
           )}
 
+          {mode === "signup" && (
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 12.5, lineHeight: 1.5, color: t.textMuted, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                style={{ width: 18, height: 18, marginTop: 1, flexShrink: 0, accentColor: t.primary }}
+              />
+              <span>
+                Li e concordo com os{" "}
+                <a href="/termos" target="_blank" rel="noopener noreferrer" style={{ color: t.primary, fontWeight: 600 }}>
+                  Termos de Uso
+                </a>{" "}
+                e a{" "}
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" style={{ color: t.primary, fontWeight: 600 }}>
+                  Política de Privacidade
+                </a>
+                .
+              </span>
+            </label>
+          )}
+
           {mode === "login" && (
             <button
               type="button"
@@ -241,6 +271,7 @@ function LoginForm() {
                 setError("");
                 setInfo("");
                 setConfirmPassword("");
+                setAcceptedTerms(false);
               }}
               style={{ background: "transparent", border: "none", color: t.primary, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
             >

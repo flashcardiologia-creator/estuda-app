@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EstudaApp } from "@/components/EstudaApp";
+import { TermsGate } from "@/components/screens/TermsGate";
+import { LEGAL_VERSION, TERMS_GATE_ENABLED } from "@/lib/legal/content";
 
 export default async function Page() {
   const supabase = await createClient();
@@ -9,6 +11,21 @@ export default async function Page() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+
+  if (TERMS_GATE_ENABLED) {
+    // Cada pessoa só enxerga os próprios registros (RLS). Se a consulta falhar (por exemplo, a
+    // tabela ainda não existe), não bloqueamos o app.
+    const { data: accepted, error } = await supabase
+      .from("terms_acceptances")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("terms_version", LEGAL_VERSION)
+      .limit(1);
+    if (!error && accepted.length === 0) {
+      const { count } = await supabase.from("terms_acceptances").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+      return <TermsGate returning={(count ?? 0) > 0} />;
+    }
+  }
 
   return <EstudaApp userId={user.id} userEmail={user.email} />;
 }
