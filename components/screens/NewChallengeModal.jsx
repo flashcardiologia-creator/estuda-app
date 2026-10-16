@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Swords, Users, BookOpen, ListChecks, X, ChevronDown, Check } from "lucide-react";
+import { Swords, Users, BookOpen, ListChecks, X, ChevronDown, Check, Lock } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, SectionLabel } from "@/components/ui/Primitives";
 
@@ -9,10 +9,12 @@ const MAX_FRIENDS = 3;
 // Opção "Todos": sorteia as questões de todos os temas (o banco entende o texto "Todos").
 const TEMA_TODOS = "Todos";
 
-export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
+// maxQuestions: sem assinatura só dá para criar desafio de 5 questões; a opção de 10 fica travada.
+// fixedTema: sem assinatura o tema é um só por dia, sorteado pelo banco, e não pode ser trocado.
+export function NewChallengeModal({ friends, temas, onCreate, onClose, maxQuestions = 10, fixedTema = null }) {
   const t = useT();
   const [friendIds, setFriendIds] = useState(friends[0] ? [friends[0].id] : []);
-  const [tema, setTema] = useState(temas[0] || "");
+  const [tema, setTema] = useState(fixedTema || temas[0] || "");
   const [qtd, setQtd] = useState(5);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -213,7 +215,9 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
         <div style={{ marginBottom: 18, position: "relative" }} ref={temaFieldRef}>
           <SectionLabel icon={<BookOpen size={13} />}>Tema</SectionLabel>
           <button
-            onClick={() => setTemaMenuOpen((v) => !v)}
+            onClick={() => {
+              if (!fixedTema) setTemaMenuOpen((v) => !v);
+            }}
             style={{
               width: "100%",
               display: "flex",
@@ -223,7 +227,7 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
               borderRadius: 12,
               border: `1.5px solid ${temaMenuOpen ? t.primary : t.border}`,
               background: t.surfaceAlt,
-              cursor: "pointer",
+              cursor: fixedTema ? "default" : "pointer",
               textAlign: "left",
               boxSizing: "border-box",
             }}
@@ -233,12 +237,21 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
             ) : (
               <span style={{ flex: 1, fontSize: 13.5, color: t.textMuted }}>Selecione um tema</span>
             )}
-            <ChevronDown
-              size={16}
-              color={t.textMuted}
-              style={{ transform: temaMenuOpen ? "rotate(180deg)" : "none", transition: "transform .15s", flexShrink: 0 }}
-            />
+            {fixedTema ? (
+              <Lock size={14} color={t.textMuted} style={{ flexShrink: 0 }} />
+            ) : (
+              <ChevronDown
+                size={16}
+                color={t.textMuted}
+                style={{ transform: temaMenuOpen ? "rotate(180deg)" : "none", transition: "transform .15s", flexShrink: 0 }}
+              />
+            )}
           </button>
+          {fixedTema && (
+            <div style={{ fontSize: 12, lineHeight: 1.45, color: t.textMuted, marginTop: 6 }}>
+              Tema sorteado de hoje. Muda todo dia. Assinantes escolhem o tema.
+            </div>
+          )}
 
           {temaMenuOpen && (
             <div
@@ -294,22 +307,33 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {[5, 10].map((n) => {
               const active = qtd === n;
+              const locked = n > maxQuestions;
               return (
                 <button
                   key={n}
-                  onClick={() => setQtd(n)}
+                  onClick={() => {
+                    if (locked) {
+                      setError("Desafios de 10 questões são para assinantes.");
+                      return;
+                    }
+                    setError("");
+                    setQtd(n);
+                  }}
                   style={{
+                    position: "relative",
                     padding: "12px 10px",
                     borderRadius: 12,
-                    border: `1.5px solid ${active ? t.primary : t.border}`,
+                    border: `1.5px ${locked ? "dashed" : "solid"} ${active ? t.primary : t.border}`,
                     background: active ? t.primarySoft : t.surfaceAlt,
-                    cursor: "pointer",
+                    cursor: locked ? "default" : "pointer",
+                    opacity: locked ? 0.6 : 1,
                     textAlign: "center",
                     transition: "all .15s ease",
                   }}
                 >
+                  {locked && <Lock size={13} color={t.textMuted} style={{ position: "absolute", top: 8, right: 9 }} />}
                   <div style={{ fontSize: 20, fontWeight: 700, color: active ? t.primary : t.text, lineHeight: 1.1 }}>{n}</div>
-                  <div style={{ fontSize: 11, color: active ? t.primary : t.textMuted, marginTop: 2 }}>questões</div>
+                  <div style={{ fontSize: 11, color: active ? t.primary : t.textMuted, marginTop: 2 }}>{locked ? "para assinantes" : "questões"}</div>
                 </button>
               );
             })}

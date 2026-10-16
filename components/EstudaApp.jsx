@@ -20,7 +20,7 @@ import { RankingScreen } from "@/components/screens/RankingScreen";
 import { StatsScreen } from "@/components/screens/StatsScreen";
 import { PaywallScreen } from "@/components/screens/PaywallScreen";
 import { PaymentReturn } from "@/components/screens/PaymentReturn";
-import { FREE_CHALLENGES_PER_DAY, LOCKED_SCREENS, PAID_CHALLENGES_PER_DAY } from "@/lib/access";
+import { FREE_CHALLENGES_PER_DAY, FREE_CHALLENGE_QUESTIONS, LOCKED_SCREENS, PAID_CHALLENGES_PER_DAY, PAID_CHALLENGE_QUESTIONS } from "@/lib/access";
 
 import {
   fetchProfile,
@@ -957,6 +957,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
           onNavigate={setScreen}
           onGoToAccountFriends={goToAccountFriends}
           dailyLimit={access.active ? PAID_CHALLENGES_PER_DAY : FREE_CHALLENGES_PER_DAY}
+          maxQuestions={access.active ? PAID_CHALLENGE_QUESTIONS : FREE_CHALLENGE_QUESTIONS}
+          isFree={!access.active}
           onAnsweringChange={setChallengeAnswering}
           fontSize={filters.fontSize}
         />

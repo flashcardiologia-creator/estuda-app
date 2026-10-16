@@ -6,7 +6,7 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, Chip, PrimaryButton, Tag, EmptyState } from "@/components/ui/Primitives";
 import { NewChallengeModal } from "@/components/screens/NewChallengeModal";
 import { ChallengeAnswerFlow } from "@/components/screens/ChallengeAnswerFlow";
-import { createChallenge } from "@/lib/data/challenges";
+import { createChallenge, fetchFreeChallengeTema } from "@/lib/data/challenges";
 import { todayStr, dateStrAt } from "@/lib/util";
 
 function challengeDone(answered, qtd) {
@@ -205,8 +205,23 @@ export function ChallengesScreen({
   onAnsweringChange,
   fontSize,
   dailyLimit = 5,
+  maxQuestions = 10,
+  isFree = false,
 }) {
   const t = useT();
+  // Sem assinatura o tema do desafio é o sorteado do dia (undefined = ainda buscando; null = sem tema fixo).
+  const [dayTema, setDayTema] = useState(undefined);
+  useEffect(() => {
+    if (!isFree) return;
+    let cancelled = false;
+    fetchFreeChallengeTema(supabase).then((tm) => {
+      if (!cancelled) setDayTema(tm);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isFree, supabase]);
+  const waitingDayTema = isFree && dayTema === undefined;
   const [tab, setTab] = useState("pendentes");
   const [showNew, setShowNew] = useState(false);
   const [showNoFriends, setShowNoFriends] = useState(false);
@@ -325,7 +340,7 @@ export function ChallengesScreen({
           </div>
           <PrimaryButton
             small
-            disabled={dailyCount >= dailyLimit}
+            disabled={dailyCount >= dailyLimit || waitingDayTema}
             onClick={() => (friends.length === 0 ? setShowNoFriends(true) : setShowNew(true))}
           >
             <Plus size={14} style={{ marginRight: 5, verticalAlign: -2 }} />
@@ -438,7 +453,7 @@ export function ChallengesScreen({
           })}
       </div>
 
-      {showNew && <NewChallengeModal friends={friends} temas={temas} onCreate={criarDesafio} onClose={() => setShowNew(false)} />}
+      {showNew && <NewChallengeModal friends={friends} temas={temas} onCreate={criarDesafio} onClose={() => setShowNew(false)} maxQuestions={maxQuestions} fixedTema={isFree ? dayTema ?? null : null} />}
       {showNoFriends && <NoFriendsModal onClose={() => setShowNoFriends(false)} onGoToAccount={onGoToAccountFriends} />}
     </div>
   );
