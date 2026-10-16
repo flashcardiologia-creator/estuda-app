@@ -464,7 +464,7 @@ export function AccountScreen({
                       }`
                     : access.lastExpiredAt
                     ? `Venceu em ${new Date(access.lastExpiredAt).toLocaleDateString("pt-BR")}`
-                    : "Plano gratuito"}
+                    : "Gratuita"}
                 </span>
                 {!access.active && (
                   <button

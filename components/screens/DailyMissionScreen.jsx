@@ -365,7 +365,7 @@ function MissionFormat({ supabase, userId }) {
   );
 }
 
-export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate }) {
+export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate, canChooseFormat = true }) {
   const t = useT();
   const [friendsStatus, setFriendsStatus] = useState(null);
 
@@ -391,7 +391,8 @@ export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate 
         <br />
         Volte amanhã para manter a chama acesa.
       </p>
-      <MissionFormat supabase={supabase} userId={userId} />
+      {/* Sem assinatura a missão é sempre de 3 questões: não há formato para escolher. */}
+      {canChooseFormat && <MissionFormat supabase={supabase} userId={userId} />}
       <div style={{ marginTop: 22 }}>
         <PrimaryButton onClick={() => onNavigate("home")}>Voltar ao início</PrimaryButton>
       </div>

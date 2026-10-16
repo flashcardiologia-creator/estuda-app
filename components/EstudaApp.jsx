@@ -244,7 +244,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
         return;
       }
       if (cancelled) return;
-      const correctedStreak = effectiveStreak(profileData.streak, profileData.last_mission_date);
+      // Sem assinatura a missão não conta dias seguidos: a sequência fica sempre em 0.
+      const correctedStreak = access.active ? effectiveStreak(profileData.streak, profileData.last_mission_date) : 0;
       if (correctedStreak !== profileData.streak) {
         profileData = { ...profileData, streak: correctedStreak };
         resetStreak(supabase, userId).catch(() => {});
@@ -283,7 +284,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
     return () => {
       cancelled = true;
     };
-  }, [supabase, userId, loadAttempt, hydrateTexts, recoverFromLoadFailure]);
+  }, [supabase, userId, loadAttempt, hydrateTexts, recoverFromLoadFailure, access.active]);
 
   // Toda tela nova (e cada questão/flashcard seguinte) abre do topo, e não na altura em que a anterior estava.
   const questionIndex = session?.index;
@@ -668,7 +669,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
 
   const finishDaily = async () => {
     const { streak, last_mission_date } = await completeDailyMission(supabase);
-    setProfile((p) => ({ ...p, streak, last_mission_date }));
+    setProfile((p) => ({ ...p, streak: access.active ? streak : 0, last_mission_date }));
     // Limpa a sessão concluída — se não, um eventual desalinhamento no cálculo
     // de "hoje" (ex.: logo após mudar a virada do dia) deixaria a próxima
     // entrada na Missão Diária caindo de volta no último item já respondido.
@@ -683,13 +684,13 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
   const expireDaily = useCallback(async () => {
     try {
       const { streak } = await expireDailyMission(supabase);
-      setProfile((p) => ({ ...p, streak }));
+      setProfile((p) => ({ ...p, streak: access.active ? streak : 0 }));
     } catch {
       // melhor deixar a streak como está do que travar o usuário na missão vencida
     }
     clearDaily();
     setScreen("home");
-  }, [supabase, clearDaily]);
+  }, [supabase, clearDaily, access.active]);
 
   useEffect(() => {
     if (screen !== "daily-session") return;
@@ -942,7 +943,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
       )}
 
       {screen === "daily-done" && (
-        <DailyDoneScreen supabase={supabase} userId={userId} streak={profile.streak} friends={friends} onNavigate={setScreen} />
+        <DailyDoneScreen supabase={supabase} userId={userId} streak={profile.streak} friends={friends} onNavigate={setScreen} canChooseFormat={access.active} />
       )}
 
       {screen === "challenges" && (

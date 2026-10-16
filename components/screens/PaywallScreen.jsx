@@ -113,7 +113,7 @@ export function PaywallScreen({ access, onBack }) {
             >
               <Lock size={22} color={t.primary} />
             </div>
-            <h2 style={{ margin: 0, fontSize: 19, lineHeight: 1.3, fontWeight: 700, color: t.text }}>Conteúdo para assinante</h2>
+            <h2 style={{ margin: 0, fontSize: 19, lineHeight: 1.3, fontWeight: 700, color: t.text }}>Conteúdo para assinantes</h2>
           </div>
           {access.lastExpiredAt && (
             <p style={{ margin: "10px 0 0", fontSize: 14, lineHeight: 1.55, color: t.textMuted }}>
@@ -130,17 +130,16 @@ export function PaywallScreen({ access, onBack }) {
               <div key={p.id} style={{ border: `1px solid ${t.border}`, background: t.surfaceAlt, borderRadius: 14, padding: "14px 16px" }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                   <span style={{ fontWeight: 700, fontSize: 16, color: t.text }}>{p.label}</span>
-                  <span style={{ fontWeight: 800, fontSize: 18, color: t.text }}>{formatBRL(p.priceCents)}</span>
+                  <span style={{ fontWeight: 800, fontSize: 18, color: t.text }}>
+                    {p.id === "anual" ? `${formatBRL(Math.round(p.priceCents / 12))}/mês` : formatBRL(p.priceCents)}
+                  </span>
                 </div>
                 <div style={{ fontSize: 13, color: t.textMuted, margin: "4px 0 0", lineHeight: 1.5 }}>
-                  {p.id === "anual" ? "Pagamento único de " : ""}
-                  {p.id === "anual" ? formatBRL(p.priceCents) : ""}
-                  {p.id === "anual" ? " · " : ""}
                   {p.days} dias de acesso, contados do dia do pagamento
                 </div>
                 {p.id === "anual" ? (
                   <div style={{ fontSize: 14.5, fontWeight: 800, color: t.primary, margin: "6px 0 12px" }}>
-                    Equivale a {formatBRL(Math.round(p.priceCents / 12))} por mês
+                    Total de {formatBRL(p.priceCents)} em um único pagamento
                   </div>
                 ) : (
                   <div style={{ height: 12 }} />
