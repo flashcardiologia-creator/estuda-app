@@ -350,7 +350,7 @@ export function ChallengesScreen({
 
         {dailyLimit < 5 && (
           <div style={{ fontSize: 12.5, lineHeight: 1.5, color: t.textMuted, margin: "-6px 2px 18px" }}>
-            No plano gratuito você cria {dailyLimit} desafio por dia. Quem assina cria até 5.{" "}
+            No plano gratuito você cria {dailyLimit} desafio de tema aleatório por dia. Quem assina cria até 5, escolhe o tema e a quantidade de questões.{" "}
             <button
               type="button"
               onClick={() => onNavigate("plans")}

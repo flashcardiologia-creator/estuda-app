@@ -249,7 +249,7 @@ export function NewChallengeModal({ friends, temas, onCreate, onClose, maxQuesti
           </button>
           {fixedTema && (
             <div style={{ fontSize: 12, lineHeight: 1.45, color: t.textMuted, marginTop: 6 }}>
-              Tema sorteado de hoje. Muda todo dia. Assinantes escolhem o tema.
+              Tema sorteado de hoje. Assinantes escolhem o tema de cada desafio.
             </div>
           )}
 
