@@ -24,8 +24,16 @@ function formatChallengeDate(iso) {
 
 const nowMs = () => Date.now();
 
-// Tempo que falta, ex.: "2h 40min", "9h", "35 min". Acima de 12h fica neutro; até 12h, âmbar.
-const URGENT_MS = 12 * 60 * 60 * 1000;
+// Cor do prazo (faixa do cartão e etiqueta de tempo): mais de 12h = verde, de 12h até 4h = âmbar,
+// 4h ou menos = vermelho.
+const HOUR_MS = 60 * 60 * 1000;
+function deadlineColor(ms, t) {
+  if (ms > 12 * HOUR_MS) return t.green;
+  if (ms > 4 * HOUR_MS) return t.amber;
+  return t.red;
+}
+
+// Tempo que falta, ex.: "2h 40min", "9h", "35 min".
 
 function formatTimeLeft(ms) {
   const totalMin = Math.max(0, Math.ceil(ms / 60000));
@@ -60,8 +68,8 @@ function SectionLabel({ children }) {
   );
 }
 
-// Etiqueta com o tempo que falta: âmbar quando faltam 12h ou menos, neutra quando falta mais.
-function TimeLeftTag({ expiresAt, urgent }) {
+// Etiqueta com o tempo que falta, na cor do prazo (verde, âmbar ou vermelho).
+function TimeLeftTag({ expiresAt }) {
   const t = useT();
   const [, forceTick] = useState(0);
   useEffect(() => {
@@ -69,6 +77,7 @@ function TimeLeftTag({ expiresAt, urgent }) {
     return () => clearInterval(interval);
   }, []);
   const ms = new Date(expiresAt).getTime() - nowMs();
+  const color = deadlineColor(ms, t);
   return (
     <span
       style={{
@@ -80,9 +89,8 @@ function TimeLeftTag({ expiresAt, urgent }) {
         fontWeight: 700,
         padding: "4px 9px",
         borderRadius: 999,
-        color: urgent ? t.amber : t.textMuted,
-        background: urgent ? `${t.amber}2B` : t.surfaceAlt,
-        border: urgent ? "none" : `1px solid ${t.border}`,
+        color,
+        background: `${color}2B`,
       }}
     >
       <Clock size={13} />
@@ -110,7 +118,13 @@ function PendingCard({ c, onRespond }) {
   const t = useT();
   const myDone = challengeDone(c.myAnswered, c.qtd);
   const myPct = myDone ? Math.round((c.myCorrect / c.qtd) * 100) : null;
-  const urgent = !myDone && new Date(c.expires_at).getTime() - nowMs() <= URGENT_MS;
+  // A faixa da esquerda só aparece enquanto você ainda não respondeu; a cor acompanha o prazo.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => forceTick((n) => n + 1), 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+  const stripeColor = myDone ? null : deadlineColor(new Date(c.expires_at).getTime() - nowMs(), t);
   // Você primeiro, depois os outros na ordem em que já vinham.
   const ordered = [...c.participants].sort((a, b) => Number(b.isMe) - Number(a.isMe));
   const others = c.participants.filter((p) => !p.isMe).map((p) => p.name);
@@ -118,7 +132,7 @@ function PendingCard({ c, onRespond }) {
 
   return (
     <div style={{ position: "relative", overflow: "hidden", background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "16px 16px 16px 18px", marginBottom: 10 }}>
-      {urgent && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: t.amber }} />}
+      {stripeColor && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: stripeColor }} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 14.5, color: t.text }}>
@@ -136,7 +150,7 @@ function PendingCard({ c, onRespond }) {
             </div>
           </div>
         ) : (
-          <TimeLeftTag expiresAt={c.expires_at} urgent={urgent} />
+          <TimeLeftTag expiresAt={c.expires_at} />
         )}
       </div>
 

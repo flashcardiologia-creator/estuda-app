@@ -19,9 +19,11 @@ import { ChallengesScreen } from "@/components/screens/ChallengesScreen";
 import { RankingScreen } from "@/components/screens/RankingScreen";
 import { StatsScreen } from "@/components/screens/StatsScreen";
 import { PaywallScreen } from "@/components/screens/PaywallScreen";
+import { AdminStatsScreen } from "@/components/screens/AdminStatsScreen";
 import { PaymentReturn } from "@/components/screens/PaymentReturn";
 import { ExpiryNotice } from "@/components/screens/ExpiryNotice";
 import {
+  ADMIN_DASHBOARD_EMAILS,
   EXPIRY_NOTICE_DAYS,
   FREE_CHALLENGES_PER_DAY,
   FREE_CHALLENGE_QUESTIONS,
@@ -873,6 +875,10 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       )}
 
       {screen === "ranking" && <RankingScreen supabase={supabase} userId={userId} onNavigate={setScreen} />}
+
+      {screen === "admin-stats" && ADMIN_DASHBOARD_EMAILS.includes((userEmail || "").toLowerCase()) && (
+        <AdminStatsScreen supabase={supabase} onBack={() => setScreen("account")} />
+      )}
 
       {screen === "stats" && (
         <StatsScreen

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PLAN_LABEL } from "@/lib/access";
+import { ADMIN_DASHBOARD_EMAILS, PLAN_LABEL } from "@/lib/access";
 import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy, Shield, KeyRound, Eye, EyeOff, ChevronRight, Swords, Rocket } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
@@ -864,6 +864,14 @@ export function AccountScreen({
             <LogOut size={15} style={{ marginRight: 6 }} /> Sair da conta
           </PrimaryButton>
         </div>
+
+        {ADMIN_DASHBOARD_EMAILS.includes((userEmail || "").toLowerCase()) && (
+          <div style={{ marginTop: 12 }}>
+            <PrimaryButton full variant="ghost" onClick={() => onNavigate("admin-stats")}>
+              <BarChart3 size={15} style={{ marginRight: 6, verticalAlign: -2 }} /> Painel de dados
+            </PrimaryButton>
+          </div>
+        )}
       </div>
 
       {viewingFriend && (
