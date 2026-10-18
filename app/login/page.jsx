@@ -112,12 +112,14 @@ function LoginForm() {
         });
         if (error) throw error;
         // Se o registro falhar, a tela de aceite após o login pede o aceite de novo.
-        if (data.user) await sendTermsAcceptance({ context: "signup", user: { id: data.user.id, email } });
+        const accepting = data.user ? sendTermsAcceptance({ context: "signup", user: { id: data.user.id, email }, keepalive: true }) : null;
         if (data.session) {
-          await updateDisplayName(supabase, data.user.id, trimmedName);
+          // Entra direto: o aceite precisa estar gravado antes de abrir o app (senão a tela de aceite aparece).
+          await Promise.all([accepting, updateDisplayName(supabase, data.user.id, trimmedName)]);
           router.push(afterLoginPath);
           router.refresh();
         } else {
+          // Precisa confirmar o e-mail: não há o que esperar, o aceite termina em segundo plano.
           setInfo("Conta criada! Verifique sua caixa de entrada para confirmar o e-mail antes de entrar.");
           setMode("login");
         }
@@ -263,9 +265,9 @@ function LoginForm() {
 
           <div style={{ marginTop: 8 }}>
             <PrimaryButton full type="submit" disabled={loading}>
-              {mode === "login" && "Entrar"}
-              {mode === "signup" && "Criar conta"}
-              {mode === "forgot" && "Enviar link de redefinição"}
+              {mode === "login" && (loading ? "Entrando…" : "Entrar")}
+              {mode === "signup" && (loading ? "Criando conta…" : "Criar conta")}
+              {mode === "forgot" && (loading ? "Enviando…" : "Enviar link de redefinição")}
             </PrimaryButton>
           </div>
         </form>

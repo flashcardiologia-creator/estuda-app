@@ -11,7 +11,8 @@
 -- Definições:
 --   * Dia = dia de Brasília (vira à meia-noite). "Hoje" começa às 00:00 de Brasília.
 --   * Usuário ATIVO = fez alguma coisa no período: respondeu questão (inclusive em desafio), viu
---     flashcard, abriu a missão diária ou criou desafio.
+--     flashcard, abriu a missão diária ou criou desafio. "Ativos agora" = isso nos últimos 15 minutos.
+--   * Compras = pagamentos aprovados de verdade (mensal/anual); cortesia não conta.
 --   * Questões respondidas = respostas avulsas + respostas dentro de desafios.
 --   * Assinantes = quem tem plano mensal, anual ou cortesia valendo agora (as contas administradoras
 --     não entram na conta).
@@ -83,9 +84,11 @@ begin
       'novos_24h',           (select count(*) from usr where created_at >= v_now - interval '24 hours'),
       'novos_48h',           (select count(*) from usr where created_at >= v_now - interval '48 hours'),
       'novos_7d',            (select count(*) from usr where created_at >= v_now - interval '7 days'),
+      'novos_30d',           (select count(*) from usr where created_at >= v_now - interval '30 days'),
       'novos_7d_anteriores', (select count(*) from usr where created_at >= v_now - interval '14 days' and created_at < v_now - interval '7 days')
     ),
     'ativos', jsonb_build_object(
+      'agora', (select count(distinct user_id) from ev where ts >= v_now - interval '15 minutes'),
       'hoje', (select count(distinct user_id) from ev where ts >= v_t0),
       'h24',  (select count(distinct user_id) from ev where ts >= v_now - interval '24 hours'),
       'd7',   (select count(distinct user_id) from ev where ts >= v_now - interval '7 days'),
@@ -96,6 +99,7 @@ begin
       'mensal',   (select count(*) from act where plan = 'mensal'),
       'anual',    (select count(*) from act where plan = 'anual'),
       'cortesia', (select count(*) from act where plan = 'cortesia'),
+      'compras_48h', (select count(*) from public.payments where status = 'approved' and method <> 'cortesia' and paid_at >= v_now - interval '48 hours'),
       'compras_7d',  (select count(*) from public.payments where status = 'approved' and method <> 'cortesia' and paid_at >= v_now - interval '7 days'),
       'compras_30d', (select count(*) from public.payments where status = 'approved' and method <> 'cortesia' and paid_at >= v_now - interval '30 days'),
       'receita_30d_centavos',   (select coalesce(sum(amount_cents), 0) from public.payments where status = 'approved' and method <> 'cortesia' and paid_at >= v_now - interval '30 days'),

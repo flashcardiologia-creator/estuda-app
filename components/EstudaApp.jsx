@@ -21,6 +21,7 @@ import { StatsScreen } from "@/components/screens/StatsScreen";
 import { PaywallScreen } from "@/components/screens/PaywallScreen";
 import { AdminStatsScreen } from "@/components/screens/AdminStatsScreen";
 import { CouponOffer } from "@/components/screens/CouponOffer";
+import { signOutAndLeave } from "@/lib/signOut";
 import { fetchCouponOffer } from "@/lib/data/coupons";
 import { PaymentReturn } from "@/components/screens/PaymentReturn";
 import { ExpiryNotice } from "@/components/screens/ExpiryNotice";
@@ -308,8 +309,9 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [screen, questionIndex, flashIndex, dailyIndex]);
 
-  // Convite para ativar o lembrete da missão diária: na primeira abertura e na primeira missão concluída,
-  // uma vez cada, e só se o lembrete ainda não estiver ativado (nem bloqueado) neste aparelho.
+  // Convite para ativar o lembrete da missão diária: só depois de concluir a primeira missão diária (não
+  // ao abrir o app pela primeira vez). Aparece uma vez por pessoa e aparelho, e só se o lembrete ainda não
+  // estiver ativado (nem bloqueado) neste aparelho.
   const offerPush = useCallback(
     async (kind) => {
       if (pushPromptSeen(userId, kind) || !(await shouldOfferPush())) return;
@@ -319,18 +321,6 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
     [userId]
   );
   const appReady = !loading && !!profile;
-  useEffect(() => {
-    if (!appReady) return;
-    let cancelled = false;
-    (async () => {
-      if (pushPromptSeen(userId, "start") || !(await shouldOfferPush()) || cancelled) return;
-      markPushPromptSeen(userId, "start");
-      setPushPrompt("start");
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [appReady, userId]);
 
   // Cupom de boas-vindas: conta criada depois da data de corte, que ainda não usou nem dispensou o cupom,
   // vê uma janela perguntando se quer ativá-lo (o banco decide: supabase/cupom_boas_vindas.sql).
@@ -805,11 +795,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
     setScreen("account");
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  };
+  const signOut = () => signOutAndLeave(supabase);
 
   const temas = useMemo(() => deriveFilterOptions(allQuestions).temas, [allQuestions]);
 
@@ -891,7 +877,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
         />
       )}
 
-      {screen === "ranking" && <RankingScreen supabase={supabase} userId={userId} onNavigate={setScreen} />}
+      {screen === "ranking" && <RankingScreen supabase={supabase} userId={userId} onNavigate={setScreen} friends={friends} />}
 
       {screen === "admin-stats" && ADMIN_DASHBOARD_EMAILS.includes((userEmail || "").toLowerCase()) && (
         <AdminStatsScreen supabase={supabase} onBack={() => setScreen("account")} />

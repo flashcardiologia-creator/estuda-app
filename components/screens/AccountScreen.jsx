@@ -77,6 +77,7 @@ export function AccountScreen({
   access,
 }) {
   const t = useT();
+  const [leaving, setLeaving] = useState(false);
   const [name, setName] = useState(profile.name);
   const [nameEditing, setNameEditing] = useState(false);
   const nameInputRef = useRef(null);
@@ -860,8 +861,16 @@ export function AccountScreen({
         <ContactBox supabase={supabase} userId={userId} />
 
         <div style={{ marginTop: 20 }}>
-          <PrimaryButton full variant="ghost" onClick={onSignOut}>
-            <LogOut size={15} style={{ marginRight: 6 }} /> Sair da conta
+          <PrimaryButton
+            full
+            variant="ghost"
+            disabled={leaving}
+            onClick={() => {
+              setLeaving(true);
+              onSignOut();
+            }}
+          >
+            <LogOut size={15} style={{ marginRight: 6 }} /> {leaving ? "Saindo…" : "Sair da conta"}
           </PrimaryButton>
         </div>
 

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
 import { sendTermsAcceptance } from "@/lib/legal/client";
+import { signOutAndLeave } from "@/lib/signOut";
 import { LegalModal } from "@/components/screens/LegalModal";
 
 // Tela exibida depois do login a quem ainda não aceitou a versão atual dos Termos e da Política.
@@ -34,11 +35,7 @@ export function TermsGate({ returning }) {
     router.refresh();
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  };
+  const signOut = () => signOutAndLeave(supabase);
 
   // Os textos abrem numa janela por cima desta tela (sem sair dela).
   const [legal, setLegal] = useState(null);

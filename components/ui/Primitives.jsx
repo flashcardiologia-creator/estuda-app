@@ -413,7 +413,8 @@ export function BackBar({ label = "Voltar", onBack }) {
   );
 }
 
-export function ScreenHeader({ title, onBack, label = "Voltar" }) {
+// right = elemento opcional no canto superior direito (ex.: o seletor Global | Amigos do ranking).
+export function ScreenHeader({ title, onBack, label = "Voltar", right = null }) {
   const t = useT();
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", padding: "18px 22px 0" }}>
@@ -440,7 +441,7 @@ export function ScreenHeader({ title, onBack, label = "Voltar" }) {
       <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 20, color: t.text, whiteSpace: "nowrap" }}>
         {title}
       </span>
-      <span />
+      <span style={{ justifySelf: "end" }}>{right}</span>
     </div>
   );
 }

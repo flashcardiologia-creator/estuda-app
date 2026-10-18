@@ -8,6 +8,8 @@ import { fetchAdminStats } from "@/lib/data/adminStats";
 import { formatBRL } from "@/lib/billing";
 
 const nf = (n, digits = 0) => Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+// Número que pode faltar se o SQL do painel ainda não foi atualizado no banco: mostra "—" em vez de 0.
+const show = (n) => (n == null ? "—" : nf(n));
 const pct = (a, b, digits = 1) => (b ? `${nf((a / b) * 100, digits)}%` : "0%");
 const compact = (n) => (n >= 10000 ? `${nf(n / 1000, 0)}k` : n >= 1000 ? `${nf(n / 1000, 1)}k` : String(n));
 
@@ -25,10 +27,11 @@ function Grid({ children, cols = 2 }) {
   return <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: 10 }}>{children}</div>;
 }
 
-function Kpi({ label, value, sub, color }) {
+// wide = ocupa a linha toda (usado quando há uma explicação mais longa abaixo do número).
+function Kpi({ label, value, sub, color, wide = false }) {
   const t = useT();
   return (
-    <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "12px 14px", minWidth: 0 }}>
+    <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "12px 14px", minWidth: 0, ...(wide ? { gridColumn: "1 / -1" } : {}) }}>
       <div style={{ fontSize: 11.5, color: t.textMuted, fontWeight: 600, lineHeight: 1.3 }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 800, color: color || t.text, marginTop: 4, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{value}</div>
       {sub && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 4, lineHeight: 1.35 }}>{sub}</div>}
@@ -207,18 +210,9 @@ export function AdminStatsScreen({ supabase, onBack }) {
             <Section title="Usuários">
               <Grid>
                 <Kpi label="Total de usuários" value={nf(d.usuarios.total)} />
-                <Kpi label="Novos nas últimas 24 h" value={nf(d.usuarios.novos_24h)} color={t.green} sub={`${nf(d.usuarios.novos_hoje)} hoje`} />
-                <Kpi label="Novos nas últimas 48 h" value={nf(d.usuarios.novos_48h)} color={t.green} />
-                <Kpi
-                  label="Novos nos últimos 7 dias"
-                  value={nf(d.usuarios.novos_7d)}
-                  color={t.green}
-                  sub={`Semana anterior: ${nf(d.usuarios.novos_7d_anteriores)}${
-                    d.usuarios.novos_7d_anteriores
-                      ? ` (${d.usuarios.novos_7d >= d.usuarios.novos_7d_anteriores ? "+" : "−"}${nf(Math.abs(((d.usuarios.novos_7d - d.usuarios.novos_7d_anteriores) / d.usuarios.novos_7d_anteriores) * 100), 0)}%)`
-                      : ""
-                  }`}
-                />
+                <Kpi label="Novos nas últimas 24 h" value={nf(d.usuarios.novos_24h)} color={t.green} />
+                <Kpi label="Novos nos últimos 7 dias" value={nf(d.usuarios.novos_7d)} color={t.green} />
+                <Kpi label="Novos no último mês" value={show(d.usuarios.novos_30d)} color={t.green} />
               </Grid>
               <ChartCard title="Novos usuários por dia (14 dias)">
                 <BarChart data={d.series.novos} color={t.green} label="Novos usuários por dia" />
@@ -227,7 +221,12 @@ export function AdminStatsScreen({ supabase, onBack }) {
 
             <Section title="Usuários ativos">
               <Grid>
-                <Kpi label="Ativos hoje" value={nf(d.ativos.hoje)} sub={`${pct(d.ativos.hoje, d.usuarios.total)} dos usuários`} color={purple} />
+                <Kpi
+                  label="Usuários ativos agora"
+                  value={show(d.ativos.agora)}
+                  sub={d.ativos.agora == null ? undefined : `Nos últimos 15 min · ${pct(d.ativos.agora, d.usuarios.total)} dos usuários`}
+                  color={purple}
+                />
                 <Kpi label="Ativos nas últimas 24 h" value={nf(d.ativos.h24)} sub={`${pct(d.ativos.h24, d.usuarios.total)} dos usuários`} color={purple} />
                 <Kpi label="Ativos nos últimos 7 dias" value={nf(d.ativos.d7)} sub={`${pct(d.ativos.d7, d.usuarios.total)} dos usuários`} color={purple} />
                 <Kpi label="Ativos nos últimos 30 dias" value={nf(d.ativos.d30)} sub={`${pct(d.ativos.d30, d.usuarios.total)} dos usuários`} color={purple} />
@@ -248,10 +247,25 @@ export function AdminStatsScreen({ supabase, onBack }) {
                 return (
                   <>
                     <Grid>
-                      <Kpi label="Assinantes ativos" value={nf(a.ativos)} sub={`${pct(a.ativos, d.usuarios.total)} dos usuários`} color={t.green} />
-                      <Kpi label="Pagantes (mensal + anual)" value={nf(pagantes)} sub={`${pct(pagantes, d.usuarios.total)} dos usuários`} color={t.green} />
-                      <Kpi label="Compras nos últimos 7 dias" value={nf(a.compras_7d)} sub={`${nf(a.compras_30d)} nos últimos 30 dias`} />
-                      <Kpi label="Receita (30 dias)" value={formatBRL(a.receita_30d_centavos)} sub={`Total: ${formatBRL(a.receita_total_centavos)}`} />
+                      <Kpi
+                        wide
+                        label="Assinantes ativos"
+                        value={nf(a.ativos)}
+                        color={t.green}
+                        sub={
+                          <>
+                            Quem tem acesso valendo agora: plano <b>mensal</b>, <b>anual</b> ou <b>cortesia</b> (acesso gratuito, como os 30 dias e o cupom).
+                            <br />
+                            {nf(a.mensal)} mensal · {nf(a.anual)} anual · {nf(a.cortesia)} cortesia
+                            <br />
+                            {nf(pagantes)} pagantes (mensal + anual) · {pct(a.ativos, d.usuarios.total)} dos usuários com acesso
+                          </>
+                        }
+                      />
+                      <Kpi label="Compras nas últimas 48 h" value={show(a.compras_48h)} />
+                      <Kpi label="Compras nos últimos 7 dias" value={nf(a.compras_7d)} />
+                      <Kpi label="Compras nos últimos 30 dias" value={nf(a.compras_30d)} />
+                      <Kpi label="Receita dos últimos 30 dias" value={formatBRL(a.receita_30d_centavos)} sub={`Total: ${formatBRL(a.receita_total_centavos)}`} />
                     </Grid>
                     <ChartCard title="Usuários por plano" note="Cortesia = acesso gratuito (30 dias dados a todos, cupom). Não inclui as contas administradoras.">
                       <Donut
