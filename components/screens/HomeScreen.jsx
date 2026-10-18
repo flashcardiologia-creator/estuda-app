@@ -34,10 +34,10 @@ function PendingChallengesBadge({ count, bg }) {
 export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily, pendingChallengesCount = 0, locked = false }) {
   const t = useT();
   return (
-    <div style={{ padding: "8px 20px 60px", maxWidth: 620, margin: "0 auto" }}>
-      <h1 style={{ fontWeight: 700, fontSize: 20, color: t.text, margin: "18px 0 24px" }}>Bem-vindo, {name}!</h1>
+    <div className="home-fit" style={{ padding: "8px 20px var(--home-bottom, 60px)", maxWidth: 620, margin: "0 auto" }}>
+      <h1 style={{ fontWeight: 700, fontSize: 20, color: t.text, margin: "var(--home-top, 18px) 0 var(--home-sub, 24px)" }}>Bem-vindo, {name}!</h1>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--home-gap, 14px)" }}>
         <HomeBox
           icon={
             <Flame

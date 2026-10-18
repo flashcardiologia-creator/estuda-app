@@ -39,6 +39,32 @@ html {
   }
 }
 
+/* Tela inicial: em celulares de tela baixa, os cartões do menu e os espaços encolhem de forma
+   proporcional à altura visível (dvh, já descontado o zoom), para tudo caber sem rolar. Em telas
+   altas os valores batem no teto e ficam como sempre foram. Sem suporte a dvh, vale o padrão. */
+.home-fit {
+  --hb-min: 118px;
+  --hb-pad: 20px;
+  --hb-gap: 10px;
+  --home-gap: 14px;
+  --home-top: 18px;
+  --home-sub: 24px;
+  --home-bottom: 60px;
+}
+
+@supports (height: 1dvh) {
+  .home-fit {
+    --hh: calc(100dvh / var(--z, 1));
+    --hb-min: clamp(80px, calc((var(--hh) - 290px) / 5), 118px);
+    --hb-pad: clamp(8px, calc(var(--hh) * 0.02), 20px);
+    --hb-gap: clamp(6px, calc(var(--hh) * 0.013), 10px);
+    --home-gap: clamp(8px, calc(var(--hh) * 0.019), 14px);
+    --home-top: clamp(8px, calc(var(--hh) * 0.022), 18px);
+    --home-sub: clamp(10px, calc(var(--hh) * 0.028), 24px);
+    --home-bottom: clamp(12px, calc(var(--hh) * 0.04), 60px);
+  }
+}
+
 /* Tela de login: sempre centralizada na área visível (dvh acompanha as barras do navegador no celular). */
 .login-screen {
   min-height: calc(100vh / var(--z, 1));

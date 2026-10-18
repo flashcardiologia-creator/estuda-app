@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, CreditCard, ShieldCheck, Check, Ticket } from "lucide-react";
+import { Lock, CreditCard, ShieldCheck, Check } from "lucide-react";
 import { PLAN_LABEL, extendedExpiry } from "@/lib/access";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/components/theme/ThemeProvider";
@@ -219,7 +219,7 @@ export function PaywallScreen({ access, onBack }) {
                   </span>
                 </div>
                 <div style={{ fontSize: 13, color: t.textMuted, margin: "4px 0 0", lineHeight: 1.5 }}>
-                  {subscribed ? `+${p.days} dias de acesso` : `${p.days} dias de acesso, contados do dia do pagamento`}
+                  {subscribed ? `+${p.days} dias de acesso` : `${p.days} dias de acesso`}
                 </div>
                 {p.id === "anual" ? (
                   <div style={{ fontSize: 14.5, fontWeight: 800, color: t.primary, margin: "6px 0 12px" }}>
@@ -241,32 +241,7 @@ export function PaywallScreen({ access, onBack }) {
               </div>
             ))}
           </div>
-          {error && <div style={{ fontSize: 12.5, color: t.red, marginTop: 12 }}>{error}</div>}
-          {waiting && (
-            <div style={{ fontSize: 13, lineHeight: 1.5, color: t.text, background: t.primarySoft, borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
-              {subscribed
-                ? "Janela do Mercado Pago aberta. Assim que o pagamento for aprovado, sua assinatura é prolongada sozinha."
-                : "Janela do Mercado Pago aberta. Assim que o pagamento for aprovado, seu acesso é liberado sozinho."}
-            </div>
-          )}
-          {extended && (
-            <div style={{ fontSize: 13, lineHeight: 1.5, color: t.text, background: "rgba(34,197,94,0.14)", borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
-              Pagamento aprovado. Sua assinatura foi prolongada até <b>{fmtDate(access.expiresAt)}</b>.
-            </div>
-          )}
-          <p style={{ margin: "12px 0 0", fontSize: 12.5, lineHeight: 1.5, color: t.textMuted }}>
-            Pagamento por Pix ou cartão, pelo Mercado Pago. No cartão, o plano mensal é pago à vista e o anual pode ser parcelado em até{" "}
-            {PLANS.anual.maxInstallments}x, com os juros do parcelamento mostrados antes de confirmar. O acesso é liberado automaticamente assim que
-            o pagamento é aprovado. Não há renovação automática.
-          </p>
-        </div>
-
-        <div style={section}>
-          <div style={{ ...label, display: "flex", alignItems: "center", gap: 7 }}>
-            <Ticket size={14} />
-            Cupom
-          </div>
-          <form onSubmit={redeemCoupon} style={{ display: "flex", gap: 10 }}>
+          <form onSubmit={redeemCoupon} style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <input
               type="text"
               value={coupon}
@@ -302,6 +277,24 @@ export function PaywallScreen({ access, onBack }) {
             </div>
           )}
           {couponResult && !couponResult.ok && <div style={{ fontSize: 12.5, color: t.red, marginTop: 12 }}>{couponResult.text}</div>}
+          {error && <div style={{ fontSize: 12.5, color: t.red, marginTop: 12 }}>{error}</div>}
+          {waiting && (
+            <div style={{ fontSize: 13, lineHeight: 1.5, color: t.text, background: t.primarySoft, borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
+              {subscribed
+                ? "Janela do Mercado Pago aberta. Assim que o pagamento for aprovado, sua assinatura é prolongada sozinha."
+                : "Janela do Mercado Pago aberta. Assim que o pagamento for aprovado, seu acesso é liberado sozinho."}
+            </div>
+          )}
+          {extended && (
+            <div style={{ fontSize: 13, lineHeight: 1.5, color: t.text, background: "rgba(34,197,94,0.14)", borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
+              Pagamento aprovado. Sua assinatura foi prolongada até <b>{fmtDate(access.expiresAt)}</b>.
+            </div>
+          )}
+          <p style={{ margin: "12px 0 0", fontSize: 12.5, lineHeight: 1.5, color: t.textMuted }}>
+            Pagamento por Pix ou cartão, pelo Mercado Pago. No cartão, o plano mensal é pago à vista e o anual pode ser parcelado em até{" "}
+            {PLANS.anual.maxInstallments}x, com os juros do parcelamento mostrados antes de confirmar. O acesso é liberado automaticamente assim que
+            o pagamento é aprovado. Não há renovação automática.
+          </p>
         </div>
       </div>
     </div>

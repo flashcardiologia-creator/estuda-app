@@ -1,4 +1,4 @@
--- Cupom "#10DIASGRATIS" (com o #): na tela Assinatura, a pessoa digita o cupom (maiúsculas ou minúsculas) e ganha
+-- Cupom "#10DIASGRATIS" (vale também sem o #): na tela Assinatura, a pessoa digita o cupom (maiúsculas ou minúsculas) e ganha
 -- 10 dias de acesso de cortesia, contados do momento em que usou. Cada conta usa uma única vez, e o
 -- cupom só vale até 01/12/2026 (inclusive, horário de Brasília).
 -- Rode uma vez no SQL Editor do Supabase (depois do assinaturas.sql). Pode rodar de novo.
@@ -62,9 +62,10 @@ begin
     raise exception 'not_authenticated';
   end if;
 
-  v_code := upper(regexp_replace(coalesce(p_code, ''), '\s', '', 'g'));
+  -- Maiúsculas ou minúsculas, com ou sem o # na frente: "10diasgratis" e "#10DIASGRATIS" valem igual.
+  v_code := ltrim(upper(regexp_replace(coalesce(p_code, ''), '\s', '', 'g')), '#');
 
-  select * into c from public.coupons where code = v_code and active;
+  select * into c from public.coupons where ltrim(code, '#') = v_code and active limit 1;
   if not found then
     return query select 'invalido'::text, null::timestamptz, null::integer;
     return;

@@ -457,12 +457,13 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, showLock, l
       onClick={disabled ? undefined : onClick}
       style={{
         width: "100%",
-        minHeight: 118,
+        // As variáveis vêm de .home-fit (globals.css): em celular baixo o cartão fica mais compacto.
+        minHeight: "var(--hb-min, 118px)",
         boxSizing: "border-box",
         textAlign: "center",
         border: grayBorder ? "1px solid #D6D6DC" : locked ? `1px dashed ${t.border}` : "none",
         borderRadius: 20,
-        padding: "20px 18px",
+        padding: "var(--hb-pad, 20px) 18px",
         cursor: disabled ? "default" : "pointer",
         background: heroBg || t.surface,
         opacity: locked ? 0.6 : loading ? 0.85 : 1,
@@ -472,7 +473,7 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, showLock, l
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 10,
+        gap: "var(--hb-gap, 10px)",
         transition: "filter .15s ease",
       }}
       onMouseEnter={(e) => !disabled && (e.currentTarget.style.filter = "brightness(1.08)")}
