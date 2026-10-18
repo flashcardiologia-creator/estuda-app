@@ -457,8 +457,8 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, showLock, l
       onClick={disabled ? undefined : onClick}
       style={{
         width: "100%",
-        // As variáveis vêm de .home-fit (globals.css): em celular baixo o cartão fica mais compacto.
-        minHeight: "var(--hb-min, 118px)",
+        // As variáveis vêm de .home-fit (globals.css): altura igual para todos os cartões, mais compacta em celular baixo.
+        height: "var(--hb-h, 118px)",
         boxSizing: "border-box",
         textAlign: "center",
         border: grayBorder ? "1px solid #D6D6DC" : locked ? `1px dashed ${t.border}` : "none",

@@ -42,9 +42,12 @@ html {
 /* Tela inicial: em celulares de tela baixa, os cartões do menu e os espaços encolhem de forma
    proporcional à altura visível (dvh, já descontado o zoom), para tudo caber sem rolar. Em telas
    altas os valores batem no teto e ficam como sempre foram. Sem suporte a dvh, vale o padrão. */
+/* Os 5 cartões têm SEMPRE a mesma altura (--hb-h): o da Missão Diária tem uma linha a mais, mas
+   não fica maior que os outros. A altura sai da tela: entre ~600px e ~860px de altura visível ela
+   vai de 84px a 118px, e os espaços crescem junto (a conta fecha para tudo caber sem rolar). */
 .home-fit {
-  --hb-min: 118px;
-  --hb-pad: 20px;
+  --hb-h: 118px;
+  --hb-pad: 12px;
   --hb-gap: 10px;
   --home-gap: 14px;
   --home-top: 18px;
@@ -55,13 +58,13 @@ html {
 @supports (height: 1dvh) {
   .home-fit {
     --hh: calc(100dvh / var(--z, 1));
-    --hb-min: clamp(80px, calc((var(--hh) - 290px) / 5), 118px);
-    --hb-pad: clamp(8px, calc(var(--hh) * 0.02), 20px);
-    --hb-gap: clamp(6px, calc(var(--hh) * 0.013), 10px);
-    --home-gap: clamp(8px, calc(var(--hh) * 0.019), 14px);
-    --home-top: clamp(8px, calc(var(--hh) * 0.022), 18px);
-    --home-sub: clamp(10px, calc(var(--hh) * 0.028), 24px);
-    --home-bottom: clamp(12px, calc(var(--hh) * 0.04), 60px);
+    --hb-h: clamp(84px, min(calc(var(--hh) * 0.1156 + 22px), calc((var(--hh) - 140px) / 5)), 118px);
+    --hb-pad: 4px;
+    --hb-gap: clamp(4px, calc((var(--hb-h) - 63px) / 6), 10px);
+    --home-gap: clamp(6px, calc(6px + (var(--hh) - 600px) * 0.031), 14px);
+    --home-top: clamp(6px, calc(6px + (var(--hh) - 600px) * 0.046), 18px);
+    --home-sub: clamp(8px, calc(8px + (var(--hh) - 600px) * 0.062), 24px);
+    --home-bottom: clamp(10px, calc(10px + (var(--hh) - 600px) * 0.19), 60px);
   }
 }
 
