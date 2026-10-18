@@ -12,6 +12,8 @@
 --   * Dia = dia de Brasília (vira à meia-noite). "Hoje" começa às 00:00 de Brasília.
 --   * Usuário ATIVO = fez alguma coisa no período: respondeu questão (inclusive em desafio), viu
 --     flashcard, abriu a missão diária ou criou desafio. "Ativos agora" = isso nos últimos 15 minutos.
+--   * Missão diária concluída = respondeu todas as questões da missão do dia (mesma regra do app).
+--     "Receberam a missão" = abriram o app no dia (a missão é sorteada ao abrir).
 --   * Compras = pagamentos aprovados de verdade (mensal/anual); cortesia não conta.
 --   * Questões respondidas = respostas avulsas + respostas dentro de desafios.
 --   * Assinantes = quem tem plano mensal, anual ou cortesia valendo agora (as contas administradoras
@@ -68,6 +70,19 @@ begin
   ch as (
     select h.created_at as ts from public.challenges h where h.created_at >= v_t0 - interval '13 days'
   ),
+  -- Uma linha por missão sorteada nos últimos 14 dias. "Concluída" segue a regra do app
+  -- (complete_daily_mission): respondeu todas as questões da missão. As missões são sorteadas quando a
+  -- pessoa abre o app no dia, então cada linha também conta "quem abriu o app naquele dia".
+  mp as (
+    select m.user_id, m.mission_date as dia,
+           (select count(*) from public.user_question_attempts a
+             where a.user_id = m.user_id and a.is_daily_mission
+               and a.question_id = any (m.question_ids)
+               and a.answered_at >= m.created_at
+               and public.app_date(a.answered_at) <= m.mission_date + 1) >= cardinality(m.question_ids) as concluida
+      from public.daily_mission_picks m
+     where m.mission_date >= v_today - 13 and cardinality(m.question_ids) > 0
+  ),
   act as (
     select distinct on (p.user_id) p.user_id, p.plan
       from public.payments p
@@ -112,6 +127,16 @@ begin
       'diarias_hoje', (select count(*) from qa where ts >= v_t0 and diaria),
       'missoes_concluidas_hoje', (select count(*) from public.profiles where last_mission_date = v_today)
     ),
+    'missao', jsonb_build_object(
+      'recebidas_hoje',    (select count(*) from mp where dia = v_today),
+      'concluidas_hoje',   (select count(*) from mp where dia = v_today and concluida),
+      'concluidas_7d',     (select count(*) from mp where dia >= v_today - 6 and concluida),
+      'recebidas_7d',      (select count(*) from mp where dia >= v_today - 6),
+      -- Sequência ativa = concluiu a missão hoje ou ontem (ainda não quebrou).
+      'sequencia_ativas',  (select count(*) from public.profiles where streak > 0 and last_mission_date >= v_today - 1),
+      'sequencia_media',   (select coalesce(round(avg(streak)::numeric, 1), 0) from public.profiles where streak > 0 and last_mission_date >= v_today - 1),
+      'sequencia_maxima',  (select coalesce(max(streak), 0) from public.profiles where streak > 0 and last_mission_date >= v_today - 1)
+    ),
     'flashcards', jsonb_build_object(
       'hoje', (select count(*) from fv where ts >= v_t0),
       'd7',   (select count(*) from fv where ts >= v_t0 - interval '6 days')
@@ -135,7 +160,9 @@ begin
       'flashcards', (select jsonb_agg(jsonb_build_object('d', to_char(d.dia, 'YYYY-MM-DD'),
                   'n', (select count(*) from fv where public.app_date(fv.ts) = d.dia)) order by d.dia) from dias d),
       'desafios', (select jsonb_agg(jsonb_build_object('d', to_char(d.dia, 'YYYY-MM-DD'),
-                  'n', (select count(*) from ch where public.app_date(ch.ts) = d.dia)) order by d.dia) from dias d)
+                  'n', (select count(*) from ch where public.app_date(ch.ts) = d.dia)) order by d.dia) from dias d),
+      'missoes', (select jsonb_agg(jsonb_build_object('d', to_char(d.dia, 'YYYY-MM-DD'),
+                  'n', (select count(*) from mp where mp.dia = d.dia and mp.concluida)) order by d.dia) from dias d)
     )
   ) into v_result;
 

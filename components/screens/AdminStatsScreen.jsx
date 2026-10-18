@@ -242,26 +242,10 @@ export function AdminStatsScreen({ supabase, onBack }) {
             <Section title="Assinantes">
               {(() => {
                 const a = d.assinaturas;
-                const pagantes = a.mensal + a.anual;
                 const semPlano = Math.max(0, d.usuarios.total - a.ativos);
                 return (
                   <>
                     <Grid>
-                      <Kpi
-                        wide
-                        label="Assinantes ativos"
-                        value={nf(a.ativos)}
-                        color={t.green}
-                        sub={
-                          <>
-                            Quem tem acesso valendo agora: plano <b>mensal</b>, <b>anual</b> ou <b>cortesia</b> (acesso gratuito, como os 30 dias e o cupom).
-                            <br />
-                            {nf(a.mensal)} mensal · {nf(a.anual)} anual · {nf(a.cortesia)} cortesia
-                            <br />
-                            {nf(pagantes)} pagantes (mensal + anual) · {pct(a.ativos, d.usuarios.total)} dos usuários com acesso
-                          </>
-                        }
-                      />
                       <Kpi label="Compras nas últimas 48 h" value={show(a.compras_48h)} />
                       <Kpi label="Compras nos últimos 7 dias" value={nf(a.compras_7d)} />
                       <Kpi label="Compras nos últimos 30 dias" value={nf(a.compras_30d)} />
@@ -302,8 +286,7 @@ export function AdminStatsScreen({ supabase, onBack }) {
                         value={nf(q.d7 / 7 / Math.max(1, d.ativos.d7), 1)}
                         sub={`Hoje: ${nf(q.hoje / Math.max(1, d.ativos.hoje), 1)} por ativo`}
                       />
-                      <Kpi label="Missões concluídas hoje" value={nf(q.missoes_concluidas_hoje)} sub={`${pct(q.missoes_concluidas_hoje, d.usuarios.total)} dos usuários`} color={t.green} />
-                      <Kpi label="Questões no banco" value={nf(d.conteudo.questoes)} sub={`${nf(d.conteudo.flashcards)} flashcards`} />
+                      <Kpi wide label="Questões no banco" value={nf(d.conteudo.questoes)} sub={`${nf(d.conteudo.flashcards)} flashcards`} />
                     </Grid>
                     <ChartCard title="Questões respondidas por dia (14 dias)" note="Inclui as respostas dentro de desafios.">
                       <BarChart data={d.series.questoes} color={blue} label="Questões respondidas por dia" />
@@ -333,6 +316,45 @@ export function AdminStatsScreen({ supabase, onBack }) {
               <ChartCard title="Desafios criados por dia (14 dias)">
                 <BarChart data={d.series.desafios} color="#9B6BFF" label="Desafios criados por dia" />
               </ChartCard>
+            </Section>
+
+            <Section title="Missão diária">
+              {(() => {
+                const m = d.missao;
+                if (!m) {
+                  return (
+                    <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16, fontSize: 13.5, lineHeight: 1.5, color: t.textMuted }}>
+                      Esta seção precisa do SQL do painel de dados atualizado no Supabase. Rode-o de novo e toque em Atualizar.
+                    </div>
+                  );
+                }
+                return (
+                  <>
+                    <Grid>
+                      <Kpi
+                        label="Missões concluídas hoje"
+                        value={nf(m.concluidas_hoje)}
+                        color={t.green}
+                        sub={`${pct(m.concluidas_hoje, m.recebidas_hoje)} de quem abriu o app hoje (${nf(m.recebidas_hoje)})`}
+                      />
+                      <Kpi
+                        label="Concluídas nos últimos 7 dias"
+                        value={nf(m.concluidas_7d)}
+                        color={t.green}
+                        sub={`Média de ${nf(m.concluidas_7d / 7, 1)} por dia · ${pct(m.concluidas_7d, m.recebidas_7d)} das sorteadas`}
+                      />
+                      <Kpi label="Com sequência ativa" value={nf(m.sequencia_ativas)} sub={`${pct(m.sequencia_ativas, d.usuarios.total)} dos usuários`} color={t.amber} />
+                      <Kpi label="Sequência média" value={`${nf(m.sequencia_media, 1)} dias`} sub={`Maior sequência: ${nf(m.sequencia_maxima)} dias`} color={t.amber} />
+                    </Grid>
+                    <ChartCard
+                      title="Missões concluídas por dia (14 dias)"
+                      note="Concluída = respondeu todas as questões da missão do dia (3 no plano gratuito). A missão é sorteada quando a pessoa abre o app. Sequência ativa = concluiu a missão hoje ou ontem."
+                    >
+                      <BarChart data={d.series.missoes || []} color={t.green} label="Missões concluídas por dia" />
+                    </ChartCard>
+                  </>
+                );
+              })()}
             </Section>
           </>
         )}
