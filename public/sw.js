@@ -28,7 +28,13 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
       for (const client of list) {
-        if ("focus" in client) return client.focus();
+        if ("focus" in client) {
+          // Com o app já aberto, leva para a página do aviso (ex.: /?prolongar=1) além de trazê-lo para a frente.
+          if (url !== "/" && "navigate" in client) {
+            return client.focus().then(() => client.navigate(url)).catch(() => {});
+          }
+          return client.focus();
+        }
       }
       return self.clients.openWindow(url);
     })

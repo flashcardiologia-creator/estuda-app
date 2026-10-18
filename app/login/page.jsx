@@ -26,6 +26,8 @@ function LoginForm() {
   const searchParams = useSearchParams();
   // Voltou do pagamento sem estar logado neste navegador: avisa que o pagamento foi recebido.
   const paymentReturn = ["ok", "pendente"].includes(searchParams.get("pagamento") || "");
+  // Link do e-mail/notificação de vencimento (/?prolongar=1): depois de entrar, abre a tela de assinatura.
+  const afterLoginPath = searchParams.get("prolongar") === "1" ? "/?prolongar=1" : "/";
   const supabase = createClient();
 
   const [mode, setMode] = useState("login");
@@ -87,7 +89,7 @@ function LoginForm() {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.push("/");
+        router.push(afterLoginPath);
         router.refresh();
       } else if (mode === "signup") {
         const trimmedName = name.trim();
@@ -113,7 +115,7 @@ function LoginForm() {
         if (data.user) await sendTermsAcceptance({ context: "signup", user: { id: data.user.id, email } });
         if (data.session) {
           await updateDisplayName(supabase, data.user.id, trimmedName);
-          router.push("/");
+          router.push(afterLoginPath);
           router.refresh();
         } else {
           setInfo("Conta criada! Verifique sua caixa de entrada para confirmar o e-mail antes de entrar.");

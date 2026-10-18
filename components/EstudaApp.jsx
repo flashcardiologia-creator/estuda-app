@@ -20,7 +20,16 @@ import { RankingScreen } from "@/components/screens/RankingScreen";
 import { StatsScreen } from "@/components/screens/StatsScreen";
 import { PaywallScreen } from "@/components/screens/PaywallScreen";
 import { PaymentReturn } from "@/components/screens/PaymentReturn";
-import { FREE_CHALLENGES_PER_DAY, FREE_CHALLENGE_QUESTIONS, LOCKED_SCREENS, PAID_CHALLENGES_PER_DAY, PAID_CHALLENGE_QUESTIONS } from "@/lib/access";
+import { ExpiryNotice } from "@/components/screens/ExpiryNotice";
+import {
+  EXPIRY_NOTICE_DAYS,
+  FREE_CHALLENGES_PER_DAY,
+  FREE_CHALLENGE_QUESTIONS,
+  LOCKED_SCREENS,
+  PAID_CHALLENGES_PER_DAY,
+  PAID_CHALLENGE_QUESTIONS,
+  calendarDaysLeft,
+} from "@/lib/access";
 
 import {
   fetchProfile,
@@ -98,7 +107,7 @@ const DEFAULT_FILTERS = {
   fontSize: "md",
 };
 
-export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
+export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans = false }) {
   const t = useT();
   const router = useRouter();
   const [supabase] = useState(() => {
@@ -108,7 +117,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
     return client;
   });
 
-  const [screen, setScreen] = useState("home");
+  // /?prolongar=1 (link do e-mail e da notificação de vencimento) abre direto a tela de assinatura.
+  const [screen, setScreen] = useState(openPlans ? "plans" : "home");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -317,6 +327,37 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
       cancelled = true;
     };
   }, [appReady, userId]);
+
+  // Aviso de vencimento: ao abrir o app, nos dias 7, 3, 1 e 0 antes de a assinatura acabar, uma vez por dia.
+  const [expiryDays, setExpiryDays] = useState(null);
+  const expiresAt = access.active ? access.expiresAt : null;
+  useEffect(() => {
+    if (!appReady || !expiresAt || openPlans) return;
+    let cancelled = false;
+    (async () => {
+      const days = calendarDaysLeft(expiresAt);
+      if (!EXPIRY_NOTICE_DAYS.includes(days) || cancelled) return;
+      const key = `flashcardio_expiry_notice_${userId}_${todayStr()}`;
+      try {
+        if (localStorage.getItem(key)) return;
+      } catch {
+        // sem armazenamento: mostra mesmo assim
+      }
+      setExpiryDays(days);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [appReady, expiresAt, userId, openPlans]);
+  const closeExpiryNotice = (goToPlans) => {
+    try {
+      localStorage.setItem(`flashcardio_expiry_notice_${userId}_${todayStr()}`, "1");
+    } catch {
+      // sem armazenamento: o aviso pode voltar na próxima abertura
+    }
+    setExpiryDays(null);
+    if (goToPlans) setScreen("plans");
+  };
 
   useEffect(() => {
     if (screen === "account") {
@@ -785,7 +826,10 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn }) {
   return (
     <div>
       {pushPrompt && <PushPrompt supabase={supabase} userId={userId} onClose={() => setPushPrompt(null)} />}
-      <PaymentReturn status={paymentReturn} active={access.active} />
+      <PaymentReturn status={paymentReturn} active={access.active} expiresAt={access.expiresAt} />
+      {screen === "home" && expiryDays !== null && (
+        <ExpiryNotice access={access} days={expiryDays} onExtend={() => closeExpiryNotice(true)} onLater={() => closeExpiryNotice(false)} />
+      )}
       {showHeader && <Header streak={profile.streak} onNavigate={setScreen} missionDone={missionDone} />}
 
       {(paywalled || screen === "plans") && <PaywallScreen access={access} onBack={() => setScreen("home")} />}

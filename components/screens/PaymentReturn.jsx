@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/components/theme/ThemeProvider";
 
@@ -10,40 +10,68 @@ const MESSAGES = {
   erro: "O pagamento não foi concluído. Você pode tentar de novo na tela de assinatura.",
 };
 
-// Faixa exibida quando a pessoa volta do Mercado Pago (?pagamento=ok|pendente|erro). Enquanto o
-// aviso do Mercado Pago não chega, consulta o acesso a cada poucos segundos; quando liberar,
-// recarrega o app limpo, porque o conteúdo é lido de outro jeito para quem tem assinatura.
-export function PaymentReturn({ status, active }) {
+const fmtDate = (iso) => new Date(iso).toLocaleDateString("pt-BR");
+const clearParam = () => window.history.replaceState(null, "", "/");
+
+// Faixa exibida quando a pessoa volta do Mercado Pago (?pagamento=ok|pendente|erro).
+// - Quem não tinha assinatura: consulta o acesso a cada poucos segundos e, quando libera, recarrega o
+//   app limpo (o conteúdo é lido de outro jeito para quem assina).
+// - Quem já assinava (prolongou): consulta até o vencimento mudar e mostra a nova data.
+export function PaymentReturn({ status, active, expiresAt }) {
   const t = useT();
   const router = useRouter();
-  const startedInactive = useRef(!active);
+  const [startedInactive] = useState(!active);
+  const [expiresAtOnReturn] = useState(expiresAt);
+  const [hidden, setHidden] = useState(false);
+  const renewal = active && !startedInactive;
+  const extended = renewal && expiresAt !== expiresAtOnReturn;
   const message = MESSAGES[status];
 
   useEffect(() => {
     if (!message) return;
-    if (active) {
-      if (startedInactive.current) window.location.replace("/");
-      else window.history.replaceState(null, "", "/");
+    if (active && startedInactive) {
+      window.location.replace("/");
       return;
+    }
+    if (extended) {
+      const timer = setTimeout(() => {
+        clearParam();
+        setHidden(true);
+      }, 9000);
+      return () => clearTimeout(timer);
     }
     if (status === "erro") return;
     let tries = 0;
     const timer = setInterval(() => {
       tries += 1;
       router.refresh();
-      if (tries >= 25) clearInterval(timer);
+      if (tries >= 25) {
+        clearInterval(timer);
+        if (renewal) {
+          clearParam();
+          setHidden(true);
+        }
+      }
     }, 4000);
     return () => clearInterval(timer);
-  }, [message, status, active, router]);
+  }, [message, status, active, startedInactive, renewal, extended, router]);
 
-  if (!message || active) return null;
+  if (!message || hidden) return null;
+  if (active && !renewal) return null;
+
+  let text = message;
+  let background = status === "erro" ? t.red : t.primary;
+  if (renewal && status !== "erro") {
+    text = extended ? `Pagamento aprovado. Sua assinatura foi prolongada até ${fmtDate(expiresAt)}.` : "Pagamento recebido. Estamos prolongando a sua assinatura…";
+    if (extended) background = t.green;
+  }
   return (
     <div
       style={{
         position: "sticky",
         top: 0,
         zIndex: 50,
-        background: status === "erro" ? t.red : t.primary,
+        background,
         color: "#fff",
         fontSize: 13.5,
         fontWeight: 600,
@@ -51,7 +79,7 @@ export function PaymentReturn({ status, active }) {
         padding: "10px 16px",
       }}
     >
-      {message}
+      {text}
     </div>
   );
 }

@@ -466,15 +466,13 @@ export function AccountScreen({
                     ? `Venceu em ${new Date(access.lastExpiredAt).toLocaleDateString("pt-BR")}`
                     : "Gratuita"}
                 </span>
-                {!access.active && (
-                  <button
-                    type="button"
-                    onClick={() => onNavigate("plans")}
-                    style={{ background: "transparent", border: "none", padding: 0, color: t.primary, fontWeight: 600, fontSize: 13, cursor: "pointer", flexShrink: 0 }}
-                  >
-                    Ver planos
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => onNavigate("plans")}
+                  style={{ background: "transparent", border: "none", padding: 0, color: t.primary, fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0 }}
+                >
+                  {access.active ? "Prolongar" : "Ver planos"}
+                </button>
               </div>
             </div>
           )}

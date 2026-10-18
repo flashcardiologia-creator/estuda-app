@@ -6,7 +6,7 @@ import { LEGAL_VERSION, TERMS_GATE_ENABLED } from "@/lib/legal/content";
 import { OPEN_ACCESS, parseAccess } from "@/lib/access";
 
 export default async function Page({ searchParams }) {
-  const { pagamento } = await searchParams;
+  const { pagamento, prolongar } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,5 +35,7 @@ export default async function Page({ searchParams }) {
   if (accessError) console.error("[acesso] my_access falhou:", accessError.message);
   const access = accessError ? OPEN_ACCESS : parseAccess(accessRows?.[0]);
 
-  return <EstudaApp userId={user.id} userEmail={user.email} access={access} paymentReturn={typeof pagamento === "string" ? pagamento : null} />;
+  return <EstudaApp userId={user.id} userEmail={user.email} access={access} paymentReturn={typeof pagamento === "string" ? pagamento : null}
+      openPlans={prolongar === "1"}
+    />;
 }

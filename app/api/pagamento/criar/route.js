@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient as createAdmin } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { MP_API, PLANS, isPlan } from "@/lib/billing";
 
@@ -18,6 +19,23 @@ function trustedOrigin(origin) {
   return null;
 }
 
+// Link de entrada de uso único para a volta do pagamento. O pagamento pode terminar em outro navegador
+// ou fora do app instalado, onde o login não existe; com este link a pessoa volta logada, na tela de
+// início. É gerado pelo próprio Supabase: vale uma vez e por pouco tempo. Devolve null se não der
+// para gerar (aí a volta usa o endereço comum).
+async function magicToken(email) {
+  try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+    const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+    const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
+    return error ? null : data?.properties?.hashed_token || null;
+  } catch (err) {
+    console.error("[pagamento] não foi possível gerar o link de entrada:", err.message);
+    return null;
+  }
+}
 // Cria a cobrança no Mercado Pago (Checkout Pro) para quem está logado e devolve o link de pagamento.
 // O valor vem de lib/billing.js, nunca do navegador. A liberação do acesso acontece no webhook
 // (app/auth/mercadopago/route.js), quando o Mercado Pago confirma o pagamento.
@@ -47,6 +65,12 @@ export async function POST(request) {
   // cookies de cada endereço (www.flashcardiologia.com não compartilha com o endereço do Netlify, por
   // exemplo). Por isso vale primeiro o endereço de onde veio o pedido (cabeçalho Origin).
   const site = (trustedOrigin(request.headers.get("origin")) || process.env.SITE_URL || DEFAULT_SITE).replace(/\/$/, "");
+  // Os dois destinos de sucesso (aprovado e em análise) usam o mesmo link de entrada: só um deles é visitado.
+  const entryToken = await magicToken(user.email);
+  const backUrl = (status) =>
+    entryToken
+      ? `${site}/auth/confirm?token_hash=${encodeURIComponent(entryToken)}&type=magiclink&next=${encodeURIComponent(`/?pagamento=${status}`)}`
+      : `${site}/?pagamento=${status}`;
   const preference = {
     items: [
       {
@@ -62,8 +86,10 @@ export async function POST(request) {
     external_reference: `${user.id}:${plan.id}`,
     notification_url: `${site}/auth/mercadopago`,
     back_urls: {
-      success: `${site}/?pagamento=ok`,
-      pending: `${site}/?pagamento=pendente`,
+      // Na volta do pagamento a pessoa entra sozinha (link de uso único, ver loginLink); se não for
+      // possível gerar o link, volta para o endereço comum e o login vale se ela ainda estiver logada.
+      success: backUrl("ok"),
+      pending: backUrl("pendente"),
       failure: `${site}/?pagamento=erro`,
     },
     statement_descriptor: "FLASHCARDIO",
