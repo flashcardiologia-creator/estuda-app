@@ -20,6 +20,8 @@ import { RankingScreen } from "@/components/screens/RankingScreen";
 import { StatsScreen } from "@/components/screens/StatsScreen";
 import { PaywallScreen } from "@/components/screens/PaywallScreen";
 import { AdminStatsScreen } from "@/components/screens/AdminStatsScreen";
+import { CouponOffer } from "@/components/screens/CouponOffer";
+import { fetchCouponOffer } from "@/lib/data/coupons";
 import { PaymentReturn } from "@/components/screens/PaymentReturn";
 import { ExpiryNotice } from "@/components/screens/ExpiryNotice";
 import {
@@ -329,6 +331,20 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       cancelled = true;
     };
   }, [appReady, userId]);
+
+  // Cupom de boas-vindas: conta criada depois da data de corte, que ainda não usou nem dispensou o cupom,
+  // vê uma janela perguntando se quer ativá-lo (o banco decide: supabase/cupom_boas_vindas.sql).
+  const [couponOffer, setCouponOffer] = useState(null);
+  useEffect(() => {
+    if (!appReady) return;
+    let cancelled = false;
+    fetchCouponOffer(supabase).then((offer) => {
+      if (!cancelled && offer) setCouponOffer(offer);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [appReady, supabase, userId]);
 
   // Aviso de vencimento: ao abrir o app, nos dias 7, 3, 1 e 0 antes de a assinatura acabar, uma vez por dia.
   const [expiryDays, setExpiryDays] = useState(null);
@@ -829,6 +845,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
     <div>
       {pushPrompt && <PushPrompt supabase={supabase} userId={userId} onClose={() => setPushPrompt(null)} />}
       <PaymentReturn status={paymentReturn} active={access.active} expiresAt={access.expiresAt} />
+      {screen === "home" && couponOffer && <CouponOffer supabase={supabase} offer={couponOffer} onClose={() => setCouponOffer(null)} />}
       {screen === "home" && expiryDays !== null && (
         <ExpiryNotice access={access} days={expiryDays} onExtend={() => closeExpiryNotice(true)} onLater={() => closeExpiryNotice(false)} />
       )}
