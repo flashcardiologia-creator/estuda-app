@@ -99,6 +99,38 @@ function TimeLeftTag({ expiresAt }) {
   );
 }
 
+// Botão roxo enxuto da tela de Desafios (o texto visível é curto; o rótulo completo vai para leitores de tela).
+function CompactButton({ children, onClick, disabled, label, padding, fontSize, radius }) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      style={{
+        fontWeight: 600,
+        fontSize,
+        padding,
+        borderRadius: radius,
+        background: disabled ? t.border : t.primary,
+        color: "#fff",
+        border: "none",
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.6 : 1,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        whiteSpace: "nowrap",
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 function ProgressRow({ name, status, statusColor, pct, barColor, strong }) {
   const t = useT();
   return (
@@ -188,10 +220,10 @@ function PendingCard({ c, onRespond }) {
           <Clock size={13} /> Expira em {formatTimeLeft(new Date(c.expires_at).getTime() - nowMs())}
         </div>
       ) : (
-        <div style={{ marginTop: 14 }}>
-          <PrimaryButton small full onClick={onRespond}>
-            {c.myAnswered > 0 ? "Continuar desafio" : "Responder desafio"}
-          </PrimaryButton>
+        <div style={{ marginTop: 14, display: "flex", justifyContent: "center" }}>
+          <CompactButton onClick={onRespond} label={c.myAnswered > 0 ? "Continuar desafio" : "Responder desafio"} padding="9px 30px" fontSize={13} radius={12}>
+            {c.myAnswered > 0 ? "Continuar" : "Responder"}
+          </CompactButton>
         </div>
       )}
     </div>
@@ -343,14 +375,17 @@ export function ChallengesScreen({
               ))}
             </div>
           </div>
-          <PrimaryButton
-            small
+          <CompactButton
+            label="Novo desafio"
+            padding="7px 12px"
+            fontSize={12.5}
+            radius={10}
             disabled={dailyCount >= dailyLimit || waitingDayTema}
             onClick={() => (friends.length === 0 ? setShowNoFriends(true) : setShowNew(true))}
           >
-            <Plus size={14} style={{ marginRight: 5, verticalAlign: -2 }} />
-            Novo Desafio
-          </PrimaryButton>
+            <Plus size={13} strokeWidth={2.2} style={{ marginRight: 4 }} />
+            Novo
+          </CompactButton>
         </div>
 
         {dailyLimit < 5 && (
@@ -366,8 +401,8 @@ export function ChallengesScreen({
           </div>
         )}
 
-        {/* Abas sublinhadas: a ativa fica em roxo com um traço embaixo; a contagem vai pequena, no alto, ao lado do nome. */}
-        <div role="tablist" style={{ display: "flex", borderBottom: `1px solid ${t.border}`, marginBottom: 16 }}>
+        {/* Abas em dois botões com borda: a ativa fica com fundo e contorno roxos; a contagem vai ao lado do nome. */}
+        <div role="tablist" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[
             { id: "pendentes", label: "Pendentes", count: pendentes.length },
             { id: "concluidos", label: "Concluídos", count: concluidos.length },
@@ -382,23 +417,22 @@ export function ChallengesScreen({
                 onClick={() => setTab(id)}
                 style={{
                   flex: 1,
-                  position: "relative",
-                  background: "transparent",
-                  border: "none",
+                  height: 42,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  borderRadius: 12,
                   cursor: "pointer",
-                  padding: "12px 0 13px",
-                  fontSize: 15,
+                  fontSize: 14.5,
                   fontWeight: 700,
-                  color: on ? t.primary : t.textMuted,
+                  background: on ? t.primarySoft : t.surface,
+                  border: `1px solid ${on ? t.primary : t.border}`,
+                  color: on ? (t.name === "dark" ? "#C4B5FF" : t.primary) : t.textMuted,
                 }}
               >
                 {label}
-                <sup style={{ fontSize: 11, fontWeight: 800, marginLeft: 3, color: on ? t.primary : t.textMuted }}>{count}</sup>
-                {on && (
-                  <span
-                    style={{ position: "absolute", left: "18%", right: "18%", bottom: -1, height: 3, borderRadius: "3px 3px 0 0", background: t.primary }}
-                  />
-                )}
+                <span style={{ fontSize: 12, opacity: 0.8 }}>{count}</span>
               </button>
             );
           })}

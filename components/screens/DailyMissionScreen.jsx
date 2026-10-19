@@ -365,8 +365,57 @@ function MissionFormat({ supabase, userId }) {
   );
 }
 
+// Ao fim da missão no plano gratuito: o que muda com a assinatura, e o botão que leva à tela de planos.
+function PlanComparison({ t, onSubscribe }) {
+  const rows = [
+    {
+      title: "Dias seguidos",
+      free: "Os dias de missão não são contados.",
+      paid: "Cada missão conta e a sua sequência de dias cresce.",
+    },
+    {
+      title: "Quais questões vêm",
+      free: "Questões aleatórias do banco.",
+      paid: "Revisão pela curva de Ebbinghaus: as questões que você errou voltam na missão diária, no momento certo, para fixar o conteúdo.",
+    },
+    {
+      title: "Tamanho da missão",
+      free: "3 questões, sem flashcards.",
+      paid: "Até 10 questões, ou 5 questões + 5 flashcards.",
+    },
+  ];
+  return (
+    <div style={{ marginTop: 26, textAlign: "left", background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: "18px 18px 20px" }}>
+      <div style={{ fontSize: 16.5, fontWeight: 800, color: t.text, textAlign: "center" }}>Plano gratuito x Assinatura</div>
+      <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center", marginTop: 4 }}>Veja o que muda na missão diária</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 16 }}>
+        {rows.map((r) => (
+          <div key={r.title} style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 14, padding: "12px 14px" }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: t.textMuted, marginBottom: 8 }}>{r.title}</div>
+            <div style={{ display: "flex", gap: 8, fontSize: 13, lineHeight: 1.5, color: t.textMuted }}>
+              <b style={{ flexShrink: 0, width: 76, color: t.textMuted }}>Gratuito</b>
+              <span>{r.free}</span>
+            </div>
+            <div style={{ display: "flex", gap: 8, fontSize: 13, lineHeight: 1.5, color: t.text, marginTop: 8 }}>
+              <b style={{ flexShrink: 0, width: 76, color: t.primary }}>Assinante</b>
+              <span>{r.paid}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: 18 }}>
+        <PrimaryButton full onClick={onSubscribe}>
+          Assinar agora
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
 export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate, canChooseFormat = true }) {
   const t = useT();
+  // Sem assinatura (não há formato para escolher): a sequência não conta dias e mostramos a comparação com o plano pago.
+  const isFree = !canChooseFormat;
   const [friendsStatus, setFriendsStatus] = useState(null);
 
   useEffect(() => {
@@ -386,15 +435,20 @@ export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate,
     <div style={{ maxWidth: 480, margin: "80px auto", textAlign: "center", padding: 22 }}>
       <Flame_ done size={54} />
       <h2 style={{ fontSize: 24, color: t.text, marginTop: 16 }}>Missão concluída!</h2>
-      <p style={{ color: t.textMuted, fontSize: 14, marginTop: 14, lineHeight: 1.6 }}>
-        Você está numa sequência de <b style={{ color: t.green }}>{streak} {streak === 1 ? "dia" : "dias"}</b>.
-        <br />
-        Volte amanhã para manter a chama acesa.
-      </p>
+      {isFree ? (
+        <p style={{ color: t.textMuted, fontSize: 14, marginTop: 14, lineHeight: 1.6 }}>Volte amanhã para uma nova missão.</p>
+      ) : (
+        <p style={{ color: t.textMuted, fontSize: 14, marginTop: 14, lineHeight: 1.6 }}>
+          Você está numa sequência de <b style={{ color: t.green }}>{streak} {streak === 1 ? "dia" : "dias"}</b>.
+          <br />
+          Volte amanhã para manter a chama acesa.
+        </p>
+      )}
       {/* Sem assinatura a missão é sempre de 3 questões: não há formato para escolher. */}
       {canChooseFormat && <MissionFormat supabase={supabase} userId={userId} />}
+      {isFree && <PlanComparison t={t} onSubscribe={() => onNavigate("plans")} />}
       <div style={{ marginTop: 22 }}>
-        <PrimaryButton onClick={() => onNavigate("home")}>Voltar ao início</PrimaryButton>
+        <PrimaryButton variant={isFree ? "ghost" : "primary"} onClick={() => onNavigate("home")}>Voltar ao início</PrimaryButton>
       </div>
 
       {friendsStatus && friendsStatus.length > 0 && (

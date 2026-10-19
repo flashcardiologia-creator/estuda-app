@@ -2,7 +2,8 @@
 -- Rode uma vez no SQL Editor do Supabase (depois do assinaturas_fase2.sql). Pode rodar de novo.
 --
 -- Quem tem assinatura ativa continua com 5 questões + 5 flashcards, ou 10 questões, conforme o
--- formato escolhido. Quem não tem recebe só 3 questões, a partir do próximo sorteio: a missão já
+-- formato escolhido (primeiro as do banco de erradas, depois sorteadas). Quem não tem recebe só
+-- 3 questões SORTEADAS de todo o banco de questões, a partir do próximo sorteio: a missão já
 -- sorteada hoje não muda.
 -- Sem assinatura, concluir a missão também não conta dias seguidos: a sequência fica congelada, sem somar nem zerar (parte 2).
 
@@ -37,25 +38,30 @@ begin
 
   v_f := '{}';
 
-  v_q := array(
-    select w.question_id from public.user_wrong_bank w
-     where w.user_id = v_user and w.in_bank
-       and (w.dormant_until is null or w.dormant_until <= v_today)
-     order by random() limit v_qn
-  );
-
-  v_need := v_qn - coalesce(cardinality(v_q), 0);
-  if v_need > 0 then
-    v_q := v_q || array(
-      select q.id from public.questions q
-       where q.id <> all (v_q)
-         and q.id not in (select w.question_id from public.user_wrong_bank w
-                           where w.user_id = v_user and w.dormant_until > v_today)
-       order by random() limit v_need
+  if not public._has_access(v_user) then
+    -- Plano gratuito: 3 questões sorteadas de TODO o banco de questões (sem puxar as do banco de erradas).
+    v_q := array(select q.id from public.questions q order by random() limit v_qn);
+  else
+    v_q := array(
+      select w.question_id from public.user_wrong_bank w
+       where w.user_id = v_user and w.in_bank
+         and (w.dormant_until is null or w.dormant_until <= v_today)
+       order by random() limit v_qn
     );
+
     v_need := v_qn - coalesce(cardinality(v_q), 0);
     if v_need > 0 then
-      v_q := v_q || array(select q.id from public.questions q where q.id <> all (v_q) order by random() limit v_need);
+      v_q := v_q || array(
+        select q.id from public.questions q
+         where q.id <> all (v_q)
+           and q.id not in (select w.question_id from public.user_wrong_bank w
+                             where w.user_id = v_user and w.dormant_until > v_today)
+         order by random() limit v_need
+      );
+      v_need := v_qn - coalesce(cardinality(v_q), 0);
+      if v_need > 0 then
+        v_q := v_q || array(select q.id from public.questions q where q.id <> all (v_q) order by random() limit v_need);
+      end if;
     end if;
   end if;
 
