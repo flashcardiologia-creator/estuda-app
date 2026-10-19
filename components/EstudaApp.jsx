@@ -81,6 +81,7 @@ import {
   respondToFriendRequest,
 } from "@/lib/data/friends";
 import { fetchChallenges } from "@/lib/data/challenges";
+import { SwipeBack } from "@/components/SwipeBack";
 import { shuffle, todayStr, msUntilNextDayBoundary, MISSION_GRACE_MS, effectiveStreak } from "@/lib/util";
 
 const HIDDEN_HEADER_SCREENS = [
@@ -828,7 +829,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   const paywalled = !access.active && LOCKED_SCREENS.includes(screen);
   const showHeader = !HIDDEN_HEADER_SCREENS.includes(screen) && !challengeAnswering;
   return (
-    <div>
+    <div id="swipe-root">
+      <SwipeBack rootId="swipe-root" />
       {pushPrompt && <PushPrompt supabase={supabase} userId={userId} onClose={() => setPushPrompt(null)} />}
       <PaymentReturn status={paymentReturn} active={access.active} expiresAt={access.expiresAt} />
       {screen === "home" && couponOffer && <CouponOffer supabase={supabase} offer={couponOffer} onClose={() => setCouponOffer(null)} />}

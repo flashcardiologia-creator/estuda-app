@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
+import { SwipeBack } from "@/components/SwipeBack";
 import { LEGAL_UPDATED } from "@/lib/legal/content";
 
 function Block({ block, t }) {
@@ -79,7 +80,8 @@ export function LegalDocument({ doc, other }) {
     else router.push("/login");
   };
   return (
-    <div style={{ minHeight: "100dvh", background: t.bg, padding: "20px 18px 60px", boxSizing: "border-box" }}>
+    <div id="swipe-root" style={{ minHeight: "100dvh", background: t.bg, padding: "20px 18px 60px", boxSizing: "border-box" }}>
+      <SwipeBack rootId="swipe-root" />
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         <button
           type="button"

@@ -90,6 +90,9 @@ html {
   max-width: 100vw;
   overflow-x: hidden;
   overscroll-behavior-y: none;
+  /* Impede o gesto de voltar do próprio navegador (arrastar da borda), que sairia do app; quem
+     trata esse gesto é o SwipeBack, que aciona o botão Voltar da tela. */
+  overscroll-behavior-x: none;
 }
 
 body {

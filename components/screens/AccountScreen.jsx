@@ -267,47 +267,35 @@ export function AccountScreen({
           ))}
         </div>
 
+        {/* Mesmo botão das abas não selecionadas de Desafios (Pendentes / Concluídos). */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20, marginTop: -10 }}>
-          <button
-            onClick={() => onNavigate("stats")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              flex: 1,
-              background: t.name === "light" ? t.surface : "transparent",
-              border: `1px solid ${t.border}`,
-              borderRadius: 12,
-              padding: "9px 12px",
-              cursor: "pointer",
-              color: t.textMuted,
-              fontSize: 12.5,
-              fontWeight: 600,
-            }}
-          >
-            <BarChart3 size={14} /> Estatísticas
-          </button>
-          <button
-            onClick={() => onNavigate("ranking")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              flex: 1,
-              background: t.name === "light" ? t.surface : "transparent",
-              border: `1px solid ${t.border}`,
-              borderRadius: 12,
-              padding: "9px 12px",
-              cursor: "pointer",
-              color: t.textMuted,
-              fontSize: 12.5,
-              fontWeight: 600,
-            }}
-          >
-            <Trophy size={14} /> Ranking
-          </button>
+          {[
+            { screen: "stats", label: "Estatísticas", icon: <BarChart3 size={16} /> },
+            { screen: "ranking", label: "Ranking", icon: <Trophy size={16} /> },
+          ].map(({ screen, label, icon }) => (
+            <button
+              key={screen}
+              type="button"
+              onClick={() => onNavigate(screen)}
+              style={{
+                flex: 1,
+                height: 42,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                borderRadius: 12,
+                cursor: "pointer",
+                fontSize: 14.5,
+                fontWeight: 700,
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                color: t.textMuted,
+              }}
+            >
+              {icon} {label}
+            </button>
+          ))}
         </div>
 
         <ExpandBox title="Perfil" icon={<User size={17} color={t.primary} />} open={profileOpen} onToggle={() => setProfileOpen((o) => !o)}>

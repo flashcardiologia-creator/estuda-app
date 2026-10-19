@@ -2,8 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Flame, Eye, EyeOff, Smartphone } from "lucide-react";
+import { Flame, Eye, EyeOff, Smartphone, ChevronLeft } from "lucide-react";
 import { InstallGuide } from "@/components/screens/InstallGuide";
+import { SwipeBack } from "@/components/SwipeBack";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
@@ -138,7 +139,32 @@ function LoginForm() {
   };
 
   return (
-    <div className="login-screen" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: 20, boxSizing: "border-box" }}>
+    <div id="swipe-root" className="login-screen" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: 20, boxSizing: "border-box" }}>
+      <SwipeBack rootId="swipe-root" />
+      {showInstall && (
+        // Mesmo botão Voltar das outras telas, no alto à esquerda.
+        <div style={{ width: "100%", maxWidth: 440 }}>
+          <button
+            type="button"
+            onClick={() => setShowInstall(false)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              background: "transparent",
+              border: `1px solid ${t.border}`,
+              borderRadius: 12,
+              padding: "8px 14px",
+              cursor: "pointer",
+              color: t.text,
+              fontSize: 13.5,
+              fontWeight: 600,
+            }}
+          >
+            <ChevronLeft size={16} /> Voltar
+          </button>
+        </div>
+      )}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <Flame size={38} color={t.amber} fill={t.amber} />
         <h1 style={{ fontSize: 30, fontWeight: 700, color: t.text, margin: 0 }}>FlashCardio</h1>
