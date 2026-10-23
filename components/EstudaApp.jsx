@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useT } from "@/components/theme/ThemeProvider";
+import { useT, useThemeControl } from "@/components/theme/ThemeProvider";
 import { Header } from "@/components/Header";
 import { HomeScreen } from "@/components/screens/HomeScreen";
 import { AccountScreen } from "@/components/screens/AccountScreen";
@@ -45,6 +45,8 @@ import {
   updateFlashcardFontSize,
   resetStreak,
   fetchStats,
+  fetchAccountTheme,
+  updateAccountTheme,
 } from "@/lib/data/profile";
 import { withRetry, withTimeout } from "@/lib/data/chunk";
 import {
@@ -145,6 +147,11 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   const [challenges, setChallenges] = useState([]);
   const [challengeAnswering, setChallengeAnswering] = useState(false);
   const [accountFocus, setAccountFocus] = useState(null);
+  // Tema escuro/claro guardado na conta: undefined = ainda não carregou (ou o banco ainda não tem a coluna),
+  // null = a conta não tem tema registrado. themeSavedRef = o que a conta tem guardado agora.
+  const { theme: currentTheme, setTheme } = useThemeControl();
+  const [accountTheme, setAccountTheme] = useState(undefined);
+  const themeSavedRef = useRef(undefined);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [flashcardFontSize, setFlashcardFontSize] = useState("md");
@@ -288,6 +295,11 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
           if (!cancelled) setChallenges(data);
         })
         .catch(() => {});
+      fetchAccountTheme(supabase, userId)
+        .then((value) => {
+          if (!cancelled) setAccountTheme(value);
+        })
+        .catch(() => {});
       // Os textos longos das questões chegam em segundo plano, em lotes de 300. Sem assinatura não há
       // o que baixar: a missão e os desafios buscam só as questões deles.
       const ids = supabase.contentOpen === false ? [] : questions.map((q) => q.id);
@@ -393,6 +405,23 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       });
     }
   }, [screen, supabase, userId]);
+
+  // Tema na conta: se a conta já tem um tema, ele vale (o tema segue a pessoa entre aparelhos); se não tem,
+  // guarda o que a pessoa está usando agora; e a partir daí grava toda vez que ela troca o tema.
+  useEffect(() => {
+    if (accountTheme === undefined) return;
+    if (themeSavedRef.current === undefined) {
+      themeSavedRef.current = accountTheme;
+      if (accountTheme && accountTheme !== currentTheme) {
+        setTheme(accountTheme);
+        return;
+      }
+    }
+    if (themeSavedRef.current !== currentTheme) {
+      themeSavedRef.current = currentTheme;
+      updateAccountTheme(supabase, userId, currentTheme).catch(() => {});
+    }
+  }, [accountTheme, currentTheme, setTheme, supabase, userId]);
 
   // Dificulta a cópia do conteúdo das questões/flashcards (proteção básica,
   // não é à prova de usuários avançados). Campos de formulário continuam

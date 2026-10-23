@@ -389,6 +389,23 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
               )}
             </Section>
 
+            <Section title="Tema do app (fundo)">
+              {ex?.temas ? (
+                <>
+                  <Grid cols={3}>
+                    <Kpi label="Fundo escuro" value={nf(ex.temas.escuro)} sub={pct(ex.temas.escuro, ex.temas.escuro + ex.temas.claro + ex.temas.sem_registro)} />
+                    <Kpi label="Fundo claro" value={nf(ex.temas.claro)} sub={pct(ex.temas.claro, ex.temas.escuro + ex.temas.claro + ex.temas.sem_registro)} />
+                    <Kpi label="Sem registro" value={nf(ex.temas.sem_registro)} sub="usam o padrão (escuro)" />
+                  </Grid>
+                  <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+                    O tema é gravado na conta quando a pessoa abre o app e a cada troca no botão de sol/lua. Quem ainda não abriu o app depois da atualização aparece em &quot;Sem registro&quot;.
+                  </div>
+                </>
+              ) : (
+                <ExtraNotice extra={ex ? { status: "missing" } : extra} />
+              )}
+            </Section>
+
             <Section title="Usuários ativos">
               <Grid>
                 <Kpi

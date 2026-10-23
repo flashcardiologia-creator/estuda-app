@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { Tag, PrimaryButton } from "@/components/ui/Primitives";
 import { ZoomableImage } from "@/components/ui/ImageZoom";
+import { isAnnulled } from "@/lib/util";
 
 export function QuestionsResultsScreen({ session, questionsById, optionsByQuestion, filters, onNavigate }) {
   const t = useT();
@@ -63,7 +64,7 @@ export function QuestionsResultsScreen({ session, questionsById, optionsByQuesti
                     )}
                     {options.map((op) => {
                       const isSel = a?.selected === op.letra;
-                      const isCorrect = op.correta === true || (a && op.letra === a.correct_option);
+                      const isCorrect = op.correta === true || (a && (isAnnulled(q.comentario) || op.letra === a.correct_option));
                       let color = t.textMuted;
                       if (isCorrect) color = t.green;
                       else if (isSel) color = t.red;

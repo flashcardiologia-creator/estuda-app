@@ -5,6 +5,7 @@ import { Star, Check, X, ChevronDown, ChevronUp, Ban } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { Tag, PrimaryButton } from "@/components/ui/Primitives";
 import { ZoomableImage } from "@/components/ui/ImageZoom";
+import { isAnnulled } from "@/lib/util";
 
 const FONT_SIZES = { sm: 14, md: 16.5, lg: 19 };
 
@@ -32,6 +33,7 @@ export function QuestionCard({
   // essa preferência continua valendo ao responder as próximas questões.
   const [commentOpen, setCommentOpen] = useState(true);
   const struck = struckLetras || [];
+  const annulled = isAnnulled(answerResult?.comentario || q.comentario);
 
   useEffect(() => {
     setShowFull(false);
@@ -72,8 +74,10 @@ export function QuestionCard({
           let bg = t.name === "light" ? t.surface : t.surfaceAlt,
             border = t.border,
             color = t.text;
+          // Questão anulada: todas as alternativas aparecem em verde, como corretas.
+          const isRight = !!answerResult && (annulled || op.letra === answerResult.correct_option);
           if (answered && !filters.modoProva && answerResult) {
-            if (op.letra === answerResult.correct_option) {
+            if (isRight) {
               bg = "rgba(61,139,95,0.12)";
               border = t.greenMuted;
               color = t.greenMuted;
@@ -147,8 +151,8 @@ export function QuestionCard({
                       {answerResult.optionStats[op.letra].pct}%
                     </span>
                   )}
-                  {op.letra === answerResult.correct_option && <Check size={16} />}
-                  {isSelected && op.letra !== answerResult.correct_option && <X size={16} />}
+                  {isRight && <Check size={16} />}
+                  {isSelected && !isRight && <X size={16} />}
                 </span>
               )}
               {!answered && onToggleStruck && (
@@ -180,6 +184,28 @@ export function QuestionCard({
           );
         })}
       </div>
+
+      {answered && !filters.modoProva && answerResult && annulled && (
+        <div
+          role="note"
+          style={{
+            marginTop: 16,
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: `${t.amber}22`,
+            border: `1.5px solid ${t.amber}`,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <Ban size={22} color={t.amber} style={{ flexShrink: 0 }} />
+          <div>
+            <div style={{ fontSize: fontSize - 1, fontWeight: 800, letterSpacing: 0.6, color: t.amber }}>QUESTÃO ANULADA</div>
+            <div style={{ fontSize: fontSize - 3.5, color: t.text, lineHeight: 1.4, marginTop: 2 }}>A banca anulou esta questão: todas as alternativas contam como corretas.</div>
+          </div>
+        </div>
+      )}
 
       {answered && !filters.modoProva && answerResult && (
         <div

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HelpCircle, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
 import { reportContentIssue } from "@/lib/data/reports";
@@ -20,6 +20,7 @@ export function ReportButton({ onClick }) {
     <button
       onClick={onClick}
       title="Reportar um erro"
+      aria-label="Reportar um erro"
       style={{
         display: "flex",
         alignItems: "center",
@@ -35,7 +36,10 @@ export function ReportButton({ onClick }) {
         padding: 0,
       }}
     >
-      <HelpCircle size={14} />
+      {/* "?" grande dentro do círculo do botão (antes era o ícone HelpCircle pequeno, que repetia o círculo). */}
+      <span aria-hidden="true" style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, marginTop: -1 }}>
+        ?
+      </span>
     </button>
   );
 }

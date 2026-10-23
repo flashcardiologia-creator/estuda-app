@@ -8,8 +8,9 @@
 --   2) A regra de desafio do plano gratuito passa a ignorar o bot (ele não é cliente).
 --   3) Cria ensure_welcome_challenge(): o app chama quando a lista de desafios vem vazia.
 --
--- Para o app o bot é uma conta comum: aparece como "Bot Braunwald te desafiou". Ele não entra no
--- ranking (ranking_visible = false), mas conta como 1 usuário a mais nos totais do painel de dados.
+-- Para o app o bot é uma conta comum: aparece como "Bot Braunwald te desafiou". Ele conta como 1 usuário a
+-- mais nos totais do painel de dados. Para ele não aparecer no ranking (nem como "Anônimo"), rode também
+-- o ranking_sem_bot.sql.
 
 -- ============================================================
 -- 1) O bot

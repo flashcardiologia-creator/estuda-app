@@ -2,6 +2,7 @@
 -- Cria a função public.admin_extra_stats(), que o painel chama para mostrar:
 --   * os e-mails dos 5 últimos usuários cadastrados (aba Usuários);
 --   * as 10 questões com mais erros e as 10 com mais acertos (aba Questões);
+--   * quantos usuários usam fundo escuro, fundo claro, ou ainda não têm tema registrado (aba Usuários);
 --   * os 10 usuários que mais lançaram e os 10 que mais ganharam desafios (aba Desafios);
 --   * os 10 com maior sequência atual e os 10 com maior sequência de todos os tempos (aba Missão diária).
 -- Rode uma vez no SQL Editor do Supabase. Pode rodar de novo (só recria a função). Só consulta: não altera
@@ -12,6 +13,13 @@
 -- absolutos, então questões muito respondidas aparecem mais; a lista mostra também o total e a porcentagem.
 --
 -- Segurança: igual à admin_stats(): confere o e-mail de quem chamou; qualquer outra conta recebe "forbidden".
+
+-- Tema (fundo escuro ou claro) escolhido pela pessoa, guardado no perfil para seguir a conta entre aparelhos.
+-- O app grava quando a pessoa abre o app (o tema que ela usa) e a cada troca no botão de sol/lua. Vazio = ainda não
+-- registrado (quem nunca abriu o app depois da atualização; o padrão do app é o escuro).
+alter table public.profiles add column if not exists theme text;
+alter table public.profiles drop constraint if exists profiles_theme_check;
+alter table public.profiles add constraint profiles_theme_check check (theme is null or theme in ('dark', 'light'));
 
 create or replace function public.admin_extra_stats()
 returns jsonb
@@ -80,12 +88,20 @@ begin
      group by c.from_user
   ),
   pessoas as (
-    select p.id, p.name, u.email, p.streak, p.best_streak, p.last_mission_date
+    select p.id, p.name, u.email, p.streak, p.best_streak, p.last_mission_date, p.theme
       from public.profiles p
       join auth.users u on u.id = p.id
      where coalesce(u.email, '') not like '%@flashcardio.invalid'
   )
   select jsonb_build_object(
+    'temas', (
+      select jsonb_build_object(
+               'escuro',       count(*) filter (where theme = 'dark'),
+               'claro',        count(*) filter (where theme = 'light'),
+               'sem_registro', count(*) filter (where theme is null)
+             )
+        from pessoas
+    ),
     'ultimos_usuarios', (
       select coalesce(jsonb_agg(jsonb_build_object('email', u.email, 'criado_em', u.created_at) order by u.created_at desc), '[]'::jsonb)
         from (select email, created_at from auth.users order by created_at desc limit 5) u
