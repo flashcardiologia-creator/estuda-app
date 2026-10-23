@@ -239,6 +239,14 @@ export function QuestionCard({
               {showFull && q.comentario_completo ? q.comentario_completo : answerResult.comentario || q.comentario}
             </div>
           )}
+          {commentOpen && showFull && q.comentario_completo && q.comentario_imagem_url && (
+            <ZoomableImage
+              src={q.comentario_imagem_url}
+              alt="Imagem do comentário"
+              wrapStyle={{ marginTop: 12 }}
+              style={{ display: "block", maxWidth: "100%", borderRadius: 10, border: `1px solid ${t.border}` }}
+            />
+          )}
           {commentOpen && !showFull && q.comentario_completo && (
             <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
               <button

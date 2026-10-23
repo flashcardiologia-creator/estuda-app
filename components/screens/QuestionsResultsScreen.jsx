@@ -113,6 +113,14 @@ export function QuestionsResultsScreen({ session, questionsById, optionsByQuesti
                         </button>
                       )}
                     </div>
+                    {expanded[qid] && q.comentario_completo && q.comentario_imagem_url && (
+                      <ZoomableImage
+                        src={q.comentario_imagem_url}
+                        alt="Imagem do comentário"
+                        wrapStyle={{ marginTop: 10 }}
+                        style={{ display: "block", maxWidth: "100%", borderRadius: 10, border: `1px solid ${t.border}` }}
+                      />
+                    )}
                   </div>
                 );
               })}
