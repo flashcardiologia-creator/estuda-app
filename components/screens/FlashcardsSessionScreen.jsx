@@ -5,6 +5,7 @@ import { ChevronLeft, Star, Trash2 } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag } from "@/components/ui/Primitives";
 import { ReportButton, ReportIssueModal } from "@/components/ui/ReportIssue";
+import { ZoomableImage } from "@/components/ui/ImageZoom";
 
 const FLASHCARD_FONT_SIZES = { sm: 16, md: 20, lg: 24 };
 const STAR_COLOR = "#F5B50A";
@@ -55,15 +56,14 @@ function CardImage({ card, flipped }) {
   if (!flipped && card.imagem_lado !== "pergunta") return null;
   return (
     <div style={{ marginTop: 18, width: "100%" }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <ZoomableImage
         src={card.imagem_url}
         alt=""
         loading="lazy"
         referrerPolicy="no-referrer"
         onError={() => setFailed(true)}
-        draggable={false}
-        style={{ display: "block", margin: "0 auto", maxWidth: "100%", maxHeight: 280, borderRadius: 10, background: "#fff" }}
+        wrapStyle={{ margin: "0 auto" }}
+        style={{ display: "block", maxWidth: "100%", maxHeight: 280, borderRadius: 10, background: "#fff" }}
       />
       {card.imagem_credito && (
         <div style={{ fontSize: 10.5, color: "#8a8f98", marginTop: 6, textAlign: "center" }}>{card.imagem_credito}</div>

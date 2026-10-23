@@ -375,17 +375,14 @@ export function ChallengesScreen({
               ))}
             </div>
           </div>
-          <CompactButton
-            label="Novo desafio"
-            padding="7px 12px"
-            fontSize={12.5}
-            radius={10}
+          <PrimaryButton
+            small
             disabled={dailyCount >= dailyLimit || waitingDayTema}
             onClick={() => (friends.length === 0 ? setShowNoFriends(true) : setShowNew(true))}
           >
-            <Plus size={13} strokeWidth={2.2} style={{ marginRight: 4 }} />
-            Novo
-          </CompactButton>
+            <Plus size={14} style={{ marginRight: 5, verticalAlign: -2 }} />
+            Novo Desafio
+          </PrimaryButton>
         </div>
 
         {dailyLimit < 5 && (

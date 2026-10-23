@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, PrimaryButton } from "@/components/ui/Primitives";
-import { fetchAdminStats } from "@/lib/data/adminStats";
+import { fetchAdminStats, fetchAdminExtra } from "@/lib/data/adminStats";
 import { formatBRL } from "@/lib/billing";
 
 const nf = (n, digits = 0) => Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -143,26 +143,162 @@ function hhmm(iso) {
   return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-// Tela de números do app, só para a conta administradora (botão em Minha Conta).
-export function AdminStatsScreen({ supabase, onBack }) {
+// "21/10 às 14:05" no horário de Brasília.
+function dataHora(iso) {
+  const d = new Date(iso);
+  const o = { timeZone: "America/Sao_Paulo" };
+  const dia = d.toLocaleDateString("pt-BR", { ...o, day: "2-digit", month: "2-digit" });
+  const hora = d.toLocaleTimeString("pt-BR", { ...o, hour: "2-digit", minute: "2-digit" });
+  return `${dia} às ${hora}`;
+}
+
+const TABS = [
+  { id: "usuarios", label: "Usuários" },
+  { id: "assinantes", label: "Assinantes" },
+  { id: "questoes", label: "Questões" },
+  { id: "flashcards", label: "Flashcards" },
+  { id: "desafios", label: "Desafios" },
+  { id: "missao", label: "Missão diária" },
+];
+
+// Abas do painel (mesmo estilo das abas de Desafios). Rolam de lado quando não cabem na tela.
+function TabBar({ tab, onTab }) {
   const t = useT();
+  return (
+    <div role="tablist" aria-label="Seções do painel" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "14px -22px 0", padding: "2px 22px 6px", scrollbarWidth: "none" }}>
+      {TABS.map(({ id, label }) => {
+        const on = tab === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onTab(id)}
+            style={{
+              flex: "none",
+              height: 38,
+              padding: "0 15px",
+              borderRadius: 12,
+              cursor: "pointer",
+              fontSize: 13.5,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              background: on ? t.primarySoft : t.surface,
+              border: `1px solid ${on ? t.primary : t.border}`,
+              color: on ? (t.name === "dark" ? "#C4B5FF" : t.primary) : t.textMuted,
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Aviso quando a parte 2 do painel (painel_dados_extra.sql) ainda não foi rodada ou falhou.
+function ExtraNotice({ extra }) {
+  const t = useT();
+  if (extra.status === "loading") return <div style={{ fontSize: 13, color: t.textMuted, padding: "6px 2px" }}>Carregando…</div>;
+  return (
+    <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16, fontSize: 13.5, lineHeight: 1.5, color: t.textMuted }}>
+      {extra.status === "missing"
+        ? "Esta lista precisa do SQL painel_dados_extra.sql rodado no Supabase. Rode-o e toque em Atualizar."
+        : "Não foi possível carregar esta lista agora. Toque em Atualizar para tentar de novo."}
+    </div>
+  );
+}
+
+// Lista de pessoas com um número à direita. rows = [{ nome, email, n }]; right(row) devolve o texto do número.
+function PeopleList({ rows, right, empty = "Ainda não há dados." }) {
+  const t = useT();
+  if (!rows.length) return <div style={{ fontSize: 13, color: t.textMuted, padding: "4px 2px" }}>{empty}</div>;
+  return (
+    <ol style={{ listStyle: "none", margin: 0, padding: 0, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, overflow: "hidden" }}>
+      {rows.map((r, i) => (
+        <li key={`${r.email}-${i}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderTop: i ? `1px solid ${t.border}` : "none" }}>
+          <span style={{ width: 22, fontSize: 13, fontWeight: 800, color: i < 3 ? t.amber : t.textMuted, fontVariantNumeric: "tabular-nums", textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.nome || "(sem nome)"}</div>
+            <div style={{ fontSize: 11.5, color: t.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.email}</div>
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontVariantNumeric: "tabular-nums", textAlign: "right", flexShrink: 0 }}>{right(r)}</div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+// Questões do ranking de erros/acertos. Tocar abre a questão sozinha, numa sessão temporária.
+function QuestionRank({ rows, kind, onOpen, busyId }) {
+  const t = useT();
+  if (!rows.length) return <div style={{ fontSize: 13, color: t.textMuted, padding: "4px 2px" }}>Ainda não há respostas suficientes.</div>;
+  const erros = kind === "erros";
+  const color = erros ? t.red : t.green;
+  return (
+    <ol style={{ listStyle: "none", margin: 0, padding: 0, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, overflow: "hidden" }}>
+      {rows.map((r, i) => {
+        const main = erros ? r.erros : r.acertos;
+        const share = r.total ? Math.round((main / r.total) * 100) : 0;
+        return (
+          <li key={r.id} style={{ borderTop: i ? `1px solid ${t.border}` : "none" }}>
+            <button
+              type="button"
+              onClick={() => onOpen(r.id)}
+              disabled={busyId === r.id}
+              style={{ display: "flex", alignItems: "flex-start", gap: 12, width: "100%", padding: "12px 14px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left", color: t.text, opacity: busyId === r.id ? 0.6 : 1 }}
+            >
+              <span style={{ width: 22, fontSize: 13, fontWeight: 800, color: i < 3 ? t.amber : t.textMuted, fontVariantNumeric: "tabular-nums", textAlign: "center", flexShrink: 0, paddingTop: 1 }}>{i + 1}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 11.5, color: t.textMuted, fontWeight: 600 }}>
+                  {[r.tema, r.instituicao, r.ano].filter(Boolean).join(" · ")}
+                </span>
+                <span style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 13.5, lineHeight: 1.4, marginTop: 2 }}>{r.enunciado || "(sem enunciado)"}</span>
+              </span>
+              <span style={{ textAlign: "right", flexShrink: 0 }}>
+                <span style={{ display: "block", fontSize: 16, fontWeight: 800, color, fontVariantNumeric: "tabular-nums" }}>{nf(main)}</span>
+                <span style={{ display: "block", fontSize: 11, color: t.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                  {share}% de {nf(r.total)}
+                </span>
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// Tela de números do app, só para a conta administradora (botão em Minha Conta).
+// tab/onTab: a aba aberta fica guardada fora da tela, para voltar nela depois de abrir uma questão.
+// onOpenQuestion(id): abre a questão numa sessão temporária (não entra no histórico de sessões).
+export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpenQuestion }) {
+  const t = useT();
+  const [ownTab, setOwnTab] = useState("usuarios");
+  const tab = tabProp || ownTab;
+  const setTab = onTab || setOwnTab;
   const [state, setState] = useState({ status: "loading", data: null, error: "" });
+  // Parte 2 do painel (e-mails, rankings). Separada para o painel continuar abrindo mesmo sem o SQL novo.
+  const [extra, setExtra] = useState({ status: "loading", data: null });
+  const [busyQuestion, setBusyQuestion] = useState(null);
+  const [openError, setOpenError] = useState("");
 
   const load = useCallback(async () => {
-    try {
-      const data = await fetchAdminStats(supabase);
-      setState({ status: "ok", data, error: "" });
-    } catch (err) {
-      setState({ status: "error", data: null, error: err.message });
-    }
+    const [main, more] = await Promise.allSettled([fetchAdminStats(supabase), fetchAdminExtra(supabase)]);
+    setState(main.status === "fulfilled" ? { status: "ok", data: main.value, error: "" } : { status: "error", data: null, error: main.reason?.message || "Erro." });
+    if (more.status === "rejected") setExtra({ status: "error", data: null });
+    else setExtra(more.value ? { status: "ok", data: more.value } : { status: "missing", data: null });
   }, [supabase]);
 
   useEffect(() => {
     let cancelled = false;
-    fetchAdminStats(supabase).then(
-      (data) => !cancelled && setState({ status: "ok", data, error: "" }),
-      (err) => !cancelled && setState({ status: "error", data: null, error: err.message })
-    );
+    Promise.allSettled([fetchAdminStats(supabase), fetchAdminExtra(supabase)]).then(([main, more]) => {
+      if (cancelled) return;
+      setState(main.status === "fulfilled" ? { status: "ok", data: main.value, error: "" } : { status: "error", data: null, error: main.reason?.message || "Erro." });
+      if (more.status === "rejected") setExtra({ status: "error", data: null });
+      else setExtra(more.value ? { status: "ok", data: more.value } : { status: "missing", data: null });
+    });
     return () => {
       cancelled = true;
     };
@@ -170,8 +306,22 @@ export function AdminStatsScreen({ supabase, onBack }) {
 
   const refresh = () => {
     setState((s) => ({ ...s, status: "loading" }));
+    setExtra((e) => ({ ...e, status: e.data ? "ok" : "loading" }));
     load();
   };
+
+  const openQuestion = async (id) => {
+    if (!onOpenQuestion || busyQuestion) return;
+    setOpenError("");
+    setBusyQuestion(id);
+    try {
+      await onOpenQuestion(id);
+    } catch (err) {
+      setOpenError(err.message || "Não foi possível abrir a questão.");
+      setBusyQuestion(null);
+    }
+  };
+  const ex = extra.data;
 
   const blue = "#3B82F6";
   const purple = t.primary;
@@ -207,6 +357,10 @@ export function AdminStatsScreen({ supabase, onBack }) {
               </button>
             </div>
 
+            <TabBar tab={tab} onTab={setTab} />
+
+            {tab === "usuarios" && (
+              <>
             <Section title="Usuários">
               <Grid>
                 <Kpi label="Total de usuários" value={nf(d.usuarios.total)} />
@@ -217,6 +371,22 @@ export function AdminStatsScreen({ supabase, onBack }) {
               <ChartCard title="Novos usuários por dia (14 dias)">
                 <BarChart data={d.series.novos} color={t.green} label="Novos usuários por dia" />
               </ChartCard>
+            </Section>
+
+            <Section title="Últimos 5 usuários cadastrados">
+              {ex ? (
+                <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, overflow: "hidden" }}>
+                  {ex.ultimos_usuarios.length === 0 && <div style={{ padding: 14, fontSize: 13, color: t.textMuted }}>Nenhum usuário ainda.</div>}
+                  {ex.ultimos_usuarios.map((u, i) => (
+                    <div key={`${u.email}-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "11px 14px", borderTop: i ? `1px solid ${t.border}` : "none" }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: t.text, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email || "(sem e-mail)"}</span>
+                      <span style={{ fontSize: 11.5, color: t.textMuted, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{dataHora(u.criado_em)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ExtraNotice extra={extra} />
+              )}
             </Section>
 
             <Section title="Usuários ativos">
@@ -238,7 +408,11 @@ export function AdminStatsScreen({ supabase, onBack }) {
                 <BarChart data={d.series.ativos} color={purple} label="Usuários ativos por dia" />
               </ChartCard>
             </Section>
+              </>
+            )}
 
+            {tab === "assinantes" && (
+              <>
             <Section title="Assinantes">
               {(() => {
                 const a = d.assinaturas;
@@ -266,7 +440,11 @@ export function AdminStatsScreen({ supabase, onBack }) {
                 );
               })()}
             </Section>
+              </>
+            )}
 
+            {tab === "questoes" && (
+              <>
             <Section title="Questões">
               {(() => {
                 const q = d.questoes;
@@ -296,6 +474,24 @@ export function AdminStatsScreen({ supabase, onBack }) {
               })()}
             </Section>
 
+            <Section title="Questões com mais erros">
+              {ex ? <QuestionRank rows={ex.mais_erradas} kind="erros" onOpen={openQuestion} busyId={busyQuestion} /> : <ExtraNotice extra={extra} />}
+            </Section>
+
+            <Section title="Questões com mais acertos">
+              {ex ? <QuestionRank rows={ex.mais_acertadas} kind="acertos" onOpen={openQuestion} busyId={busyQuestion} /> : <ExtraNotice extra={extra} />}
+              {ex && (
+                <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+                  Contam as respostas avulsas e as de desafios, de todos os usuários. Toque numa questão para abri-la sozinha; essa sessão é temporária e não entra no histórico de sessões.
+                </div>
+              )}
+              {openError && <div style={{ fontSize: 12.5, color: t.red, marginTop: 8 }}>{openError}</div>}
+            </Section>
+              </>
+            )}
+
+            {tab === "flashcards" && (
+              <>
             <Section title="Flashcards">
               <Grid>
                 <Kpi label="Vistos hoje" value={nf(d.flashcards.hoje)} color={t.amber} />
@@ -305,7 +501,11 @@ export function AdminStatsScreen({ supabase, onBack }) {
                 <BarChart data={d.series.flashcards} color={t.amber} label="Flashcards vistos por dia" />
               </ChartCard>
             </Section>
+              </>
+            )}
 
+            {tab === "desafios" && (
+              <>
             <Section title="Desafios">
               <Grid>
                 <Kpi label="Criados hoje" value={nf(d.desafios.hoje)} color="#9B6BFF" />
@@ -318,6 +518,23 @@ export function AdminStatsScreen({ supabase, onBack }) {
               </ChartCard>
             </Section>
 
+            <Section title="Quem mais lançou desafios">
+              {ex ? <PeopleList rows={ex.desafios_lancados} right={(r) => nf(r.n)} /> : <ExtraNotice extra={extra} />}
+            </Section>
+
+            <Section title="Quem mais ganhou desafios">
+              {ex ? <PeopleList rows={ex.desafios_ganhos} right={(r) => nf(r.n)} empty="Ainda não há desafios concluídos com vencedor." /> : <ExtraNotice extra={extra} />}
+              {ex && (
+                <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+                  Vitória = desafio concluído em que a pessoa fez mais acertos que todos os outros (empate no topo não conta). O Bot Braunwald fica fora das listas.
+                </div>
+              )}
+            </Section>
+              </>
+            )}
+
+            {tab === "missao" && (
+              <>
             <Section title="Missão diária">
               {(() => {
                 const m = d.missao;
@@ -356,6 +573,31 @@ export function AdminStatsScreen({ supabase, onBack }) {
                 );
               })()}
             </Section>
+
+            <Section title="Maiores sequências atuais">
+              {ex ? <PeopleList rows={ex.sequencias_atuais} right={(r) => `${nf(r.n)} ${r.n === 1 ? "dia" : "dias"}`} empty="Ninguém com sequência ativa agora." /> : <ExtraNotice extra={extra} />}
+              {ex && (
+                <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>Sequência ativa = concluiu a missão hoje ou ontem.</div>
+              )}
+            </Section>
+
+            <Section title="Maiores sequências de todos os tempos">
+              {ex ? (
+                <PeopleList
+                  rows={ex.sequencias_gerais}
+                  right={(r) => (
+                    <>
+                      {nf(r.n)} {r.n === 1 ? "dia" : "dias"}
+                      <span style={{ display: "block", fontSize: 11, fontWeight: 600, color: t.textMuted }}>{r.atual > 0 ? `atual: ${nf(r.atual)}` : "sem sequência agora"}</span>
+                    </>
+                  )}
+                />
+              ) : (
+                <ExtraNotice extra={extra} />
+              )}
+            </Section>
+              </>
+            )}
           </>
         )}
       </div>

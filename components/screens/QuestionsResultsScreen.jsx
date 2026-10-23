@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { Tag, PrimaryButton } from "@/components/ui/Primitives";
+import { ZoomableImage } from "@/components/ui/ImageZoom";
 
 export function QuestionsResultsScreen({ session, questionsById, optionsByQuestion, filters, onNavigate }) {
   const t = useT();
@@ -53,10 +54,11 @@ export function QuestionsResultsScreen({ session, questionsById, optionsByQuesti
                     </div>
                     <div style={{ fontWeight: 600, fontSize: 14.5, color: t.text, whiteSpace: "pre-line", marginBottom: q.imagem_url ? 8 : 10 }}>{q.enunciado}</div>
                     {q.imagem_url && (
-                      <img
+                      <ZoomableImage
                         src={q.imagem_url}
                         alt="Imagem da questão"
-                        style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: 10, border: `1px solid ${t.border}` }}
+                        wrapStyle={{ marginBottom: 10 }}
+                        style={{ display: "block", maxWidth: "100%", borderRadius: 10, border: `1px solid ${t.border}` }}
                       />
                     )}
                     {options.map((op) => {

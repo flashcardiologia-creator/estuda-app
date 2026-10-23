@@ -98,7 +98,7 @@ export function SwipeBack({ rootId }) {
       if (e.touches.length !== 1) return;
       const t = e.touches[0];
       if (t.clientX > EDGE) return;
-      if (document.querySelector(".modal-overlay")) return;
+      if (document.querySelector(".modal-overlay, [data-lightbox]")) return;
       if (!findBackButton()) return;
       drag = { x0: t.clientX, y0: t.clientY, dx: 0, engaged: false, last: null };
       // O ouvinte de movimento só existe durante um toque que começou na borda, para não atrapalhar a rolagem.

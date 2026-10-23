@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Star, Check, X, ChevronDown, ChevronUp, Ban } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { Tag, PrimaryButton } from "@/components/ui/Primitives";
+import { ZoomableImage } from "@/components/ui/ImageZoom";
 
 const FONT_SIZES = { sm: 14, md: 16.5, lg: 19 };
 
@@ -57,10 +58,11 @@ export function QuestionCard({
       <div style={{ fontSize, fontWeight: 600, color: t.text, lineHeight: 1.5, whiteSpace: "pre-line", marginBottom: q.imagem_url ? 14 : 20 }}>{q.enunciado}</div>
 
       {q.imagem_url && (
-        <img
+        <ZoomableImage
           src={q.imagem_url}
           alt="Imagem da questão"
-          style={{ display: "block", maxWidth: "100%", borderRadius: 12, marginBottom: 20, border: `1px solid ${t.border}` }}
+          wrapStyle={{ marginBottom: 20 }}
+          style={{ display: "block", maxWidth: "100%", borderRadius: 12, border: `1px solid ${t.border}` }}
         />
       )}
 

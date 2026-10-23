@@ -158,6 +158,10 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   const sessionRecordRef = useRef(null);
   // Para onde o botão Voltar das Estatísticas leva (Minha Conta, ou Questões quando vem de "Desempenho").
   const [statsReturn, setStatsReturn] = useState("account");
+  // Painel de dados: aba aberta (fica guardada para voltar nela) e se a sessão de questão em andamento é
+  // a temporária aberta pelo painel (uma questão só, sem histórico e sem "Continuar sessão").
+  const [adminTab, setAdminTab] = useState("usuarios");
+  const [tempSession, setTempSession] = useState(false);
 
   const [flashSession, setFlashSession] = useState(null);
 
@@ -565,7 +569,34 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
     setScreen("questions-session");
   };
 
+  // Abre uma questão sozinha, vinda do painel de dados. Não cria registro no histórico de sessões, não
+  // mexe na sessão guardada ("Continuar") e, ao sair, volta para o painel.
+  const openTempQuestion = async (qid) => {
+    const base = allQuestions.find((q) => q.id === qid);
+    if (!base) throw new Error("Essa questão não está mais disponível.");
+    if (textsBgRef.current) await textsBgRef.current;
+    await hydrateTexts([qid]);
+    const q = textsRef.current[qid] ? { ...base, ...textsRef.current[qid] } : base;
+    const options = await fetchOptionsForQuestions(supabase, [qid]);
+    sessionRecordRef.current = null;
+    setSessionQuestionsById({ [qid]: q });
+    setSessionOptionsByQuestion(options);
+    setSession({ ids: [qid], index: 0, selected: {}, answers: {}, prefilled: {}, struck: {}, startedAt: null, durationMs: null });
+    setTempSession(true);
+    setScreen("questions-session");
+  };
+
+  const leaveTempSession = () => {
+    setSession(null);
+    setTempSession(false);
+    setScreen("admin-stats");
+  };
+
   const backFromSession = () => {
+    if (tempSession) {
+      leaveTempSession();
+      return;
+    }
     persistSession(session);
     setSavedSession({
       session,
@@ -583,6 +614,10 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   };
 
   const finishQuestions = async () => {
+    if (tempSession) {
+      leaveTempSession();
+      return;
+    }
     if (filters.modoProva) {
       const withKey = await fetchOptionsWithAnswerKey(supabase, session.ids);
       setSessionOptionsByQuestion(withKey);
@@ -882,7 +917,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       {screen === "ranking" && <RankingScreen supabase={supabase} userId={userId} onNavigate={setScreen} friends={friends} />}
 
       {screen === "admin-stats" && ADMIN_DASHBOARD_EMAILS.includes((userEmail || "").toLowerCase()) && (
-        <AdminStatsScreen supabase={supabase} onBack={() => setScreen("account")} />
+        <AdminStatsScreen supabase={supabase} onBack={() => setScreen("account")} tab={adminTab} onTab={setAdminTab} onOpenQuestion={openTempQuestion} />
       )}
 
       {screen === "stats" && (
@@ -925,7 +960,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
           setSession={setSession}
           questionsById={sessionQuestionsById}
           optionsByQuestion={sessionOptionsByQuestion}
-          filters={filters}
+          filters={tempSession ? { ...filters, modoProva: false, cronometro: false } : filters}
           favorites={favorites}
           onToggleFav={toggleFav}
           onAnswer={answerQuestion}

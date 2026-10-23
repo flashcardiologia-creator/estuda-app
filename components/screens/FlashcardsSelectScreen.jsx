@@ -86,6 +86,9 @@ export function FlashcardsSelectScreen({
         </ExpandBox>
 
         <ExpandBox title="Personalizado" icon={<UserCog size={17} color={t.primary} />} open={open.personal} onToggle={() => toggle("personal")}>
+          <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, lineHeight: 1.5 }}>
+            Os flashcards que você cria e os que manda para a lixeira valem só para a sua conta.
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <PrimaryButton full onClick={() => setShowCreate(true)}>
               <Plus size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
@@ -95,9 +98,6 @@ export function FlashcardsSelectScreen({
               <Trash2 size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
               Lixeira
             </PrimaryButton>
-          </div>
-          <div style={{ fontSize: 12, color: t.textMuted, marginTop: 10, lineHeight: 1.5 }}>
-            Os flashcards que você cria e os que manda para a lixeira valem só para a sua conta.
           </div>
         </ExpandBox>
 

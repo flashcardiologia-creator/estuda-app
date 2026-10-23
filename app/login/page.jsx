@@ -141,9 +141,9 @@ function LoginForm() {
   return (
     <div id="swipe-root" className="login-screen" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: 20, boxSizing: "border-box" }}>
       <SwipeBack rootId="swipe-root" />
-      {showInstall && (
-        // Mesmo botão Voltar das outras telas, no alto à esquerda.
-        <div style={{ width: "100%", maxWidth: 440 }}>
+      {/* Na tela "Baixar aplicativo" o botão Voltar (o mesmo das outras telas) fica no alto à esquerda, na linha do logo. */}
+      <div style={showInstall ? { width: "100%", maxWidth: 440, display: "flex", alignItems: "center", gap: 12 } : undefined}>
+        {showInstall && (
           <button
             type="button"
             onClick={() => setShowInstall(false)}
@@ -151,6 +151,7 @@ function LoginForm() {
               display: "flex",
               alignItems: "center",
               gap: 4,
+              flexShrink: 0,
               background: "transparent",
               border: `1px solid ${t.border}`,
               borderRadius: 12,
@@ -163,11 +164,11 @@ function LoginForm() {
           >
             <ChevronLeft size={16} /> Voltar
           </button>
+        )}
+        <div style={{ display: "flex", alignItems: "center", gap: showInstall ? 8 : 12, ...(showInstall ? { flex: 1, justifyContent: "center" } : {}) }}>
+          <Flame size={showInstall ? 30 : 38} color={t.amber} fill={t.amber} />
+          <h1 style={{ fontSize: showInstall ? 24 : 30, fontWeight: 700, color: t.text, margin: 0 }}>FlashCardio</h1>
         </div>
-      )}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Flame size={38} color={t.amber} fill={t.amber} />
-        <h1 style={{ fontSize: 30, fontWeight: 700, color: t.text, margin: 0 }}>FlashCardio</h1>
       </div>
       {showInstall ? (
         <InstallGuide onBack={() => setShowInstall(false)} />
