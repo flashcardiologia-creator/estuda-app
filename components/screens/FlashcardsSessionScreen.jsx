@@ -129,7 +129,7 @@ export function FlashcardsSessionScreen({
     }
   };
 
-  const answerBg = t.name === "light" ? "linear-gradient(135deg, #A9DDBD 0%, #C7C7CE 100%)" : "rgba(19,46,36,0.5)";
+  const answerBg = t.name === "light" ? "rgba(34,197,94,0.16)" : "rgba(19,46,36,0.5)";
   const answerBorder = t.name === "light" ? "#16A34A" : "#2FB380";
 
   return (

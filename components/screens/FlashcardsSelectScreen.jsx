@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, Hash, Plus, RotateCw, Settings, Shuffle, Trash2, UserCog } from "lucide-react";
+import { BookOpen, Hash, Plus, RotateCw, Settings, Trash2, UserCog } from "lucide-react";
 import { CreateFlashcardModal, TrashModal } from "@/components/screens/FlashcardPersonalModals";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, Chip, FontSizePicker, Toggle, PrimaryButton, DropdownList, DROPDOWN_ALL } from "@/components/ui/Primitives";
 
-const QTD_OPTIONS = [5, 10, 15, 20, 25, 50, "Todos"];
+const QTD_OPTIONS = [5, 10, 15, 20, 25, 50, 100, "Todos"];
 
 export function FlashcardsSelectScreen({
   themeCounts,
@@ -57,10 +57,6 @@ export function FlashcardsSelectScreen({
           </div>
         </ExpandBox>
 
-        <ExpandBox title="Aleatorizar" icon={<Shuffle size={17} color={t.primary} />} open={open.aleatorio} onToggle={() => toggle("aleatorio")}>
-          <Toggle checked={aleatorio} onChange={setAleatorio} sub="Embaralha os cartões antes de iniciar" />
-        </ExpandBox>
-
         <ExpandBox title="Configurações" icon={<Settings size={17} color={t.primary} />} open={open.config} onToggle={() => toggle("config")}>
           <Toggle
             checked={favoritasOnly}
@@ -68,6 +64,7 @@ export function FlashcardsSelectScreen({
             label="Somente flashcards favoritados"
             sub={`${totalFavorites} marcados`}
           />
+          <Toggle checked={aleatorio} onChange={setAleatorio} label="Aleatorizar" sub="Embaralha os cartões antes de iniciar" />
           <FontSizePicker value={tamanho} onChange={onSetTamanho} />
         </ExpandBox>
 

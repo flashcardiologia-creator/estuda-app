@@ -99,8 +99,9 @@ function TimeLeftTag({ expiresAt }) {
   );
 }
 
-// Botão roxo enxuto da tela de Desafios (o texto visível é curto; o rótulo completo vai para leitores de tela).
-function CompactButton({ children, onClick, disabled, label, padding, fontSize, radius }) {
+// Botão enxuto da tela de Desafios, no estilo da aba selecionada (borda e letra roxas, fundo roxo translúcido).
+// O texto visível é curto; o rótulo completo vai para leitores de tela.
+function CompactButton({ children, onClick, disabled, label, padding, fontSize, radius, full = false, height }) {
   const t = useT();
   return (
     <button
@@ -110,13 +111,13 @@ function CompactButton({ children, onClick, disabled, label, padding, fontSize, 
       aria-label={label}
       title={label}
       style={{
-        fontWeight: 600,
+        fontWeight: 700,
         fontSize,
         padding,
         borderRadius: radius,
-        background: disabled ? t.border : t.primary,
-        color: "#fff",
-        border: "none",
+        background: disabled ? t.border : t.primarySoft,
+        color: disabled ? t.textMuted : t.name === "dark" ? "#C4B5FF" : t.primary,
+        border: `1px solid ${disabled ? t.border : t.primary}`,
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.6 : 1,
         display: "inline-flex",
@@ -124,6 +125,8 @@ function CompactButton({ children, onClick, disabled, label, padding, fontSize, 
         justifyContent: "center",
         whiteSpace: "nowrap",
         flexShrink: 0,
+        ...(full ? { width: "100%" } : {}),
+        ...(height ? { height } : {}),
       }}
     >
       {children}
@@ -220,8 +223,8 @@ function PendingCard({ c, onRespond }) {
           <Clock size={13} /> Expira em {formatTimeLeft(new Date(c.expires_at).getTime() - nowMs())}
         </div>
       ) : (
-        <div style={{ marginTop: 14, display: "flex", justifyContent: "center" }}>
-          <CompactButton onClick={onRespond} label={c.myAnswered > 0 ? "Continuar desafio" : "Responder desafio"} padding="9px 30px" fontSize={13} radius={12}>
+        <div style={{ marginTop: 14 }}>
+          <CompactButton onClick={onRespond} label={c.myAnswered > 0 ? "Continuar desafio" : "Responder desafio"} padding="0 16px" height={42} fontSize={14.5} radius={12} full>
             {c.myAnswered > 0 ? "Continuar" : "Responder"}
           </CompactButton>
         </div>
