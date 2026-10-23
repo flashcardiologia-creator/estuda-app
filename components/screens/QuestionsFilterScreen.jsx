@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Hash, ChevronLeft, ChevronRight, Clock, Award, History, Settings, Trash2, Lock, RotateCw } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList } from "@/components/ui/Primitives";
+import { ScreenHeader, ExpandBox, Chip, FontSizePicker, Toggle, PrimaryButton, DropdownList } from "@/components/ui/Primitives";
 import { applyQuestionFilters, deriveFilterOptions, parseInstituicao } from "@/lib/data/questions";
 import { MAX_SESSIONS } from "@/lib/data/sessions";
 
@@ -228,16 +228,7 @@ export function QuestionsFilterScreen({
               />
             </div>
           )}
-          <div style={{ marginTop: 14, display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px 12px" }}>
-            <span style={{ fontSize: 13, color: t.text, fontWeight: 600, whiteSpace: "nowrap" }}>Tamanho da letra</span>
-            <div style={{ display: "flex", gap: 8 }}>
-              {[["sm", "Pequena"], ["md", "Média"], ["lg", "Grande"]].map(([k, l]) => (
-                <Chip key={k} active={filters.fontSize === k} onClick={() => onSetFontSize(k)}>
-                  {l}
-                </Chip>
-              ))}
-            </div>
-          </div>
+          <FontSizePicker value={filters.fontSize} onChange={onSetFontSize} />
         </ExpandBox>
 
         <ExpandBox title="Modos" icon={<Lock size={17} color={t.primary} />} open={open.provas} onToggle={() => toggle("provas")}>

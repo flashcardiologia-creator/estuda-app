@@ -651,7 +651,10 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       const withKey = await fetchOptionsWithAnswerKey(supabase, session.ids);
       setSessionOptionsByQuestion(withKey);
     }
-    persistSession(session, true);
+    // Sessão concluída não fica em "Sessões antigas": o registro é apagado ao finalizar.
+    const finishedId = sessionRecordRef.current;
+    sessionRecordRef.current = null;
+    if (finishedId) deleteQuestionSession(supabase, finishedId).catch(() => {});
     setSavedSession(null);
     setScreen("questions-results");
   };

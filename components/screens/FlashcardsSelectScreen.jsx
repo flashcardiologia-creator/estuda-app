@@ -4,14 +4,9 @@ import { useMemo, useState } from "react";
 import { BookOpen, Hash, Plus, RotateCw, Settings, Shuffle, Trash2, UserCog } from "lucide-react";
 import { CreateFlashcardModal, TrashModal } from "@/components/screens/FlashcardPersonalModals";
 import { useT } from "@/components/theme/ThemeProvider";
-import { ScreenHeader, ExpandBox, Chip, Toggle, PrimaryButton, DropdownList, DROPDOWN_ALL } from "@/components/ui/Primitives";
+import { ScreenHeader, ExpandBox, Chip, FontSizePicker, Toggle, PrimaryButton, DropdownList, DROPDOWN_ALL } from "@/components/ui/Primitives";
 
 const QTD_OPTIONS = [5, 10, 15, 20, 25, 50, "Todos"];
-const TAMANHO_OPTIONS = [
-  { value: "sm", label: "Pequena" },
-  { value: "md", label: "Média" },
-  { value: "lg", label: "Grande" },
-];
 
 export function FlashcardsSelectScreen({
   themeCounts,
@@ -73,16 +68,7 @@ export function FlashcardsSelectScreen({
             label="Somente flashcards favoritados"
             sub={`${totalFavorites} marcados`}
           />
-          <div style={{ marginTop: 14, display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px 12px" }}>
-            <span style={{ fontSize: 13, color: t.text, fontWeight: 600, whiteSpace: "nowrap" }}>Tamanho da letra</span>
-            <div style={{ display: "flex", gap: 8 }}>
-              {TAMANHO_OPTIONS.map((o) => (
-                <Chip key={o.value} active={tamanho === o.value} onClick={() => onSetTamanho(o.value)}>
-                  {o.label}
-                </Chip>
-              ))}
-            </div>
-          </div>
+          <FontSizePicker value={tamanho} onChange={onSetTamanho} />
         </ExpandBox>
 
         <ExpandBox title="Personalizado" icon={<UserCog size={17} color={t.primary} />} open={open.personal} onToggle={() => toggle("personal")}>

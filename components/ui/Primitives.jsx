@@ -34,6 +34,59 @@ export function Chip({ active, onClick, children, disabled, style }) {
   );
 }
 
+// Escolha do tamanho da letra (questões e flashcards): frase à esquerda e três balões P, M e G na mesma linha.
+const FONT_SIZE_BUBBLES = [
+  { value: "sm", letter: "P", label: "Letra pequena", size: 13 },
+  { value: "md", letter: "M", label: "Letra média", size: 16 },
+  { value: "lg", letter: "G", label: "Letra grande", size: 19 },
+];
+
+export function FontSizePicker({ value, onChange }) {
+  const t = useT();
+  return (
+    <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <span style={{ fontSize: 13, color: t.text, fontWeight: 600, whiteSpace: "nowrap" }}>Tamanho da letra</span>
+      <div role="radiogroup" aria-label="Tamanho da letra" style={{ display: "flex", gap: 8 }}>
+        {FONT_SIZE_BUBBLES.map((o) => {
+          const on = value === o.value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              aria-label={o.label}
+              title={o.label}
+              onClick={() => onChange(o.value)}
+              style={{
+                fontFamily: FONT_BODY,
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+                fontSize: o.size,
+                fontWeight: 700,
+                lineHeight: 1,
+                border: `1.5px solid ${on ? t.primary : t.border}`,
+                background: on ? t.primarySoft : "transparent",
+                color: on ? t.primary : t.textMuted,
+                cursor: "pointer",
+                transition: "all .15s ease",
+                flexShrink: 0,
+              }}
+            >
+              {o.letter}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function ExpandBox({ title, icon, open, onToggle, children, badge }) {
   const t = useT();
   return (

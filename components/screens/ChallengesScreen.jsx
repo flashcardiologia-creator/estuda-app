@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Clock, Plus, Trophy } from "lucide-react";
+import { Check, Clock, Swords, Trophy } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, PrimaryButton, Tag, EmptyState } from "@/components/ui/Primitives";
 import { NewChallengeModal } from "@/components/screens/NewChallengeModal";
@@ -380,8 +380,8 @@ export function ChallengesScreen({
             disabled={dailyCount >= dailyLimit || waitingDayTema}
             onClick={() => (friends.length === 0 ? setShowNoFriends(true) : setShowNew(true))}
           >
-            <Plus size={14} style={{ marginRight: 5, verticalAlign: -2 }} />
-            Novo Desafio
+            <Swords size={15} style={{ marginRight: 6, verticalAlign: -3 }} />
+            Desafiar
           </PrimaryButton>
         </div>
 
