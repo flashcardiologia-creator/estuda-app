@@ -33,7 +33,8 @@ export function QuestionCard({
   // essa preferência continua valendo ao responder as próximas questões.
   const [commentOpen, setCommentOpen] = useState(true);
   const struck = struckLetras || [];
-  const annulled = isAnnulled(answerResult?.comentario || q.comentario);
+  // Anulada = todas as alternativas corretas no banco (answerResult.annulled); o texto do comentário fica de reserva.
+  const annulled = !!answerResult?.annulled || isAnnulled(answerResult?.comentario || q.comentario);
 
   useEffect(() => {
     setShowFull(false);

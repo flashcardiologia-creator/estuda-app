@@ -64,7 +64,7 @@ export function QuestionsResultsScreen({ session, questionsById, optionsByQuesti
                     )}
                     {options.map((op) => {
                       const isSel = a?.selected === op.letra;
-                      const isCorrect = op.correta === true || (a && (isAnnulled(q.comentario) || op.letra === a.correct_option));
+                      const isCorrect = op.correta === true || (a && (a.annulled || isAnnulled(q.comentario) || op.letra === a.correct_option));
                       let color = t.textMuted;
                       if (isCorrect) color = t.green;
                       else if (isSel) color = t.red;

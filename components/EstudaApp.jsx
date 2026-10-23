@@ -56,6 +56,7 @@ import {
   deriveFilterOptions,
   fetchOptionsForQuestions,
   fetchOptionsWithAnswerKey,
+  optionsAreAnnulled,
   fetchAttemptHistory,
   recordAnswer,
   fetchFavoriteIds,
@@ -499,7 +500,12 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
           const lastAttempt = hist[id][hist[id].length - 1];
           if (correctOption && lastAttempt) {
             initialSelected[id] = lastAttempt.selected;
-            initialAnswers[id] = { selected: lastAttempt.selected, correct: lastAttempt.correct, correct_option: correctOption };
+            initialAnswers[id] = {
+              selected: lastAttempt.selected,
+              correct: lastAttempt.correct,
+              correct_option: correctOption,
+              annulled: optionsAreAnnulled(answerKeyOptions[id]),
+            };
             initialPrefilled[id] = true;
           }
         }

@@ -6,7 +6,7 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
 import { QuestionCard } from "@/components/screens/QuestionCard";
 import { fetchChallengeQuestions, fetchMyChallengeAnswers, recordChallengeAnswer } from "@/lib/data/challenges";
-import { fetchOptionsForQuestions, fetchOptionsWithAnswerKey } from "@/lib/data/questions";
+import { fetchOptionsForQuestions, fetchOptionsWithAnswerKey, optionsAreAnnulled } from "@/lib/data/questions";
 
 export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onCancel, fontSize }) {
   const t = useT();
@@ -40,7 +40,10 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
       const answered = Object.fromEntries(
         myAnswers.map((a) => {
           const correctOption = answerKeyOptions[a.question_id]?.find((o) => o.correta)?.letra || null;
-          return [a.question_id, { question_id: a.question_id, selected_option: a.selected_option, correct: a.correct, correct_option: correctOption }];
+          return [
+            a.question_id,
+            { question_id: a.question_id, selected_option: a.selected_option, correct: a.correct, correct_option: correctOption, annulled: optionsAreAnnulled(answerKeyOptions[a.question_id]) },
+          ];
         })
       );
       setQuestions(qs);
@@ -72,7 +75,7 @@ export function ChallengeAnswerFlow({ supabase, userId, challenge, onFinish, onC
       const result = await recordChallengeAnswer(supabase, challenge.id, q.id, selected);
       setAnsweredMap((m) => ({
         ...m,
-        [q.id]: { question_id: q.id, selected_option: selected, correct: result.correct, correct_option: result.correct_option },
+        [q.id]: { question_id: q.id, selected_option: selected, correct: result.correct, correct_option: result.correct_option, annulled: result.annulled },
       }));
       setRevealed(result);
     } finally {
