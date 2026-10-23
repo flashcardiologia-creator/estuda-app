@@ -25,8 +25,8 @@ export function ReportButton({ onClick }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        width: 34,
-        height: 34,
+        width: 28,
+        height: 28,
         borderRadius: "50%",
         background: "transparent",
         border: `1px solid ${t.border}`,
@@ -37,7 +37,7 @@ export function ReportButton({ onClick }) {
       }}
     >
       {/* "?" grande dentro do círculo do botão (antes era o ícone HelpCircle pequeno, que repetia o círculo). */}
-      <span aria-hidden="true" style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, marginTop: -1 }}>
+      <span aria-hidden="true" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1, marginTop: -1 }}>
         ?
       </span>
     </button>

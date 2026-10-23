@@ -36,9 +36,9 @@ export function Chip({ active, onClick, children, disabled, style }) {
 
 // Escolha do tamanho da letra (questões e flashcards): frase à esquerda e três balões P, M e G na mesma linha.
 const FONT_SIZE_BUBBLES = [
-  { value: "sm", letter: "P", label: "Letra pequena", size: 12 },
-  { value: "md", letter: "M", label: "Letra média", size: 14.5 },
-  { value: "lg", letter: "G", label: "Letra grande", size: 17 },
+  { value: "sm", letter: "P", label: "Letra pequena", size: 11.5 },
+  { value: "md", letter: "M", label: "Letra média", size: 13.5 },
+  { value: "lg", letter: "G", label: "Letra grande", size: 15.5 },
 ];
 
 export function FontSizePicker({ value, onChange }) {
@@ -60,8 +60,8 @@ export function FontSizePicker({ value, onChange }) {
               onClick={() => onChange(o.value)}
               style={{
                 fontFamily: FONT_BODY,
-                width: 34,
-                height: 34,
+                width: 30,
+                height: 30,
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
