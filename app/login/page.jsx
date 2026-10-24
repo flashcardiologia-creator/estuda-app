@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Flame, Eye, EyeOff, Smartphone, ChevronLeft } from "lucide-react";
 import { InstallGuide } from "@/components/screens/InstallGuide";
@@ -12,7 +12,25 @@ import { updateDisplayName } from "@/lib/data/profile";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { sendTermsAcceptance } from "@/lib/legal/client";
 import { LegalModal } from "@/components/screens/LegalModal";
-import { LoginCouponPromo, PROMO_UNTIL, markPromoSeen, promoAlreadySeen } from "@/components/screens/LoginCouponPromo";
+import { SignupCouponBanner, PROMO_UNTIL, promoDeadline } from "@/components/screens/SignupCouponBanner";
+
+// Este navegador já teve uma conta (entrou ou criou uma): a tela abre em "Entrar". Quem nunca entrou abre direto no cadastro.
+const SEEN_KEY = "fc-ja-teve-conta";
+const noopSubscribe = () => () => {};
+const hasAccountHere = () => {
+  try {
+    return window.localStorage.getItem(SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+const rememberAccount = () => {
+  try {
+    window.localStorage.setItem(SEEN_KEY, "1");
+  } catch {
+    // sem armazenamento: a tela volta a abrir no cadastro
+  }
+};
 
 export default function LoginPage() {
   return (
@@ -32,7 +50,12 @@ function LoginForm() {
   const afterLoginPath = searchParams.get("prolongar") === "1" ? "/?prolongar=1" : "/";
   const supabase = createClient();
 
-  const [mode, setMode] = useState("login");
+  // Primeira tela: cadastro, a não ser que este navegador já tenha tido conta ou a pessoa tenha vindo por um link de
+  // pagamento, de erro ou de renovação (esses pedem para entrar).
+  const knownHere = useSyncExternalStore(noopSubscribe, hasAccountHere, () => false);
+  const wantsLogin = knownHere || paymentReturn || !!searchParams.get("error") || searchParams.get("prolongar") === "1";
+  const [chosenMode, setMode] = useState(null);
+  const mode = chosenMode ?? (wantsLogin ? "login" : "signup");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,43 +82,28 @@ function LoginForm() {
     }
   }, [searchParams]);
 
-  // Anúncio do cupom #10DIASGRATIS: aparece ao abrir o site (uma vez por visita) para quem ainda não entrou. Não aparece
-  // quando a pessoa chegou por um link de redefinição de senha, de pagamento ou de renovação, nem depois da validade do cupom.
-  const [promo, setPromo] = useState(false);
+  // Cupom #10DIASGRATIS: aviso com contador no alto da tela de cadastro. O contador começa na primeira visita (fica salvo no
+  // navegador). Não aparece quando a pessoa chegou por um link de redefinição de senha, de pagamento ou de renovação,
+  // nem depois da validade do cupom, nem quando o IP de quem abriu o site já tem conta (se a consulta falhar, aparece).
+  const [promo, setPromo] = useState(null); // { deadline, rest } enquanto o aviso vale
   const skipPromo = paymentReturn || !!searchParams.get("error") || searchParams.get("prolongar") === "1";
   useEffect(() => {
-    if (skipPromo || Date.now() >= PROMO_UNTIL || promoAlreadySeen()) return undefined;
+    if (skipPromo || Date.now() >= PROMO_UNTIL) return undefined;
     let cancelled = false;
-    let timer;
-    // Se o IP de quem abriu o site já tem conta, o anúncio não aparece. Se a consulta falhar, ele aparece.
     fetch("/auth/promo", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { mostrar: true }))
       .catch(() => ({ mostrar: true }))
       .then((r) => {
-        if (cancelled) return;
-        if (r?.mostrar === false) {
-          markPromoSeen();
-          return;
-        }
-        timer = setTimeout(() => setPromo(true), 300);
+        if (cancelled || r?.mostrar === false) return;
+        const deadline = promoDeadline();
+        const rest = deadline - Date.now();
+        if (rest > 0) setPromo({ deadline, rest });
       });
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
   }, [skipPromo]);
-  const closePromo = () => {
-    markPromoSeen();
-    setPromo(false);
-  };
-  const getCoupon = () => {
-    closePromo();
-    setMode("signup");
-    setError("");
-    setInfo("");
-    setConfirmPassword("");
-    setAcceptedTerms(false);
-  };
+  const endPromo = useCallback(() => setPromo(null), []);
 
   const inputStyle = {
     width: "100%",
@@ -129,6 +137,7 @@ function LoginForm() {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        rememberAccount();
         router.push(afterLoginPath);
         router.refresh();
       } else if (mode === "signup") {
@@ -151,6 +160,7 @@ function LoginForm() {
           options: { data: { name: trimmedName } },
         });
         if (error) throw error;
+        rememberAccount();
         // Se o registro falhar, a tela de aceite após o login pede o aceite de novo.
         const accepting = data.user ? sendTermsAcceptance({ context: "signup", user: { id: data.user.id, email }, keepalive: true }) : null;
         if (data.session) {
@@ -213,7 +223,8 @@ function LoginForm() {
         <InstallGuide onBack={() => setShowInstall(false)} />
       ) : (
       <div style={{ width: "100%", maxWidth: 380, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: 30 }}>
-        {mode !== "login" && (
+        {mode === "signup" && promo && <SignupCouponBanner deadline={promo.deadline} initialRest={promo.rest} onExpire={endPromo} />}
+        {mode !== "login" && !(mode === "signup" && promo) && (
           <p style={{ fontSize: 13, color: t.textMuted, margin: "0 0 20px", textAlign: "center" }}>
             {mode === "signup" && "Crie sua conta agora"}
             {mode === "forgot" && "Informe seu e-mail para receber o link de redefinição"}
@@ -377,7 +388,6 @@ function LoginForm() {
       </div>
       )}
       {legal && <LegalModal initial={legal} onClose={() => setLegal(null)} closeLabel="Voltar ao cadastro" />}
-      {promo && !showInstall && !legal && <LoginCouponPromo onGetCoupon={getCoupon} onClose={closePromo} />}
     </div>
   );
 }
