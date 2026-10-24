@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, PrimaryButton } from "@/components/ui/Primitives";
 import { fetchAdminStats, fetchAdminExtra } from "@/lib/data/adminStats";
@@ -19,6 +19,37 @@ function Section({ title, children }) {
     <section style={{ marginTop: 22 }}>
       <h2 style={{ margin: "0 2px 10px", fontSize: 12, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: t.textMuted }}>{title}</h2>
       {children}
+    </section>
+  );
+}
+
+// Quais seções retráteis estão abertas. Fica fora do componente para valer também depois de abrir uma questão
+// e voltar ao painel (a tela é montada de novo, mas a página não recarrega).
+const openSections = {};
+
+// Seção que abre e fecha ao tocar no título. Começa fechada. count = número mostrado ao lado do título.
+function CollapsibleSection({ id, title, count, children }) {
+  const t = useT();
+  const [open, setOpen] = useState(!!openSections[id]);
+  const toggle = () => {
+    openSections[id] = !open;
+    setOpen(!open);
+  };
+  return (
+    <section style={{ marginTop: 22 }}>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", margin: 0, padding: "11px 14px", background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, cursor: "pointer", textAlign: "left", color: t.text }}
+      >
+        <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: t.textMuted }}>{title}</span>
+        {count != null && (
+          <span style={{ fontSize: 12, fontWeight: 800, color: t.primary, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{count}</span>
+        )}
+        {open ? <ChevronUp size={16} color={t.textMuted} /> : <ChevronDown size={16} color={t.textMuted} />}
+      </button>
+      {open && <div style={{ marginTop: 10 }}>{children}</div>}
     </section>
   );
 }
@@ -211,14 +242,16 @@ function ExtraNotice({ extra }) {
 }
 
 // Lista de pessoas com um número à direita. rows = [{ nome, email, n }]; right(row) devolve o texto do número.
-function PeopleList({ rows, right, empty = "Ainda não há dados." }) {
+function PeopleList({ rows, right, empty = "Ainda não há dados.", numbered = true }) {
   const t = useT();
   if (!rows.length) return <div style={{ fontSize: 13, color: t.textMuted, padding: "4px 2px" }}>{empty}</div>;
   return (
     <ol style={{ listStyle: "none", margin: 0, padding: 0, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, overflow: "hidden" }}>
       {rows.map((r, i) => (
         <li key={`${r.email}-${i}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderTop: i ? `1px solid ${t.border}` : "none" }}>
-          <span style={{ width: 22, fontSize: 13, fontWeight: 800, color: i < 3 ? t.amber : t.textMuted, fontVariantNumeric: "tabular-nums", textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
+          {numbered && (
+            <span style={{ width: 22, fontSize: 13, fontWeight: 800, color: i < 3 ? t.amber : t.textMuted, fontVariantNumeric: "tabular-nums", textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
+          )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.nome || "(sem nome)"}</div>
             <div style={{ fontSize: 11.5, color: t.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.email}</div>
@@ -425,6 +458,25 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                 <BarChart data={d.series.ativos} color={purple} label="Usuários ativos por dia" />
               </ChartCard>
             </Section>
+
+            <CollapsibleSection id="entraram24h" title="Entraram nas últimas 24 h" count={ex?.ativos_24h_total != null ? nf(ex.ativos_24h_total) : undefined}>
+              {ex?.ativos_24h ? (
+                <>
+                  <PeopleList
+                    rows={ex.ativos_24h}
+                    right={(r) => dataHora(r.ultimo)}
+                    empty="Ninguém usou o app nas últimas 24 h."
+                    numbered={false}
+                  />
+                  <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+                    Entrou = respondeu questão, viu flashcard, abriu a missão diária (acontece ao abrir o app) ou criou desafio. A hora é do último uso, no horário de Brasília.
+                    {ex.ativos_24h_total > ex.ativos_24h.length ? ` Mostrando os ${ex.ativos_24h.length} mais recentes de ${nf(ex.ativos_24h_total)}.` : ""}
+                  </div>
+                </>
+              ) : (
+                <ExtraNotice extra={ex ? { status: "missing" } : extra} />
+              )}
+            </CollapsibleSection>
               </>
             )}
 
@@ -491,11 +543,25 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
               })()}
             </Section>
 
-            <Section title="Questões com mais erros">
-              {ex ? <QuestionRank rows={ex.mais_erradas} kind="erros" onOpen={openQuestion} busyId={busyQuestion} /> : <ExtraNotice extra={extra} />}
-            </Section>
+            <CollapsibleSection id="top24h" title="10 usuários com mais questões nas últimas 24 h">
+              {ex?.top_questoes_24h ? (
+                <>
+                  <PeopleList rows={ex.top_questoes_24h} right={(r) => nf(r.n)} empty="Ninguém respondeu questões nas últimas 24 h." />
+                  <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+                    Contam as respostas avulsas e as dentro de desafios, nas últimas 24 horas corridas. O Bot Braunwald fica fora da lista.
+                  </div>
+                </>
+              ) : (
+                <ExtraNotice extra={ex ? { status: "missing" } : extra} />
+              )}
+            </CollapsibleSection>
 
-            <Section title="Questões com mais acertos">
+            <CollapsibleSection id="maisErros" title="Questões com mais erros">
+              {ex ? <QuestionRank rows={ex.mais_erradas} kind="erros" onOpen={openQuestion} busyId={busyQuestion} /> : <ExtraNotice extra={extra} />}
+              {openError && <div style={{ fontSize: 12.5, color: t.red, marginTop: 8 }}>{openError}</div>}
+            </CollapsibleSection>
+
+            <CollapsibleSection id="maisAcertos" title="Questões com mais acertos">
               {ex ? <QuestionRank rows={ex.mais_acertadas} kind="acertos" onOpen={openQuestion} busyId={busyQuestion} /> : <ExtraNotice extra={extra} />}
               {ex && (
                 <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
@@ -503,7 +569,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                 </div>
               )}
               {openError && <div style={{ fontSize: 12.5, color: t.red, marginTop: 8 }}>{openError}</div>}
-            </Section>
+            </CollapsibleSection>
               </>
             )}
 

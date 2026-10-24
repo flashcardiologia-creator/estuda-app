@@ -2,7 +2,7 @@
 -- 1) Troca a imagem da questão pela versão recortada, sem a linha de texto do enunciado que aparecia em cima.
 -- 2) Coloca no comentário completo a mesma imagem com um círculo marcando o forame oval.
 -- ANTES: rode o SQL "imagem no comentário" (cria a coluna comentario_imagem_url) e suba as 2 imagens no bucket question-images:
---   tec2024-foi-ete-limpa.png e tec2024-foi-ete-circulada.png
+--   ete_limpa.png e ete_circulada.png
 -- A questão é achada pelo texto do enunciado (com trechos curingas), sem depender do tema nem do ano. Se não achar exatamente 1,
 -- o SQL para e mostra no erro quais questões parecidas existem no banco.
 begin;
@@ -13,8 +13,8 @@ declare
   v_info text;
 begin
   update public.questions
-  set imagem_url = 'https://kjjjkdsexobkwwuosvjb.supabase.co/storage/v1/object/public/question-images/tec2024-foi-ete-limpa.png',
-      comentario_imagem_url = 'https://kjjjkdsexobkwwuosvjb.supabase.co/storage/v1/object/public/question-images/tec2024-foi-ete-circulada.png',
+  set imagem_url = 'https://kjjjkdsexobkwwuosvjb.supabase.co/storage/v1/object/public/question-images/ete_limpa.png',
+      comentario_imagem_url = 'https://kjjjkdsexobkwwuosvjb.supabase.co/storage/v1/object/public/question-images/ete_circulada.png',
       comentario_completo = case
         when comentario_completo like '%círculo vermelho%' then comentario_completo
         else comentario_completo || E'\n\nNa imagem abaixo, o círculo vermelho marca o forame oval patente no septo interatrial.'
@@ -34,6 +34,6 @@ $$;
 -- conferência: uma linha, com as duas imagens preenchidas
 select id, instituicao, ano, tema, left(enunciado, 60) as inicio, imagem_url, comentario_imagem_url
 from public.questions
-where comentario_imagem_url like '%tec2024-foi-ete-circulada.png';
+where comentario_imagem_url like '%ete_circulada.png';
 
 commit;

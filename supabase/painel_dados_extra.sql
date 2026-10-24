@@ -4,7 +4,8 @@
 --   * as 10 questões com mais erros e as 10 com mais acertos (aba Questões);
 --   * quantos usuários usam fundo escuro, fundo claro, ou ainda não têm tema registrado (aba Usuários);
 --   * os 10 usuários que mais lançaram e os 10 que mais ganharam desafios (aba Desafios);
---   * os 10 com maior sequência atual e os 10 com maior sequência de todos os tempos (aba Missão diária).
+--   * os 10 com maior sequência atual e os 10 com maior sequência de todos os tempos (aba Missão diária);
+--   * quem usou o app nas últimas 24 h (aba Usuários) e os 10 usuários com mais questões nas últimas 24 h (aba Questões).
 -- Rode uma vez no SQL Editor do Supabase. Pode rodar de novo (só recria a função). Só consulta: não altera
 -- nenhum dado. Não mexe na função admin_stats() do painel_dados_admin.sql.
 --
@@ -31,6 +32,7 @@ as $$
 declare
   v_email  text;
   v_today  date := public.app_today();
+  v_now    timestamptz := now();
   v_result jsonb;
 begin
   select lower(u.email) into v_email from auth.users u where u.id = auth.uid();
@@ -92,6 +94,24 @@ begin
       from public.profiles p
       join auth.users u on u.id = p.id
      where coalesce(u.email, '') not like '%@flashcardio.invalid'
+  ),
+  -- Atividade das últimas 24 h (mesma definição de "ativo" do painel: respondeu questão, viu flashcard,
+  -- abriu a missão diária ou criou desafio). Quem abre o app recebe a missão do dia, então "entrou" cai aqui.
+  ev24 as (
+    select a.user_id, a.answered_at as ts from public.user_question_attempts a where a.answered_at >= v_now - interval '24 hours'
+    union all
+    select c.user_id, c.answered_at from public.challenge_answers c where c.answered_at >= v_now - interval '24 hours'
+    union all
+    select f.user_id, f.viewed_at from public.user_flashcard_views f where f.viewed_at >= v_now - interval '24 hours'
+    union all
+    select m.user_id, m.created_at from public.daily_mission_picks m where m.created_at >= v_now - interval '24 hours'
+    union all
+    select h.from_user, h.created_at from public.challenges h where h.created_at >= v_now - interval '24 hours'
+  ),
+  q24 as (
+    select a.user_id from public.user_question_attempts a where a.answered_at >= v_now - interval '24 hours'
+    union all
+    select c.user_id from public.challenge_answers c where c.answered_at >= v_now - interval '24 hours'
   )
   select jsonb_build_object(
     'temas', (
@@ -105,6 +125,29 @@ begin
     'ultimos_usuarios', (
       select coalesce(jsonb_agg(jsonb_build_object('email', u.email, 'criado_em', u.created_at) order by u.created_at desc), '[]'::jsonb)
         from (select email, created_at from auth.users order by created_at desc limit 5) u
+    ),
+    -- Quem usou o app nas últimas 24 h, do mais recente para o mais antigo (até 100) e o total de pessoas.
+    'ativos_24h', (
+      select coalesce(jsonb_agg(jsonb_build_object('nome', x.name, 'email', x.email, 'ultimo', x.ultimo) order by x.ultimo desc), '[]'::jsonb)
+        from (
+          select pe.name, pe.email, max(e.ts) as ultimo
+            from ev24 e join pessoas pe on pe.id = e.user_id
+           group by pe.id, pe.name, pe.email
+           order by max(e.ts) desc
+           limit 100
+        ) x
+    ),
+    'ativos_24h_total', (select count(distinct e.user_id) from ev24 e join pessoas pe on pe.id = e.user_id),
+    -- Os 10 usuários que mais responderam questões nas últimas 24 h (avulsas + dentro de desafios).
+    'top_questoes_24h', (
+      select coalesce(jsonb_agg(jsonb_build_object('nome', x.name, 'email', x.email, 'n', x.n) order by x.n desc, x.name), '[]'::jsonb)
+        from (
+          select pe.name, pe.email, count(*) as n
+            from q24 q join pessoas pe on pe.id = q.user_id
+           group by pe.id, pe.name, pe.email
+           order by count(*) desc, pe.name
+           limit 10
+        ) x
     ),
     'mais_erradas', (
       select coalesce(jsonb_agg(jsonb_build_object(
