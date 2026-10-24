@@ -48,7 +48,7 @@ export function SignupCouponBanner({ deadline, initialRest, onExpire }) {
   }, [deadline, onExpire]);
 
   return (
-    <div style={{ textAlign: "center", margin: "0 0 20px", padding: "12px 14px", borderRadius: 14, background: t.primarySoft, border: `1px solid ${t.primary}` }}>
+    <div style={{ textAlign: "center", margin: "0 0 20px" }}>
       <div style={{ fontSize: 15, lineHeight: 1.45, fontWeight: 700, color: t.text }}>
         Crie sua conta <span style={{ color: t.primary }}>GRÁTIS</span> agora
       </div>
