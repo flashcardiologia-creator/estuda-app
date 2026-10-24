@@ -432,7 +432,7 @@ export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate,
   }, [supabase, friends]);
 
   return (
-    <div style={{ maxWidth: 480, margin: "80px auto", textAlign: "center", padding: 22 }}>
+    <div style={{ maxWidth: 480, margin: "28px auto 80px", textAlign: "center", padding: 22 }}>
       <Flame_ done size={54} />
       <h2 style={{ fontSize: 24, color: t.text, marginTop: 16 }}>Missão concluída!</h2>
       {isFree ? (

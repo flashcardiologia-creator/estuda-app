@@ -12,6 +12,7 @@ import { updateDisplayName } from "@/lib/data/profile";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { sendTermsAcceptance } from "@/lib/legal/client";
 import { LegalModal } from "@/components/screens/LegalModal";
+import { LoginCouponPromo, PROMO_UNTIL, markPromoSeen, promoAlreadySeen } from "@/components/screens/LoginCouponPromo";
 
 export default function LoginPage() {
   return (
@@ -57,6 +58,44 @@ function LoginForm() {
       setError("Esse link de redefinição de senha é inválido ou expirou. Solicite um novo.");
     }
   }, [searchParams]);
+
+  // Anúncio do cupom #10DIASGRATIS: aparece ao abrir o site (uma vez por visita) para quem ainda não entrou. Não aparece
+  // quando a pessoa chegou por um link de redefinição de senha, de pagamento ou de renovação, nem depois da validade do cupom.
+  const [promo, setPromo] = useState(false);
+  const skipPromo = paymentReturn || !!searchParams.get("error") || searchParams.get("prolongar") === "1";
+  useEffect(() => {
+    if (skipPromo || Date.now() >= PROMO_UNTIL || promoAlreadySeen()) return undefined;
+    let cancelled = false;
+    let timer;
+    // Se o IP de quem abriu o site já tem conta, o anúncio não aparece. Se a consulta falhar, ele aparece.
+    fetch("/auth/promo", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { mostrar: true }))
+      .catch(() => ({ mostrar: true }))
+      .then((r) => {
+        if (cancelled) return;
+        if (r?.mostrar === false) {
+          markPromoSeen();
+          return;
+        }
+        timer = setTimeout(() => setPromo(true), 300);
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [skipPromo]);
+  const closePromo = () => {
+    markPromoSeen();
+    setPromo(false);
+  };
+  const getCoupon = () => {
+    closePromo();
+    setMode("signup");
+    setError("");
+    setInfo("");
+    setConfirmPassword("");
+    setAcceptedTerms(false);
+  };
 
   const inputStyle = {
     width: "100%",
@@ -338,6 +377,7 @@ function LoginForm() {
       </div>
       )}
       {legal && <LegalModal initial={legal} onClose={() => setLegal(null)} closeLabel="Voltar ao cadastro" />}
+      {promo && !showInstall && !legal && <LoginCouponPromo onGetCoupon={getCoupon} onClose={closePromo} />}
     </div>
   );
 }
