@@ -12,7 +12,8 @@ import { updateDisplayName } from "@/lib/data/profile";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { sendTermsAcceptance } from "@/lib/legal/client";
 import { LegalModal } from "@/components/screens/LegalModal";
-import { SignupCouponBanner, PROMO_UNTIL, promoDeadline } from "@/components/screens/SignupCouponBanner";
+import { LoginQuizPromo, PROMO_UNTIL, promoDeadline } from "@/components/screens/LoginQuizPromo";
+import { fetchQuizState, parseQuiz, quizSnapshot, saveQuiz, subscribeQuiz } from "@/lib/data/quiz";
 
 // Este navegador já teve uma conta (entrou ou criou uma): a tela abre em "Entrar". Quem nunca entrou abre direto no cadastro.
 const SEEN_KEY = "fc-ja-teve-conta";
@@ -82,28 +83,56 @@ function LoginForm() {
     }
   }, [searchParams]);
 
-  // Cupom #10DIASGRATIS: aviso com contador no alto da tela de cadastro. O contador começa na primeira visita (fica salvo no
-  // navegador). Não aparece quando a pessoa chegou por um link de redefinição de senha, de pagamento ou de renovação,
-  // nem depois da validade do cupom, nem quando o IP de quem abriu o site já tem conta (se a consulta falhar, aparece).
-  const [promo, setPromo] = useState(null); // { deadline, rest } enquanto o aviso vale
+  // Quiz de boas-vindas: ao abrir o site, a pessoa responde 3 questões e ganha de 3 a 10 dias grátis (supabase/quiz_boas_vindas.sql).
+  // A tentativa fica gravada pelo IP no servidor: quem já respondeu (mesmo atualizando a página ou limpando o navegador) vê o
+  // mesmo resultado, sem refazer. O contador começa na primeira visita (fica salvo no navegador). O quiz não aparece quando a
+  // pessoa chegou por um link de redefinição de senha, de pagamento ou de renovação, depois da validade do cupom, quando já o
+  // fechou nesta visita, nem quando o IP de quem abriu o site já tem conta (se a consulta falhar, aparece). Sem o quiz no banco, nada aparece.
+  const [promo, setPromo] = useState(null); // { estado, deadline, rest } enquanto o quiz está aberto
   const skipPromo = paymentReturn || !!searchParams.get("error") || searchParams.get("prolongar") === "1";
+  const savedQuiz = parseQuiz(useSyncExternalStore(subscribeQuiz, quizSnapshot, () => ""));
   useEffect(() => {
     if (skipPromo || Date.now() >= PROMO_UNTIL) return undefined;
+    try {
+      if (window.sessionStorage.getItem("fc-quiz-visto")) return undefined;
+    } catch {
+      // sem armazenamento: o quiz aparece a cada abertura
+    }
     let cancelled = false;
     fetch("/auth/promo", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { mostrar: true }))
       .catch(() => ({ mostrar: true }))
-      .then((r) => {
-        if (cancelled || r?.mostrar === false) return;
+      .then(async (r) => {
+        if (cancelled || r?.mostrar === false) return null;
+        return fetchQuizState();
+      })
+      .then((estado) => {
+        if (cancelled || !estado) return;
+        // Este IP já respondeu: guarda o número da tentativa aqui também (o cadastro precisa dele), mesmo que a pessoa feche o aviso.
+        if (estado.feito) saveQuiz(estado.id, estado.resultado);
         const deadline = promoDeadline();
         const rest = deadline - Date.now();
-        if (rest > 0) setPromo({ deadline, rest });
+        if (rest > 0) setPromo({ estado, deadline, rest });
       });
     return () => {
       cancelled = true;
     };
   }, [skipPromo]);
   const endPromo = useCallback(() => setPromo(null), []);
+  const closePromo = useCallback(() => {
+    try {
+      window.sessionStorage.setItem("fc-quiz-visto", "1");
+    } catch {
+      // sem armazenamento: o quiz volta na próxima abertura
+    }
+    setPromo(null);
+  }, []);
+  const quizDone = useCallback(() => {
+    closePromo();
+    setMode("signup");
+    setError("");
+    setInfo("");
+  }, [closePromo]);
 
   const inputStyle = {
     width: "100%",
@@ -157,7 +186,8 @@ function LoginForm() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { name: trimmedName } },
+          // O número da tentativa do quiz de boas-vindas vai junto: depois do login o app libera os dias (o banco confere a tentativa).
+          options: { data: { name: trimmedName, ...(savedQuiz ? { quiz_id: savedQuiz.id } : {}) } },
         });
         if (error) throw error;
         rememberAccount();
@@ -223,8 +253,12 @@ function LoginForm() {
         <InstallGuide onBack={() => setShowInstall(false)} />
       ) : (
       <div style={{ width: "100%", maxWidth: 380, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: 30 }}>
-        {mode === "signup" && promo && <SignupCouponBanner deadline={promo.deadline} initialRest={promo.rest} onExpire={endPromo} />}
-        {mode !== "login" && !(mode === "signup" && promo) && (
+        {mode === "signup" && savedQuiz && (
+          <p style={{ fontSize: 14, lineHeight: 1.5, fontWeight: 600, color: t.text, margin: "0 0 20px", textAlign: "center" }}>
+            Você garantiu <span style={{ color: t.primary }}>{savedQuiz.dias} dias GRÁTIS</span> ({savedQuiz.acertos} de {savedQuiz.total} acertos). Eles entram sozinhos quando a conta for criada.
+          </p>
+        )}
+        {mode !== "login" && !(mode === "signup" && savedQuiz) && (
           <p style={{ fontSize: 13, color: t.textMuted, margin: "0 0 20px", textAlign: "center" }}>
             {mode === "signup" && "Crie sua conta agora"}
             {mode === "forgot" && "Informe seu e-mail para receber o link de redefinição"}
@@ -386,6 +420,9 @@ function LoginForm() {
           </div>
         )}
       </div>
+      )}
+      {promo && !showInstall && !legal && (
+        <LoginQuizPromo estado={promo.estado} deadline={promo.deadline} initialRest={promo.rest} onClose={closePromo} onExpire={endPromo} onDone={quizDone} />
       )}
       {legal && <LegalModal initial={legal} onClose={() => setLegal(null)} closeLabel="Voltar ao cadastro" />}
     </div>

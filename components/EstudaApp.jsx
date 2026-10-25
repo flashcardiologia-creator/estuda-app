@@ -21,6 +21,8 @@ import { StatsScreen } from "@/components/screens/StatsScreen";
 import { PaywallScreen } from "@/components/screens/PaywallScreen";
 import { AdminStatsScreen } from "@/components/screens/AdminStatsScreen";
 import { CouponOffer } from "@/components/screens/CouponOffer";
+import { QuizReward } from "@/components/screens/QuizReward";
+import { claimQuizReward } from "@/lib/data/quiz";
 import { signOutAndLeave } from "@/lib/signOut";
 import { fetchCouponOffer } from "@/lib/data/coupons";
 import { PaymentReturn } from "@/components/screens/PaymentReturn";
@@ -348,6 +350,32 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
     let cancelled = false;
     fetchCouponOffer(supabase).then((offer) => {
       if (!cancelled && offer) setCouponOffer(offer);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [appReady, supabase, userId]);
+
+  // Quiz de boas-vindas: conta criada depois de responder o quiz na tela de entrada ganha de 3 a 10 dias, sem cupom. O banco
+  // corrige as respostas guardadas no cadastro (supabase/quiz_boas_vindas.sql). A consulta roda uma vez por conta e aparelho.
+  const [quizReward, setQuizReward] = useState(null);
+  useEffect(() => {
+    if (!appReady) return;
+    const key = `flashcardio_quiz_checked_${userId}`;
+    try {
+      if (localStorage.getItem(key)) return;
+    } catch {
+      // sem armazenamento: consulta a cada abertura
+    }
+    let cancelled = false;
+    claimQuizReward(supabase).then((r) => {
+      if (cancelled || !r) return;
+      try {
+        localStorage.setItem(key, "1");
+      } catch {
+        // ignora
+      }
+      if (r.status === "ok") setQuizReward(r);
     });
     return () => {
       cancelled = true;
@@ -906,7 +934,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       <SwipeBack rootId="swipe-root" />
       {pushPrompt && <PushPrompt supabase={supabase} userId={userId} onClose={() => setPushPrompt(null)} />}
       <PaymentReturn status={paymentReturn} active={access.active} expiresAt={access.expiresAt} />
-      {screen === "home" && couponOffer && <CouponOffer supabase={supabase} offer={couponOffer} onClose={() => setCouponOffer(null)} />}
+      {screen === "home" && quizReward && <QuizReward reward={quizReward} onClose={() => window.location.replace("/")} />}
+      {screen === "home" && couponOffer && !quizReward && <CouponOffer supabase={supabase} offer={couponOffer} onClose={() => setCouponOffer(null)} />}
       {screen === "home" && expiryDays !== null && (
         <ExpiryNotice access={access} days={expiryDays} onExtend={() => closeExpiryNotice(true)} onLater={() => closeExpiryNotice(false)} />
       )}
