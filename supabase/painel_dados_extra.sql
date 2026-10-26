@@ -5,6 +5,7 @@
 --   * quantos usuários usam fundo escuro, fundo claro, ou ainda não têm tema registrado (aba Usuários);
 --   * os 10 usuários que mais lançaram e os 10 que mais ganharam desafios (aba Desafios);
 --   * os 10 com maior sequência atual e os 10 com maior sequência de todos os tempos (aba Missão diária);
+--   * quantas pessoas têm o lembrete por notificação ligado e quantas não (aba Missão diária);
 --   * quem usou o app nas últimas 24 h (aba Usuários) e os usuários com mais questões hoje, top 10 (aba Questões).
 -- Rode uma vez no SQL Editor do Supabase. Pode rodar de novo (só recria a função). Só consulta: não altera
 -- nenhum dado. Não mexe na função admin_stats() do painel_dados_admin.sql.
@@ -114,6 +115,12 @@ begin
     select a.user_id from public.user_question_attempts a where a.answered_at >= v_t0
     union all
     select c.user_id from public.challenge_answers c where c.answered_at >= v_t0
+  ),
+  -- Lembretes por notificação: um registro por aparelho que ligou o lembrete (Minha Conta > Permissões).
+  subs as (
+    select s.user_id, count(*) as aparelhos, min(s.created_at) as primeiro
+      from public.push_subscriptions s
+     group by s.user_id
   )
   select jsonb_build_object(
     'temas', (
@@ -123,6 +130,17 @@ begin
                'sem_registro', count(*) filter (where theme is null)
              )
         from pessoas
+    ),
+    -- Quantas pessoas têm o lembrete por notificação ligado (em pelo menos 1 aparelho) e quantas não.
+    'notificacoes', (
+      select jsonb_build_object(
+               'ativadas',    count(*) filter (where su.user_id is not null),
+               'desativadas', count(*) filter (where su.user_id is null),
+               'aparelhos',   coalesce(sum(su.aparelhos), 0),
+               'novas_7d',    count(*) filter (where su.primeiro >= v_now - interval '7 days')
+             )
+        from pessoas pe
+        left join subs su on su.user_id = pe.id
     ),
     'ultimos_usuarios', (
       select coalesce(jsonb_agg(jsonb_build_object('email', u.email, 'criado_em', u.created_at) order by u.created_at desc), '[]'::jsonb)

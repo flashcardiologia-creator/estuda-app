@@ -101,6 +101,7 @@ export function AccountScreen({
   const [friendInfo, setFriendInfo] = useState("");
   const [addingFriend, setAddingFriend] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [searchedFor, setSearchedFor] = useState(""); // texto da última busca por nome que terminou
   const [respondingId, setRespondingId] = useState(null);
   const [codeCopied, setCodeCopied] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
@@ -118,7 +119,10 @@ export function AccountScreen({
   }, [nameEditing]);
 
   const friendQuery = newFriend.trim();
-  const visibleSuggestions = friendQuery.length >= 2 && !/^\d+$/.test(friendQuery) ? suggestions : [];
+  const isCodeQuery = /^\d+$/.test(friendQuery);
+  const visibleSuggestions = friendQuery.length >= 2 && !isCodeQuery ? suggestions : [];
+  // Linha "Adicionar" no menu: para código (só números), ou quando a busca por nome já terminou sem achar ninguém.
+  const showTypedRow = friendQuery.length >= 1 && (isCodeQuery || (friendQuery.length >= 2 && searchedFor === friendQuery && suggestions.length === 0));
 
   // Sugestões de amigos enquanto digita: busca nomes que começam com o texto
   // (a partir de 2 letras, com pequeno atraso para não consultar a cada tecla).
@@ -128,7 +132,10 @@ export function AccountScreen({
     let cancelled = false;
     const timer = setTimeout(async () => {
       const found = await searchProfilesByPrefix(supabase, q);
-      if (!cancelled) setSuggestions(found);
+      if (!cancelled) {
+        setSuggestions(found);
+        setSearchedFor(q);
+      }
     }, 250);
     return () => {
       cancelled = true;
@@ -652,69 +659,124 @@ export function AccountScreen({
               {codeCopied ? "Copiado" : "Copiar"}
             </button>
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <input
-              value={newFriend}
-              maxLength={MAX_NAME_LEN}
-              onChange={(e) => setNewFriend(sanitizeName(e.target.value))}
-              placeholder="Digite o nome ou o código do amigo"
-              className="friend-search-input"
-              style={{
-                flex: 1,
-                minWidth: 0,
-                padding: "9px 12px",
-                borderRadius: 10,
-                border: `1px solid ${t.border}`,
-                background: t.surfaceAlt,
-                color: t.text,
-                fontSize: 16,
-              }}
-            />
-            <PrimaryButton small disabled={!newFriend.trim() || addingFriend} onClick={() => addFriend()}>
-              <Plus size={14} />
-            </PrimaryButton>
-          </div>
-          {visibleSuggestions.length > 0 && (
+          {/* Busca de amigos: só o campo. Adiciona ao tocar no nome sugerido (ou no + ao lado), pelo Enter, ou pela linha "Adicionar" quando se digita um código. */}
+          <input
+            value={newFriend}
+            maxLength={MAX_NAME_LEN}
+            onChange={(e) => setNewFriend(sanitizeName(e.target.value))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && friendQuery && !addingFriend) {
+                e.preventDefault();
+                addFriend();
+              }
+            }}
+            placeholder="Digite o nome ou o código do amigo"
+            enterKeyHint="send"
+            autoComplete="off"
+            aria-label="Buscar amigo por nome ou código"
+            className="friend-search-input"
+            style={{
+              display: "block",
+              width: "100%",
+              boxSizing: "border-box",
+              marginBottom: 8,
+              padding: "11px 14px",
+              borderRadius: 12,
+              border: `1px solid ${t.border}`,
+              background: t.surfaceAlt,
+              color: t.text,
+              fontSize: 16,
+            }}
+          />
+          {(visibleSuggestions.length > 0 || showTypedRow) && (
             <div
+              role="listbox"
+              aria-label="Resultados da busca"
               style={{
                 marginBottom: 8,
                 border: `1px solid ${t.border}`,
-                borderRadius: 10,
+                borderRadius: 12,
                 background: t.surface,
                 overflow: "hidden",
+                opacity: addingFriend ? 0.6 : 1,
+                transition: "opacity .15s",
               }}
             >
               {visibleSuggestions.map((s, i) => {
-                const typed = newFriend.trim().length;
+                const typed = friendQuery.length;
                 return (
                   <button
                     key={s.id}
+                    type="button"
+                    role="option"
+                    aria-selected="false"
                     onClick={() => addFriend(s)}
                     disabled={addingFriend}
+                    aria-label={`Adicionar ${s.name}`}
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 8,
+                      gap: 10,
                       width: "100%",
+                      minHeight: 48,
                       textAlign: "left",
-                      padding: "10px 12px",
+                      padding: "8px 12px",
                       background: "transparent",
                       border: "none",
                       borderTop: i === 0 ? "none" : `1px solid ${t.border}`,
                       color: t.text,
                       fontSize: 14,
+                      fontFamily: "inherit",
                       cursor: addingFriend ? "default" : "pointer",
                     }}
                   >
-                    <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span
+                      aria-hidden="true"
+                      style={{ width: 28, height: 28, borderRadius: "50%", background: t.primarySoft, color: t.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}
+                    >
+                      {s.name[0]}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       <strong style={{ color: t.primary }}>{s.name.slice(0, typed)}</strong>
                       {s.name.slice(typed)}
                     </span>
-                    <Plus size={14} color={t.textMuted} style={{ flexShrink: 0 }} />
+                    <span aria-hidden="true" style={{ width: 28, height: 28, borderRadius: "50%", background: t.primarySoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Plus size={15} color={t.primary} />
+                    </span>
                   </button>
                 );
               })}
+              {showTypedRow && (
+                <button
+                  type="button"
+                  onClick={() => addFriend()}
+                  disabled={addingFriend}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    width: "100%",
+                    minHeight: 48,
+                    textAlign: "left",
+                    padding: "8px 12px",
+                    background: "transparent",
+                    border: "none",
+                    borderTop: visibleSuggestions.length ? `1px solid ${t.border}` : "none",
+                    color: t.text,
+                    fontSize: 14,
+                    fontFamily: "inherit",
+                    cursor: addingFriend ? "default" : "pointer",
+                  }}
+                >
+                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {isCodeQuery ? "Adicionar pelo código " : "Adicionar "}
+                    <strong style={{ color: t.primary }}>{isCodeQuery ? friendQuery : `“${friendQuery}”`}</strong>
+                  </span>
+                  <span aria-hidden="true" style={{ width: 28, height: 28, borderRadius: "50%", background: t.primarySoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Plus size={15} color={t.primary} />
+                  </span>
+                </button>
+              )}
             </div>
           )}
           {friendError && (

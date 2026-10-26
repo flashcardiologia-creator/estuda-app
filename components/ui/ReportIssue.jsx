@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Flag, Check, CircleCheck, FileText, MessageSquareText, ImageOff, SpellCheck, Ellipsis, Send, TriangleAlert } from "lucide-react";
+import { X, Flag, Check, TriangleAlert } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
 import { reportContentIssue } from "@/lib/data/reports";
 
 // O texto de cada motivo é o que vai para o banco (content_reports.reason): não mudar sem avisar quem lê os reportes.
 const REASONS = [
-  { label: "Enunciado ou alternativas com erro", Icon: FileText },
-  { label: "Gabarito errado", Icon: CircleCheck },
-  { label: "Comentário/explicação errado ou confuso", Icon: MessageSquareText },
-  { label: "Imagem não aparece ou está errada", Icon: ImageOff },
-  { label: "Erro de português/digitação", Icon: SpellCheck },
-  { label: "Outro", Icon: Ellipsis },
+  "Enunciado ou alternativas com erro",
+  "Gabarito errado",
+  "Comentário/explicação errado ou confuso",
+  "Imagem não aparece ou está errada",
+  "Erro de português/digitação",
+  "Outro",
 ];
 
 export function ReportButton({ onClick }) {
@@ -162,7 +162,7 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
             </div>
 
             <div role="radiogroup" aria-label="Motivo do reporte" style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
-              {REASONS.map(({ label, Icon }) => {
+              {REASONS.map((label) => {
                 const on = reason === label;
                 return (
                   <button
@@ -177,8 +177,9 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
                       alignItems: "center",
                       gap: 12,
                       width: "100%",
+                      minHeight: 48,
                       textAlign: "left",
-                      padding: "9px 12px 9px 10px",
+                      padding: "10px 14px",
                       borderRadius: 12,
                       border: `1.5px solid ${on ? t.primary : t.border}`,
                       background: on ? t.primarySoft : t.surfaceAlt,
@@ -190,13 +191,11 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
                       transition: "border-color .15s, background .15s",
                     }}
                   >
-                    <span style={{ width: 32, height: 32, borderRadius: 9, background: on ? t.primary : t.surface, border: on ? "none" : `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Icon size={16} color={on ? "#fff" : t.textMuted} />
+                    {/* Bola de seleção à esquerda (marcada = ponto roxo no centro), no lugar do ícone de cada motivo. */}
+                    <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${on ? t.primary : t.textMuted}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxSizing: "border-box" }}>
+                      {on && <span style={{ width: 10, height: 10, borderRadius: "50%", background: t.primary }} />}
                     </span>
                     <span style={{ flex: 1, minWidth: 0, fontWeight: on ? 600 : 500 }}>{label}</span>
-                    <span style={{ width: 20, height: 20, borderRadius: "50%", border: `1.5px solid ${on ? t.primary : t.border}`, background: on ? t.primary : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {on && <Check size={12} color="#fff" strokeWidth={3} />}
-                    </span>
                   </button>
                 );
               })}
@@ -252,14 +251,7 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
                 </div>
                 <div style={{ flex: 1.4, minWidth: 0 }}>
                   <PrimaryButton full disabled={sending || !canSend} onClick={submit}>
-                    {sending ? (
-                      "Enviando…"
-                    ) : (
-                      <>
-                        <Send size={15} style={{ marginRight: 8 }} />
-                        Enviar reporte
-                      </>
-                    )}
+                    {sending ? "Enviando…" : "Enviar"}
                   </PrimaryButton>
                 </div>
               </div>

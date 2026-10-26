@@ -242,6 +242,29 @@ function ExtraNotice({ extra }) {
   );
 }
 
+// Aba Missão diária: quantas pessoas têm o lembrete por notificação ligado. n = { ativadas, desativadas, aparelhos, novas_7d }.
+function NotificacoesResumo({ n }) {
+  const t = useT();
+  const total = n.ativadas + n.desativadas;
+  return (
+    <>
+      <Grid>
+        <Kpi label="Com notificação ativada" value={nf(n.ativadas)} color={t.green} sub={`${pct(n.ativadas, total)} dos usuários`} />
+        <Kpi label="Com notificação desativada" value={nf(n.desativadas)} color={t.red} sub={`${pct(n.desativadas, total)} dos usuários`} />
+        <Kpi label="Aparelhos cadastrados" value={nf(n.aparelhos)} sub={n.ativadas ? `${nf(n.aparelhos / n.ativadas, 1)} por pessoa` : undefined} />
+        <Kpi label="Ativaram nos últimos 7 dias" value={nf(n.novas_7d)} color={t.primary} />
+      </Grid>
+      <div style={{ display: "flex", height: 10, borderRadius: 999, overflow: "hidden", background: t.surfaceAlt, marginTop: 12 }} role="img" aria-label={`${pct(n.ativadas, total)} com notificação ativada`}>
+        <div style={{ width: `${total ? (n.ativadas / total) * 100 : 0}%`, background: t.green }} />
+        <div style={{ width: `${total ? (n.desativadas / total) * 100 : 0}%`, background: t.red, opacity: 0.75 }} />
+      </div>
+      <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+        Ativada = a pessoa ligou o lembrete em Minha Conta → Permissões em pelo menos um aparelho. Desativada = nunca ligou, desligou, ou o aparelho parou de receber. Não dá para separar quem bloqueou no navegador de quem nunca viu o convite. O Bot Braunwald fica fora da conta.
+      </div>
+    </>
+  );
+}
+
 // Lista de pessoas com um número à direita. rows = [{ nome, email, n }]; right(row) devolve o texto do número.
 function PeopleList({ rows, right, empty = "Ainda não há dados.", numbered = true }) {
   const t = useT();
@@ -890,6 +913,10 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                   </>
                 );
               })()}
+            </Section>
+
+            <Section title="Lembretes por notificação">
+              {ex?.notificacoes ? <NotificacoesResumo n={ex.notificacoes} /> : <ExtraNotice extra={ex ? { status: "missing" } : extra} />}
             </Section>
 
             <Section title="Maiores sequências atuais">

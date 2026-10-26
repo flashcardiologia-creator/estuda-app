@@ -22,6 +22,7 @@ import { PaywallScreen } from "@/components/screens/PaywallScreen";
 import { AdminStatsScreen } from "@/components/screens/AdminStatsScreen";
 import { CouponOffer } from "@/components/screens/CouponOffer";
 import { QuizReward } from "@/components/screens/QuizReward";
+import { StreakSheet } from "@/components/screens/StreakSheet";
 import { claimQuizReward } from "@/lib/data/quiz";
 import { signOutAndLeave } from "@/lib/signOut";
 import { fetchCouponOffer } from "@/lib/data/coupons";
@@ -135,6 +136,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [pushPrompt, setPushPrompt] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [streakOpen, setStreakOpen] = useState(false); // painel que abre no foguinho
+  const [missionReward, setMissionReward] = useState(null); // { earned, used } da missão que acabou de ser concluída
   const [allQuestions, setAllQuestions] = useState([]);
   // Textos (enunciado/comentários) já baixados, por id; e a promessa do download
   // em segundo plano, para a sessão de questões esperar por ele se precisar.
@@ -275,7 +278,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       }
       if (cancelled) return;
       // Sem assinatura a sequência fica congelada: não soma nem zera. Ao assinar de novo, segue de onde parou.
-      const correctedStreak = access.active ? effectiveStreak(profileData.streak, profileData.last_mission_date) : profileData.streak;
+      const correctedStreak = access.active ? effectiveStreak(profileData.streak, profileData.last_mission_date, profileData.bandages) : profileData.streak;
       if (correctedStreak !== profileData.streak) {
         profileData = { ...profileData, streak: correctedStreak };
         resetStreak(supabase, userId).catch(() => {});
@@ -819,8 +822,10 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   };
 
   const finishDaily = async () => {
-    const { streak, last_mission_date } = await completeDailyMission(supabase);
-    setProfile((p) => ({ ...p, streak: access.active ? streak : p.streak, last_mission_date }));
+    const { streak, last_mission_date, bandages, bandage_earned, bandage_used } = await completeDailyMission(supabase);
+    setProfile((p) => ({ ...p, streak: access.active ? streak : p.streak, last_mission_date, bandages: bandages ?? p.bandages }));
+    // Avisos da tela "Missão concluída": ganhou uma bandagem agora, ou uma bandagem cobriu um dia perdido.
+    setMissionReward({ earned: !!bandage_earned, used: !!bandage_used });
     // Limpa a sessão concluída — se não, um eventual desalinhamento no cálculo
     // de "hoje" (ex.: logo após mudar a virada do dia) deixaria a próxima
     // entrada na Missão Diária caindo de volta no último item já respondido.
@@ -939,7 +944,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       {screen === "home" && expiryDays !== null && (
         <ExpiryNotice access={access} days={expiryDays} onExtend={() => closeExpiryNotice(true)} onLater={() => closeExpiryNotice(false)} />
       )}
-      {showHeader && <Header streak={profile.streak} onNavigate={setScreen} missionDone={missionDone} />}
+      {showHeader && <Header streak={profile.streak} onNavigate={setScreen} missionDone={missionDone} onOpenStreak={() => setStreakOpen(true)} />}
+      {streakOpen && <StreakSheet supabase={supabase} profile={profile} streak={profile.streak} subscribed={access.active} friends={friends} onClose={() => setStreakOpen(false)} />}
 
       {(paywalled || screen === "plans") && <PaywallScreen access={access} onBack={() => setScreen("home")} />}
 
@@ -1100,7 +1106,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       )}
 
       {screen === "daily-done" && (
-        <DailyDoneScreen supabase={supabase} userId={userId} streak={profile.streak} friends={friends} onNavigate={setScreen} canChooseFormat={access.active} />
+        <DailyDoneScreen supabase={supabase} userId={userId} streak={profile.streak} friends={friends} onNavigate={setScreen} canChooseFormat={access.active} reward={missionReward} />
       )}
 
       {screen === "challenges" && (

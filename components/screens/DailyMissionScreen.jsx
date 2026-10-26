@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, ChevronLeft, Layers, ListChecks, Target } from "lucide-react";
+import { Bandage, Check, ChevronLeft, Layers, ListChecks, Target } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag, Flame_ } from "@/components/ui/Primitives";
 import { QuestionCard } from "@/components/screens/QuestionCard";
@@ -258,8 +258,8 @@ function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate,
 }
 
 const MISSION_FORMATS = [
-  { id: "mix", big: "5+5", title: "5 questões + 5 flashcards", sub: "Questões e flashcards do mesmo assunto", Icon: Layers, gradient: "linear-gradient(135deg, #7C5CFC 0%, #4F46E5 100%)" },
-  { id: "questions", big: "10", title: "10 questões", sub: "Só questões, para treinar mais prova", Icon: ListChecks, gradient: "linear-gradient(135deg, #F2A93B 0%, #E5484D 100%)" },
+  { id: "mix", big: "5+5", title: "5 questões + 5 flashcards", sub: "Questões que errou, para revisar, e flashcards do mesmo assunto", Icon: Layers, gradient: "linear-gradient(135deg, #7C5CFC 0%, #4F46E5 100%)" },
+  { id: "questions", big: "10", title: "10 questões", sub: "Só questões que você já errou, para revisar e treinar mais prova", Icon: ListChecks, gradient: "linear-gradient(135deg, #F2A93B 0%, #E5484D 100%)" },
 ];
 
 // Escolha do formato da missão diária, na tela de conclusão. Vale a partir da missão de amanhã
@@ -354,7 +354,10 @@ function MissionFormat({ supabase, userId }) {
         })}
       </div>
 
-      <div style={{ fontSize: 11.5, color: saved === false ? t.red : t.textMuted, textAlign: "center", marginTop: 10, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 11.5, color: t.textMuted, textAlign: "center", marginTop: 10, lineHeight: 1.5 }}>
+        As questões vêm primeiro das que você já errou, na hora certa de revisar. Se faltarem, completamos com questões novas.
+      </div>
+      <div style={{ fontSize: 11.5, color: saved === false ? t.red : t.textMuted, textAlign: "center", marginTop: 6, lineHeight: 1.5 }}>
         {saved === false
           ? "Salvo só neste aparelho por enquanto. Vale a partir de amanhã."
           : saved
@@ -412,7 +415,7 @@ function PlanComparison({ t, onSubscribe }) {
   );
 }
 
-export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate, canChooseFormat = true }) {
+export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate, canChooseFormat = true, reward = null }) {
   const t = useT();
   // Sem assinatura (não há formato para escolher): a sequência não conta dias e mostramos a comparação com o plano pago.
   const isFree = !canChooseFormat;
@@ -442,6 +445,19 @@ export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate,
           Você está numa sequência de <b style={{ color: t.green }}>{streak} {streak === 1 ? "dia" : "dias"}</b>.
           <br />
           Volte amanhã para manter a chama acesa.
+        </p>
+      )}
+      {/* Bandagem da sequência: ganhou uma agora, ou uma bandagem cobriu o dia que a pessoa tinha perdido. */}
+      {!isFree && reward?.used && (
+        <p role="status" style={{ margin: "16px 0 0", padding: "10px 14px", borderRadius: 12, background: t.surface, border: `1px solid ${t.border}`, fontSize: 13.5, lineHeight: 1.5, color: t.text }}>
+          <Bandage size={15} color={t.green} style={{ marginRight: 8, verticalAlign: -2 }} />
+          Sua <b>bandagem</b> cobriu o dia que você perdeu: a sequência continuou.
+        </p>
+      )}
+      {!isFree && reward?.earned && (
+        <p role="status" style={{ margin: "12px 0 0", padding: "10px 14px", borderRadius: 12, background: t.primarySoft, border: `1px solid ${t.primary}`, fontSize: 13.5, lineHeight: 1.5, color: t.text }}>
+          <Bandage size={15} color={t.primary} style={{ marginRight: 8, verticalAlign: -2 }} />
+          Você acertou tudo e ganhou uma <b>bandagem</b>! Ela salva sua sequência se você ficar um dia sem fazer a missão.
         </p>
       )}
       {/* Sem assinatura a missão é sempre de 3 questões: não há formato para escolher. */}

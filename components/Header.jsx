@@ -4,7 +4,7 @@ import { Sun, Moon, User } from "lucide-react";
 import { useT, useThemeControl } from "@/components/theme/ThemeProvider";
 import { Flame_ } from "@/components/ui/Primitives";
 
-export function Header({ streak, onNavigate, missionDone }) {
+export function Header({ streak, onNavigate, missionDone, onOpenStreak }) {
   const t = useT();
   const { theme, setTheme } = useThemeControl();
 
@@ -22,13 +22,17 @@ export function Header({ streak, onNavigate, missionDone }) {
         margin: "0 auto",
       }}
     >
-      <div
-        style={{ display: "flex", alignItems: "center", gap: 8 }}
+      {/* O foguinho abre o painel de sequência (atual, maior, bandagem e amigos). */}
+      <button
+        type="button"
+        onClick={onOpenStreak}
+        aria-label={`Ver minha sequência: ${streak} ${streak === 1 ? "dia" : "dias"}. ${missionDone ? "Missão de hoje concluída" : "Missão de hoje pendente"}`}
         title={missionDone ? "Missão de hoje concluída" : "Missão de hoje pendente"}
+        style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, padding: "0 10px 0 0", background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit" }}
       >
         <Flame_ done={missionDone} size={26} />
         <span style={{ fontWeight: 700, fontSize: 19, color: t.text }}>{streak}</span>
-      </div>
+      </button>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <button

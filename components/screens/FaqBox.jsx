@@ -37,6 +37,14 @@ function faqItems(B) {
       ),
     },
     {
+      q: "O que é a bandagem da sequência?",
+      a: (
+        <>
+          Se você <B>acertar todas as questões</B> da missão diária, tem <B>50% de chance</B> de ganhar uma bandagem. Ela <B>salva sua sequência</B> quando você passa um dia sem fazer a missão: ao voltar e concluir a missão seguinte, a sequência continua e a bandagem é gasta. Só cabe <B>uma</B> por vez (com uma guardada, não há novo sorteio), e ela cobre apenas um dia perdido. Para ver quantas bandagens você tem, toque no <B>foguinho</B> no alto da tela. As bandagens são para assinantes.
+        </>
+      ),
+    },
+    {
       q: "Quanto custa e como pago?",
       a: (
         <>
@@ -104,7 +112,7 @@ function faqItems(B) {
       q: "Achei um erro numa questão ou flashcard. Como aviso?",
       a: (
         <>
-          Toque no botão <B>?</B> no canto da questão ou do flashcard, escolha o motivo e toque em <B>Enviar reporte</B>. Se for pertinente, a resposta chega no seu e-mail.
+          Toque no botão <B>?</B> no canto da questão ou do flashcard, escolha o motivo e toque em <B>Enviar</B>. Se for pertinente, a resposta chega no seu e-mail.
         </>
       ),
     },
@@ -152,7 +160,7 @@ export function FaqBox() {
   const items = faqItems(B);
 
   return (
-    <ExpandBox title="Perguntas frequentes" icon={<CircleQuestionMark size={17} color={t.primary} />} open={open} onToggle={() => setOpen((o) => !o)}>
+    <ExpandBox title="Perguntas Frequentes" icon={<CircleQuestionMark size={17} color={t.primary} />} open={open} onToggle={() => setOpen((o) => !o)}>
       <div style={{ border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden", background: t.surfaceAlt }}>
         {items.map((item, i) => {
           const on = current === i;
