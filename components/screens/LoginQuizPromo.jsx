@@ -5,6 +5,7 @@ import { X, Check, ChevronDown } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
 import { submitQuiz, saveQuiz, quizTable } from "@/lib/data/quiz";
+import { track } from "@/lib/data/visitTracking";
 
 // Mesma validade do cupom no banco (supabase/cupom_10diasgratis.sql: 02/12/2026 00:00 em Brasília). Depois disso o quiz some sozinho.
 export const PROMO_UNTIL = new Date("2026-12-02T00:00:00-03:00").getTime();
@@ -51,6 +52,11 @@ export function LoginQuizPromo({ estado, deadline, initialRest, onClose, onExpir
   const [open, setOpen] = useState({}); // questões abertas no resultado, por slot
   const [full, setFull] = useState({}); // questões com a resposta completa aberta, por slot
 
+  // Contagem anônima (aba Acessos do painel de dados): o quiz apareceu para esta visita.
+  useEffect(() => {
+    track("quiz_visto", null, { once: true });
+  }, []);
+
   useEffect(() => {
     const id = setInterval(() => {
       const left = deadline - Date.now();
@@ -81,17 +87,24 @@ export function LoginQuizPromo({ estado, deadline, initialRest, onClose, onExpir
       return;
     }
     saveQuiz(saved.id, saved.resultado);
+    track("quiz_fim");
     setAlreadyDone(saved.jaTinha);
     setResult(saved.resultado);
     setStep("resultado");
   };
 
   const next = () => {
+    track("resposta", step + 1);
     if (isLast) finish();
     else setStep((s) => s + 1);
   };
 
   const toggle = (setter, slot) => setter((o) => ({ ...o, [slot]: !o[slot] }));
+  // Onde a pessoa estava ao fechar: 0 = abertura, 1 a 3 = questão, 4 = resultado.
+  const close = () => {
+    track("quiz_fechado", step === -1 ? 0 : step === "resultado" ? 4 : step + 1);
+    onClose();
+  };
   const small = { fontSize: 12.5, color: t.textMuted, lineHeight: 1.5 };
 
   return (
@@ -102,7 +115,7 @@ export function LoginQuizPromo({ estado, deadline, initialRest, onClose, onExpir
       style={{ position: "fixed", inset: 0, zIndex: 80, background: veil, backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
     >
       <div style={{ position: "relative", width: "100%", maxWidth: 400, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", boxSizing: "border-box", background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: "26px 22px 22px", boxShadow: "0 18px 50px rgba(0,0,0,0.35)" }}>
-        <button type="button" onClick={onClose} aria-label="Fechar" style={{ position: "absolute", top: 8, right: 8, width: 36, height: 36, border: "none", background: "transparent", color: t.textMuted, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <button type="button" onClick={close} aria-label="Fechar" style={{ position: "absolute", top: 8, right: 8, width: 36, height: 36, border: "none", background: "transparent", color: t.textMuted, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <X size={18} />
         </button>
 
@@ -126,7 +139,13 @@ export function LoginQuizPromo({ estado, deadline, initialRest, onClose, onExpir
             </div>
             <p style={{ ...small, margin: "12px 0 0" }}>Os dias entram sozinhos quando você criar a conta. Não precisa de cupom. Só vale uma tentativa.</p>
             <div style={{ marginTop: 18 }}>
-              <PrimaryButton full onClick={() => setStep(0)}>
+              <PrimaryButton
+                full
+                onClick={() => {
+                  track("quiz_inicio");
+                  setStep(0);
+                }}
+              >
                 Começar
               </PrimaryButton>
             </div>
@@ -277,7 +296,13 @@ export function LoginQuizPromo({ estado, deadline, initialRest, onClose, onExpir
             </div>
 
             <div style={{ marginTop: 16 }}>
-              <PrimaryButton full onClick={() => onDone(result)}>
+              <PrimaryButton
+                full
+                onClick={() => {
+                  track("criar_clique");
+                  onDone(result);
+                }}
+              >
                 Criar minha conta
               </PrimaryButton>
             </div>

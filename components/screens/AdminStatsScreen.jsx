@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, PrimaryButton } from "@/components/ui/Primitives";
-import { fetchAdminStats, fetchAdminExtra } from "@/lib/data/adminStats";
+import { fetchAdminStats, fetchAdminExtra, fetchAdminAcessos } from "@/lib/data/adminStats";
 import { formatBRL } from "@/lib/billing";
 
 const nf = (n, digits = 0) => Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -190,6 +190,7 @@ const TABS = [
   { id: "flashcards", label: "Flashcards" },
   { id: "desafios", label: "Desafios" },
   { id: "missao", label: "Missão diária" },
+  { id: "acessos", label: "Acessos" },
 ];
 
 // Abas do painel (mesmo estilo das abas de Desafios). Rolam de lado quando não cabem na tela.
@@ -303,6 +304,235 @@ function QuestionRank({ rows, kind, onOpen, busyId }) {
   );
 }
 
+const ACESSOS_ETAPAS = [
+  ["tela", "Abriram a tela de entrada"],
+  ["quiz_visto", "Viram o quiz"],
+  ["quiz_inicio", "Começaram o quiz"],
+  ["r1", "Responderam a questão 1"],
+  ["r2", "Responderam a questão 2"],
+  ["r3", "Responderam a questão 3"],
+  ["quiz_fim", "Viram o resultado"],
+  ["criar", "Clicaram em \"Criar minha conta\""],
+  ["envio", "Enviaram o cadastro"],
+  ["conta", "Criaram a conta"],
+];
+
+// Onde quem NÃO criou conta parou (a última etapa que alcançou).
+const ACESSOS_PARARAM = [
+  ["tela", "Só abriram a tela, sem ver o quiz"],
+  ["intro", "Viram o quiz e não começaram"],
+  ["q1", "Pararam na questão 1"],
+  ["q2", "Pararam na questão 2"],
+  ["q3", "Pararam na questão 3"],
+  ["resultado", "Viram o resultado e não clicaram em Criar conta"],
+  ["criar", "Clicaram em Criar conta e não enviaram o cadastro"],
+  ["envio", "Enviaram o cadastro e não concluíram"],
+];
+
+const ACESSOS_TEMPO = [
+  ["ate10", "Menos de 10 s"],
+  ["de10a30", "10 a 30 s"],
+  ["de30a60", "30 s a 1 min"],
+  ["de1a3min", "1 a 3 min"],
+  ["mais3min", "Mais de 3 min"],
+];
+
+// Duração em segundos -> "45 s" ou "2 min 10 s".
+function dur(s) {
+  if (s == null) return "—";
+  const r = Math.round(s);
+  return r < 60 ? `${r} s` : `${Math.floor(r / 60)} min ${r % 60} s`;
+}
+
+// Linhas com barra proporcional: rows = [{ label, n, sub? }]; base = valor que ocupa a barra inteira.
+function BarRows({ rows, base, color }) {
+  const t = useT();
+  return (
+    <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "6px 14px" }}>
+      {rows.map((r, i) => (
+        <div key={r.label} style={{ padding: "10px 0", borderTop: i ? `1px solid ${t.border}` : "none" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: t.text, lineHeight: 1.35 }}>{r.label}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: t.text, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{nf(r.n)}</span>
+          </div>
+          <div style={{ height: 6, borderRadius: 3, background: t.surfaceAlt, marginTop: 6, overflow: "hidden" }}>
+            <div style={{ width: `${base ? Math.min(100, (r.n / base) * 100) : 0}%`, height: "100%", borderRadius: 3, background: color }} />
+          </div>
+          {r.sub && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 4 }}>{r.sub}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Lista simples "nome — visitas — contas — taxa" (origem e aparelho).
+function SourceRows({ rows, label }) {
+  const t = useT();
+  if (!rows.length) return <div style={{ fontSize: 13, color: t.textMuted, padding: "4px 2px" }}>Ainda não há visitas.</div>;
+  return (
+    <ol style={{ listStyle: "none", margin: 0, padding: 0, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, overflow: "hidden" }}>
+      {rows.map((r, i) => (
+        <li key={label(r)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderTop: i ? `1px solid ${t.border}` : "none" }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label(r)}</span>
+          <span style={{ textAlign: "right", flexShrink: 0 }}>
+            <span style={{ display: "block", fontSize: 14, fontWeight: 800, color: t.text, fontVariantNumeric: "tabular-nums" }}>{nf(r.visitas)} {r.visitas === 1 ? "visita" : "visitas"}</span>
+            <span style={{ display: "block", fontSize: 11.5, color: t.textMuted, fontVariantNumeric: "tabular-nums" }}>
+              {nf(r.contas)} {r.contas === 1 ? "conta" : "contas"} · {pct(r.contas, r.visitas)}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+// Aba Acessos: quem abre a tela de entrada e o quiz (contagem anônima, supabase/acessos_visitantes.sql).
+function AcessosTab({ supabase, refreshKey }) {
+  const t = useT();
+  const [dias, setDias] = useState(30);
+  const key = `${dias}-${refreshKey}`;
+  const [res, setRes] = useState({ key: "", status: "loading", data: null, error: "" });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdminAcessos(supabase, dias).then(
+      (data) => !cancelled && setRes({ key, status: data ? "ok" : "missing", data, error: "" }),
+      (err) => !cancelled && setRes({ key, status: "error", data: null, error: err.message })
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, dias, key]);
+
+  const loading = res.key !== key;
+  const a = !loading && res.status === "ok" ? res.data : null;
+  const f = a?.funil;
+
+  const chip = (n) => {
+    const on = dias === n;
+    return (
+      <button
+        key={n}
+        type="button"
+        onClick={() => setDias(n)}
+        aria-pressed={on}
+        style={{ height: 32, padding: "0 14px", borderRadius: 999, cursor: "pointer", fontSize: 12.5, fontWeight: 700, background: on ? t.primarySoft : t.surface, border: `1px solid ${on ? t.primary : t.border}`, color: on ? (t.name === "dark" ? "#C4B5FF" : t.primary) : t.textMuted }}
+      >
+        {n} dias
+      </button>
+    );
+  };
+
+  return (
+    <>
+      <Section title="Período">
+        <div style={{ display: "flex", gap: 8 }}>{[7, 30, 90].map(chip)}</div>
+      </Section>
+
+      {loading && <div style={{ fontSize: 13, color: t.textMuted, padding: "16px 2px" }}>Carregando…</div>}
+
+      {!loading && res.status === "missing" && (
+        <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16, marginTop: 22, fontSize: 13.5, lineHeight: 1.5, color: t.textMuted }}>
+          Esta aba precisa do SQL acessos_visitantes.sql rodado no Supabase. Rode-o e toque em Atualizar.
+        </div>
+      )}
+      {!loading && res.status === "error" && (
+        <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16, marginTop: 22, fontSize: 13.5, lineHeight: 1.5, color: t.red }}>{res.error}</div>
+      )}
+
+      {a && (
+        <>
+          <Section title="Resumo">
+            <Grid>
+              <Kpi label="Visitas à tela de entrada" value={nf(f.tela)} color={blueAcessos} />
+              <Kpi label="Criaram conta" value={nf(f.conta)} color={t.green} sub={`${pct(f.conta, f.tela)} das visitas`} />
+              <Kpi label="Viram o resultado do quiz" value={nf(f.quiz_fim)} sub={`${pct(f.quiz_fim, f.tela)} das visitas`} />
+              <Kpi label="Tempo mediano na tela" value={dur(a.tempo_tela.mediana)} sub="Da abertura até sair" />
+              <Kpi label="Entraram em conta que já tinham" value={nf(a.login)} />
+              <Kpi label="Fecharam o quiz sem criar conta" value={nf(a.fecharam_quiz)} />
+            </Grid>
+          </Section>
+
+          <Section title="Funil: onde as pessoas chegam">
+            <BarRows
+              base={f.tela}
+              color={t.primary}
+              rows={ACESSOS_ETAPAS.map(([k, label], i) => {
+                const prev = i ? f[ACESSOS_ETAPAS[i - 1][0]] : null;
+                return {
+                  label,
+                  n: f[k],
+                  sub: i ? `${pct(f[k], f.tela)} das visitas · ${pct(f[k], prev)} da etapa anterior` : "Todas as visitas",
+                };
+              })}
+            />
+            <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+              Quem já respondeu o quiz neste IP vê o resultado direto, então pode aparecer em etapas finais sem ter passado pelas questões.
+            </div>
+          </Section>
+
+          <Section title="Onde pararam quem não criou conta">
+            {(() => {
+              const total = Object.values(a.pararam).reduce((s, n) => s + n, 0);
+              return (
+                <>
+                  <BarRows base={total} color={t.red} rows={ACESSOS_PARARAM.map(([k, label]) => ({ label, n: a.pararam[k] || 0 }))} />
+                  <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+                    Conta {nf(total)} {total === 1 ? "visita" : "visitas"}; quem criou conta ou entrou numa conta existente fica de fora.
+                  </div>
+                </>
+              );
+            })()}
+          </Section>
+
+          <Section title="Tempo na tela">
+            <BarRows base={f.tela} color={blueAcessos} rows={ACESSOS_TEMPO.map(([k, label]) => ({ label, n: a.tempo_tela[k] || 0 }))} />
+            <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+              Do primeiro ao último sinal da visita. Quem fecha o navegador sem avisar pode aparecer com menos tempo do que ficou de verdade.
+            </div>
+          </Section>
+
+          <Section title="Tempo no quiz (mediana)">
+            <Grid>
+              <Kpi label="Questão 1" value={dur(a.tempos.q1)} />
+              <Kpi label="Questão 2" value={dur(a.tempos.q2)} />
+              <Kpi label="Questão 3" value={dur(a.tempos.q3)} />
+              <Kpi label="Quiz inteiro" value={dur(a.tempos.quiz)} />
+              <Kpi label="Da abertura até criar a conta" value={dur(a.tempos.ate_conta)} wide />
+            </Grid>
+          </Section>
+
+          <Section title="Visitas por dia (14 dias)">
+            <ChartCard title="Visitas à tela de entrada">
+              <BarChart data={a.por_dia.slice(-14).map((p) => ({ d: p.d, n: p.visitas }))} color={blueAcessos} label="Visitas por dia" />
+            </ChartCard>
+            <ChartCard title="Contas criadas">
+              <BarChart data={a.por_dia.slice(-14).map((p) => ({ d: p.d, n: p.contas }))} color={t.green} label="Contas criadas por dia" />
+            </ChartCard>
+          </Section>
+
+          <Section title="De onde vêm">
+            <SourceRows rows={a.origens} label={(r) => (r.origem === "direto" ? "Direto (sem origem)" : r.origem)} />
+            <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+              O site de onde a pessoa chegou, ou o utm_source do link. Para separar campanhas, acrescente ao link do site algo como ?utm_source=instagram.
+            </div>
+          </Section>
+
+          <Section title="Aparelho">
+            <SourceRows rows={a.aparelhos} label={(r) => r.aparelho.charAt(0).toUpperCase() + r.aparelho.slice(1)} />
+          </Section>
+
+          <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 22, lineHeight: 1.5 }}>
+            Contagem anônima própria: cada visita tem um código aleatório, sem IP, e-mail ou outro dado pessoal. Só enxerga a tela de entrada e o quiz, não o resto do site. Quem liga o &ldquo;Não rastrear&rdquo; do navegador não é contado. Dias no horário de Brasília.
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+const blueAcessos = "#3B82F6";
+
 // Tela de números do app, só para a conta administradora (botão em Minha Conta).
 // tab/onTab: a aba aberta fica guardada fora da tela, para voltar nela depois de abrir uma questão.
 // onOpenQuestion(id): abre a questão numa sessão temporária (não entra no histórico de sessões).
@@ -316,6 +546,8 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
   const [extra, setExtra] = useState({ status: "loading", data: null });
   const [busyQuestion, setBusyQuestion] = useState(null);
   const [openError, setOpenError] = useState("");
+  // Sobe a cada "Atualizar" para a aba Acessos (que busca os próprios dados) carregar de novo.
+  const [acessosKey, setAcessosKey] = useState(0);
 
   const load = useCallback(async () => {
     const [main, more] = await Promise.allSettled([fetchAdminStats(supabase), fetchAdminExtra(supabase)]);
@@ -340,6 +572,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
   const refresh = () => {
     setState((s) => ({ ...s, status: "loading" }));
     setExtra((e) => ({ ...e, status: e.data ? "ok" : "loading" }));
+    setAcessosKey((k) => k + 1);
     load();
   };
 
@@ -681,6 +914,8 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
             </Section>
               </>
             )}
+
+            {tab === "acessos" && <AcessosTab supabase={supabase} refreshKey={acessosKey} />}
           </>
         )}
       </div>

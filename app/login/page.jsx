@@ -14,6 +14,7 @@ import { sendTermsAcceptance } from "@/lib/legal/client";
 import { LegalModal } from "@/components/screens/LegalModal";
 import { LoginQuizPromo, PROMO_UNTIL, promoDeadline } from "@/components/screens/LoginQuizPromo";
 import { fetchQuizState, parseQuiz, quizSnapshot, saveQuiz, subscribeQuiz } from "@/lib/data/quiz";
+import { track } from "@/lib/data/visitTracking";
 
 // Este navegador já teve uma conta (entrou ou criou uma): a tela abre em "Entrar". Quem nunca entrou abre direto no cadastro.
 const SEEN_KEY = "fc-ja-teve-conta";
@@ -82,6 +83,16 @@ function LoginForm() {
       setError("Esse link de redefinição de senha é inválido ou expirou. Solicite um novo.");
     }
   }, [searchParams]);
+
+  // Contagem anônima da visita (aba Acessos do painel de dados): abriu a tela e quando saiu. Ver lib/data/visitTracking.js.
+  useEffect(() => {
+    track("tela", null, { once: true });
+    const onHide = () => {
+      if (document.visibilityState === "hidden") track("saida");
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, []);
 
   // Quiz de boas-vindas: ao abrir o site, a pessoa responde 3 questões e ganha de 3 a 10 dias grátis (supabase/quiz_boas_vindas.sql).
   // A tentativa fica gravada pelo IP no servidor: quem já respondeu (mesmo atualizando a página ou limpando o navegador) vê o
@@ -167,6 +178,7 @@ function LoginForm() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         rememberAccount();
+        track("login_ok");
         router.push(afterLoginPath);
         router.refresh();
       } else if (mode === "signup") {
@@ -183,6 +195,7 @@ function LoginForm() {
           setError("Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.");
           return;
         }
+        track("cadastro_envio");
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -191,6 +204,7 @@ function LoginForm() {
         });
         if (error) throw error;
         rememberAccount();
+        track("cadastro_ok");
         // Se o registro falhar, a tela de aceite após o login pede o aceite de novo.
         const accepting = data.user ? sendTermsAcceptance({ context: "signup", user: { id: data.user.id, email }, keepalive: true }) : null;
         if (data.session) {
@@ -211,6 +225,7 @@ function LoginForm() {
         setInfo("Se esse e-mail tiver uma conta, enviamos um link para redefinir a senha.");
       }
     } catch (err) {
+      if (mode === "signup") track("cadastro_erro");
       setError(err.message || "Algo deu errado.");
     } finally {
       setLoading(false);
