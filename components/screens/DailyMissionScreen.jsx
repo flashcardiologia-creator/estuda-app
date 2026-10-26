@@ -5,7 +5,7 @@ import { Bandage, Check, ChevronLeft, Layers, ListChecks, Target } from "lucide-
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton, Tag, Flame_ } from "@/components/ui/Primitives";
 import { QuestionCard } from "@/components/screens/QuestionCard";
-import { fetchFriendsMissionStatus } from "@/lib/data/friends";
+import { fetchFriendsMissionStatus, fetchFriendsStreaks } from "@/lib/data/friends";
 import { getDailyMode, setDailyMode } from "@/lib/data/dailyMode";
 import { msUntilNextDayBoundary, msSincePreviousDayBoundary, MISSION_GRACE_MS, formatCountdownClock } from "@/lib/util";
 
@@ -422,10 +422,10 @@ export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate,
       setFriendsStatus([]);
       return;
     }
-    fetchFriendsMissionStatus(
-      supabase,
-      friends.map((f) => f.id)
-    )
+    const ids = friends.map((f) => f.id);
+    // get_friends_streaks já devolve a sequência vigente; se o SQL ainda não foi rodado, cai no RPC antigo.
+    fetchFriendsStreaks(supabase, ids)
+      .then((list) => list ?? fetchFriendsMissionStatus(supabase, ids).then((old) => old.map((f) => ({ ...f, streak: f.done_today ? f.streak : 0 }))))
       .then(setFriendsStatus)
       .catch(() => setFriendsStatus([]));
   }, [supabase, friends]);
@@ -470,7 +470,7 @@ export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate,
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {friendsStatus.map((f) => {
-              const shownStreak = f.done_today ? f.streak : 0;
+              const shownStreak = f.streak ?? 0;
               return (
                 <div
                   key={f.id}

@@ -570,7 +570,7 @@ export function AccountScreen({
               sub={
                 savingVisibility
                   ? "Salvando…"
-                  : "Amigos poderão ver sua sequência, questões respondidas e % de acerto"
+                  : "Amigos poderão ver suas questões respondidas e % de acerto"
               }
               style={{ padding: 0 }}
             />

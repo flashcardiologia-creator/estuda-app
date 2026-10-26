@@ -16,8 +16,8 @@
 --   * profiles.bandages: 0 ou 1.
 --   * complete_daily_mission(): devolve também bandages (quantas tem agora), bandage_earned e bandage_used.
 --   * expire_daily_mission(): se o dia virou no meio da missão, a sequência NÃO zera quando há uma bandagem que ainda pode cobrir esse dia.
---   * get_friends_streaks(ids): sequência atual de cada amigo (para o painel que abre no foguinho), respeitando a opção
---     "Comparem estatísticas com você".
+--   * get_friends_streaks(ids): sequência atual de cada amigo (painel do foguinho e tela "Missão concluída"). A sequência
+--     é visível entre amigos independente da opção "Comparem estatísticas com você" (essa opção cobre só as demais estatísticas).
 
 alter table public.profiles add column if not exists bandages integer not null default 0;
 alter table public.profiles drop constraint if exists profiles_bandages_check;
@@ -198,12 +198,10 @@ set search_path = public
 as $$
   select p.id,
          p.name,
-         case when p.stats_visible_to_friends then
-           case when p.last_mission_date >= public.app_today() - 1 then p.streak
-                when p.last_mission_date = public.app_today() - 2 and coalesce(p.bandages, 0) > 0 then p.streak
-                else 0 end
-         end as streak,
-         case when p.stats_visible_to_friends then p.best_streak end as best_streak,
+         case when p.last_mission_date >= public.app_today() - 1 then p.streak
+              when p.last_mission_date = public.app_today() - 2 and coalesce(p.bandages, 0) > 0 then p.streak
+              else 0 end as streak,
+         p.best_streak,
          coalesce(p.last_mission_date = public.app_today(), false) as done_today,
          coalesce(p.stats_visible_to_friends, false) as visible
     from public.profiles p

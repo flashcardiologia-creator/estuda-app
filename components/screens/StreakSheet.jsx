@@ -32,7 +32,7 @@ export function StreakSheet({ supabase, profile, streak, subscribed, friends, on
     ).then((list) => {
       if (cancelled) return;
       // list = null: o SQL ainda não foi rodado; mostra os amigos sem número.
-      setFriendsState(list ? { status: "ok", list } : { status: "missing", list: friends.map((f) => ({ id: f.id, name: f.name, streak: undefined, visible: true })) });
+      setFriendsState(list ? { status: "ok", list } : { status: "missing", list: friends.map((f) => ({ id: f.id, name: f.name, streak: undefined })) });
     });
     return () => {
       cancelled = true;
@@ -131,7 +131,7 @@ export function StreakSheet({ supabase, profile, streak, subscribed, friends, on
                 </span>
                 <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
                 {f.streak == null ? (
-                  <span style={{ fontSize: 12.5, color: t.textMuted }}>{f.visible === false ? "Oculta" : "—"}</span>
+                  <span style={{ fontSize: 12.5, color: t.textMuted }}>—</span>
                 ) : (
                   <span style={{ display: "flex", alignItems: "center", gap: 6, ...value }}>
                     <Flame size={15} color={f.done_today ? t.green : t.textMuted} fill={f.done_today ? t.green : "none"} />

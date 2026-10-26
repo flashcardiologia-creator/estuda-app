@@ -96,7 +96,7 @@ function faqItems(B) {
       q: "O que meus amigos e o ranking mostram de mim?",
       a: (
         <>
-          Em <B>Minha Conta → Permissões</B> você escolhe. Com &quot;Comparem estatísticas com você&quot; ligado, seus amigos veem sua sequência, questões respondidas e % de acerto. Com &quot;Mostrar meu nome no ranking&quot; desligado, você continua no ranking, mas aparece como <B>Anônimo</B>.
+          Em <B>Minha Conta → Permissões</B> você escolhe. Com &quot;Comparem estatísticas com você&quot; ligado, seus amigos veem suas questões respondidas e % de acerto (a sua sequência eles veem sempre). Com &quot;Mostrar meu nome no ranking&quot; desligado, você continua no ranking, mas aparece como <B>Anônimo</B>.
         </>
       ),
     },
