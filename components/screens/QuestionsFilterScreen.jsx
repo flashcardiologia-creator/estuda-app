@@ -269,7 +269,7 @@ export function QuestionsFilterScreen({
                   return (
                     <div
                       key={s.id}
-                      style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 12, padding: "12px 14px" }}
+                      style={{ background: t.name === "light" ? t.bg : t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 12, padding: "12px 14px" }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                         <div style={{ minWidth: 0 }}>

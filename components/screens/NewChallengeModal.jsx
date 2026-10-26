@@ -13,7 +13,7 @@ const TEMA_TODOS = "Todos";
 // fixedTema: sem assinatura o tema é um só por dia, sorteado pelo banco, e não pode ser trocado.
 export function NewChallengeModal({ friends, temas, onCreate, onClose, maxQuestions = 10, fixedTema = null }) {
   const t = useT();
-  const [friendIds, setFriendIds] = useState(friends[0] ? [friends[0].id] : []);
+  const [friendIds, setFriendIds] = useState([]);
   const [tema, setTema] = useState(fixedTema || temas[0] || "");
   const [qtd, setQtd] = useState(5);
   const [creating, setCreating] = useState(false);
