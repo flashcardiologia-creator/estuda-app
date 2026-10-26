@@ -72,7 +72,8 @@ export function QuestionCard({
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {options.map((op) => {
           const isSelected = selected === op.letra;
-          let bg = t.name === "light" ? t.surface : t.surfaceAlt,
+          // Tema claro: as alternativas usam o cinza do fundo (as tags de cima continuam no tom lilás de sempre).
+          let bg = t.name === "light" ? t.bg : t.surfaceAlt,
             border = t.border,
             color = t.text;
           // Questão anulada: todas as alternativas aparecem em verde, como corretas.

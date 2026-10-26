@@ -28,7 +28,8 @@ export function Header({ streak, onNavigate, missionDone, onOpenStreak }) {
         onClick={onOpenStreak}
         aria-label={`Ver minha sequência: ${streak} ${streak === 1 ? "dia" : "dias"}. ${missionDone ? "Missão de hoje concluída" : "Missão de hoje pendente"}`}
         title={missionDone ? "Missão de hoje concluída" : "Missão de hoje pendente"}
-        style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, padding: "0 10px 0 0", background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+        // Sem contorno de foco nem retângulo de toque em volta do foguinho (o navegador desenhava os dois ao tocar ou fechar o painel).
+        style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, padding: "0 10px 0 0", background: "transparent", border: "none", outline: "none", WebkitTapHighlightColor: "transparent", cursor: "pointer", fontFamily: "inherit" }}
       >
         <Flame_ done={missionDone} size={26} />
         <span style={{ fontWeight: 700, fontSize: 19, color: t.text }}>{streak}</span>

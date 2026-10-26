@@ -31,33 +31,30 @@ function PendingChallengesBadge({ count, bg }) {
   );
 }
 
+// Botão Missão Diária: cor do ícone/texto (accent) e do fundo (hero) em cada tema e estado.
+// Tema claro: vermelho carmim quando pendente e verde suave quando concluída.
+const MISSION_TONES = {
+  dark: { pending: { hero: "rgba(180,32,38,0.28)" }, done: { hero: "rgba(34,197,94,0.13)", accent: "#22C55E" } },
+  light: { pending: { hero: "#EDB9C4", accent: "#B4173E" }, done: { hero: "#C2E5D0", accent: "#238B50" } },
+};
+
 export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily, pendingChallengesCount = 0, locked = false }) {
   const t = useT();
+  const tone = MISSION_TONES[t.name === "dark" ? "dark" : "light"][missionDone ? "done" : "pending"];
+  const missionAccent = tone.accent || t.red; // no escuro, o vermelho pendente vem do tema
   return (
     <div className="home-fit" style={{ padding: "8px 20px var(--home-bottom, 60px)", maxWidth: 620, margin: "0 auto" }}>
       <h1 style={{ fontWeight: 700, fontSize: 20, color: t.text, margin: "var(--home-top, 18px) 0 var(--home-sub, 24px)" }}>Bem-vindo, {name}!</h1>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--home-gap, 14px)" }}>
         <HomeBox
-          icon={
-            <Flame
-              fill={missionDone ? (t.name === "dark" ? "#22C55E" : "#16A34A") : t.name === "dark" ? t.red : "#DC2626"}
-            />
-          }
+          icon={<Flame fill={missionAccent} />}
           title="Missão Diária"
           onClick={onOpenDaily}
-          heroBg={
-            t.name === "dark"
-              ? missionDone
-                ? "rgba(34,197,94,0.13)"
-                : "rgba(180,32,38,0.28)"
-              : missionDone
-              ? "#A9DDBD"
-              : "#E9AFB6"
-          }
-          accentColor={missionDone ? (t.name === "dark" ? "#22C55E" : "#16A34A") : t.name === "dark" ? t.red : "#DC2626"}
+          heroBg={tone.hero}
+          accentColor={missionAccent}
           statusText={missionDone ? (t.name === "dark" ? "✓ Concluída" : "Concluída") : "Não realizada"}
-          statusColor={missionDone ? (t.name === "dark" ? "#22C55E" : "#16A34A") : t.name === "dark" ? t.red : "#DC2626"}
+          statusColor={missionAccent}
         />
         <HomeBox icon={<BookOpen />} title="Questões" showLock={locked} onClick={() => onNavigate("questions-filters")} accentColor="#3B82F6" />
         <HomeBox icon={<Rocket />} title="Flashcards" showLock={locked} onClick={() => onNavigate("flashcards-select")} accentColor={t.amber} />
