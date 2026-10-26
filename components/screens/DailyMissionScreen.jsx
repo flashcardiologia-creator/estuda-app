@@ -287,10 +287,7 @@ function MissionFormat({ supabase, userId }) {
 
   return (
     <div style={{ marginTop: 28, textAlign: "left" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 800, letterSpacing: 1, color: t.amber }}>
-        <Target size={14} /> SUA MISSÃO DIÁRIA
-      </div>
-      <p style={{ fontSize: 13.5, color: t.textMuted, textAlign: "center", margin: "8px 0 14px", lineHeight: 1.5 }}>
+      <p style={{ fontSize: 14, fontWeight: 700, color: t.amber, textAlign: "center", margin: "0 0 14px", lineHeight: 1.5 }}>
         A partir de amanhã, como você quer a sua missão?
       </p>
 
@@ -357,13 +354,12 @@ function MissionFormat({ supabase, userId }) {
       <div style={{ fontSize: 11.5, color: t.textMuted, textAlign: "center", marginTop: 10, lineHeight: 1.5 }}>
         As questões vêm primeiro das que você já errou, na hora certa de revisar. Se faltarem, completamos com questões novas.
       </div>
-      <div style={{ fontSize: 11.5, color: saved === false ? t.red : t.textMuted, textAlign: "center", marginTop: 6, lineHeight: 1.5 }}>
-        {saved === false
-          ? "Salvo só neste aparelho por enquanto. Vale a partir de amanhã."
-          : saved
-            ? "Salvo! Vale a partir de amanhã e continua até você trocar."
-            : "Sua escolha vale a partir de amanhã e continua até você trocar."}
-      </div>
+      {/* Só aparece depois de a pessoa trocar o formato: confirma que salvou (ou avisa que ficou só neste aparelho). */}
+      {saved != null && (
+        <div role="status" style={{ fontSize: 11.5, color: saved ? t.textMuted : t.red, textAlign: "center", marginTop: 6, lineHeight: 1.5 }}>
+          {saved ? "Salvo!" : "Salvo só neste aparelho por enquanto. Vale a partir de amanhã."}
+        </div>
+      )}
     </div>
   );
 }
@@ -435,7 +431,7 @@ export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate,
   }, [supabase, friends]);
 
   return (
-    <div style={{ maxWidth: 480, margin: "28px auto 80px", textAlign: "center", padding: 22 }}>
+    <div style={{ maxWidth: 480, margin: "10px auto 80px", textAlign: "center", padding: 22 }}>
       <Flame_ done size={54} />
       <h2 style={{ fontSize: 24, color: t.text, marginTop: 16 }}>Missão concluída!</h2>
       {isFree ? (
