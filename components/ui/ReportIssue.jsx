@@ -1,17 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, Flag, Check, CircleCheck, FileText, MessageSquareText, ImageOff, SpellCheck, Ellipsis, Send, TriangleAlert } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
 import { reportContentIssue } from "@/lib/data/reports";
 
+// O texto de cada motivo é o que vai para o banco (content_reports.reason): não mudar sem avisar quem lê os reportes.
 const REASONS = [
-  "Enunciado ou alternativas com erro",
-  "Gabarito errado",
-  "Comentário/explicação errado ou confuso",
-  "Imagem não aparece ou está errada",
-  "Erro de português/digitação",
+  { label: "Enunciado ou alternativas com erro", Icon: FileText },
+  { label: "Gabarito errado", Icon: CircleCheck },
+  { label: "Comentário/explicação errado ou confuso", Icon: MessageSquareText },
+  { label: "Imagem não aparece ou está errada", Icon: ImageOff },
+  { label: "Erro de português/digitação", Icon: SpellCheck },
+  { label: "Outro", Icon: Ellipsis },
 ];
 
 export function ReportButton({ onClick }) {
@@ -51,16 +53,38 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [focus, setFocus] = useState(false);
+  const detailsRef = useRef(null);
+  const closeTimer = useRef(null);
+
+  const isOther = reason === "Outro";
+  const canSend = !!reason && !(isOther && !details.trim());
+  const what = itemType === "flashcard" ? "neste flashcard" : "nesta questão";
+
+  // Esc fecha a janela (menos enquanto envia).
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape" && !sending) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sending, onClose]);
+
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
+
+  // Ao escolher o motivo, o campo de detalhes aparece embaixo: leva a tela até ele.
+  useEffect(() => {
+    if (reason) detailsRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [reason]);
 
   const submit = async () => {
-    if (!reason) return;
-    if (reason === "Outro" && !details.trim()) return;
+    if (!canSend || sending) return;
     setSending(true);
     setError("");
     try {
       await reportContentIssue(supabase, userId, itemType, itemId, reason, details.trim());
       setSent(true);
-      setTimeout(onClose, 4000);
+      closeTimer.current = setTimeout(onClose, 4000);
     } catch (err) {
       setError(err.message || "Não foi possível enviar. Tente de novo.");
     } finally {
@@ -77,10 +101,13 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
   return (
     <div
       className="modal-overlay"
+      onClick={(e) => e.target === e.currentTarget && !sending && onClose()}
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.5)",
+        background: t.name === "dark" ? "rgba(5,11,30,0.62)" : "rgba(30,26,60,0.4)",
+        backdropFilter: "blur(3px)",
+        WebkitBackdropFilter: "blur(3px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -88,66 +115,131 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
         padding: 20,
       }}
     >
-      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 400, width: "100%" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <h3 style={{ fontSize: 16, color: t.text, margin: 0 }}>Reportar um erro</h3>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4 }}>
-            <X size={18} color={t.textMuted} />
-          </button>
-        </div>
-
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-title"
+        className="fc-sheet"
+        style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: "20px 20px 22px", maxWidth: 400, width: "100%", boxSizing: "border-box", boxShadow: "0 18px 50px rgba(0,0,0,0.35)" }}
+      >
         {sent ? (
-          <div style={{ fontSize: 13.5, color: t.green, textAlign: "center", padding: "20px 0" }}>
-            Obrigado, seu reporte foi enviado. Em breve, caso pertinente receberá a resposta em seu e-mail.
+          <div style={{ textAlign: "center", padding: "10px 4px 2px" }}>
+            <span style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(34,197,94,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+              <Check size={30} color={t.green} strokeWidth={2.6} />
+            </span>
+            <h3 id="report-title" style={{ fontSize: 18, fontWeight: 700, color: t.text, margin: "14px 0 6px" }}>
+              Reporte enviado
+            </h3>
+            <p style={{ fontSize: 13.5, lineHeight: 1.55, color: t.textMuted, margin: 0 }}>
+              Obrigado por ajudar a melhorar o FlashCardio. Se for pertinente, você receberá a resposta no seu e-mail.
+            </p>
+            <div style={{ marginTop: 18 }}>
+              <PrimaryButton full variant="ghost" onClick={onClose}>
+                Fechar
+              </PrimaryButton>
+            </div>
           </div>
         ) : (
           <>
-            <div style={{ fontSize: 12.5, color: t.textMuted, marginBottom: 14 }}>
-              O que está errado {itemType === "flashcard" ? "neste flashcard" : "nesta questão"}?
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(242,169,59,0.16)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Flag size={19} color={t.amber} />
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 id="report-title" style={{ fontSize: 17, fontWeight: 700, color: t.text, margin: 0, lineHeight: 1.25 }}>
+                  Reportar um erro
+                </h3>
+                <div style={{ fontSize: 12.5, color: t.textMuted, marginTop: 2 }}>O que está errado {what}?</div>
+              </div>
+              <button
+                onClick={onClose}
+                disabled={sending}
+                aria-label="Fechar"
+                style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: -6 }}
+              >
+                <X size={19} color={t.textMuted} />
+              </button>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[...REASONS, "Outro"].map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setReason(r)}
-                  disabled={sending}
-                  style={{
-                    textAlign: "left",
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: `1.5px solid ${reason === r ? t.primary : t.border}`,
-                    background: reason === r ? t.primarySoft : t.surfaceAlt,
-                    color: t.text,
-                    fontSize: 13,
-                    cursor: sending ? "default" : "pointer",
-                  }}
-                >
-                  {r}
-                </button>
-              ))}
+
+            <div role="radiogroup" aria-label="Motivo do reporte" style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
+              {REASONS.map(({ label, Icon }) => {
+                const on = reason === label;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setReason(label)}
+                    disabled={sending}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "9px 12px 9px 10px",
+                      borderRadius: 12,
+                      border: `1.5px solid ${on ? t.primary : t.border}`,
+                      background: on ? t.primarySoft : t.surfaceAlt,
+                      color: t.text,
+                      fontSize: 13.5,
+                      lineHeight: 1.35,
+                      fontFamily: "inherit",
+                      cursor: sending ? "default" : "pointer",
+                      transition: "border-color .15s, background .15s",
+                    }}
+                  >
+                    <span style={{ width: 32, height: 32, borderRadius: 9, background: on ? t.primary : t.surface, border: on ? "none" : `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Icon size={16} color={on ? "#fff" : t.textMuted} />
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, fontWeight: on ? 600 : 500 }}>{label}</span>
+                    <span style={{ width: 20, height: 20, borderRadius: "50%", border: `1.5px solid ${on ? t.primary : t.border}`, background: on ? t.primary : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {on && <Check size={12} color="#fff" strokeWidth={3} />}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {reason && (
-              <div style={{ marginTop: 12 }}>
+              <div ref={detailsRef} style={{ marginTop: 14 }}>
+                <label htmlFor="report-details" style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 6 }}>
+                  <span>Detalhes</span>
+                  <span style={{ fontWeight: 500 }}>{isOther ? "Obrigatório" : "Opcional"}</span>
+                </label>
                 <textarea
+                  id="report-details"
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
-                  placeholder={reason === "Outro" ? "Descreva o erro..." : "Descreva mais, se quiser (opcional)"}
+                  onFocus={() => setFocus(true)}
+                  onBlur={() => setFocus(false)}
+                  placeholder={isOther ? "Descreva o erro…" : "Conte mais para a gente corrigir mais rápido"}
                   rows={4}
-                  autoFocus={reason === "Outro"}
+                  autoFocus={isOther}
                   style={{
                     width: "100%",
-                    padding: 10,
-                    borderRadius: 10,
-                    border: `1px solid ${t.border}`,
+                    padding: "11px 12px",
+                    borderRadius: 12,
+                    border: `1.5px solid ${focus ? t.primary : t.border}`,
                     background: t.surfaceAlt,
                     color: t.text,
                     fontSize: 16,
+                    lineHeight: 1.45,
                     fontFamily: "inherit",
                     resize: "vertical",
                     boxSizing: "border-box",
+                    outline: "none",
+                    transition: "border-color .15s",
                   }}
                 />
+              </div>
+            )}
+
+            {error && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12.5, lineHeight: 1.45, color: t.red, background: "rgba(229,72,77,0.12)", borderRadius: 10, padding: "9px 12px", marginTop: 12 }}>
+                <TriangleAlert size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>{error}</span>
               </div>
             )}
 
@@ -155,22 +247,23 @@ export function ReportIssueModal({ supabase, userId, itemType, itemId, onClose }
               <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <PrimaryButton full variant="ghost" disabled={sending} onClick={cancelSelection}>
-                    Cancelar
+                    Voltar
                   </PrimaryButton>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <PrimaryButton
-                    full
-                    disabled={sending || (reason === "Outro" && !details.trim())}
-                    onClick={submit}
-                  >
-                    Confirmar
+                <div style={{ flex: 1.4, minWidth: 0 }}>
+                  <PrimaryButton full disabled={sending || !canSend} onClick={submit}>
+                    {sending ? (
+                      "Enviando…"
+                    ) : (
+                      <>
+                        <Send size={15} style={{ marginRight: 8 }} />
+                        Enviar reporte
+                      </>
+                    )}
                   </PrimaryButton>
                 </div>
               </div>
             )}
-
-            {error && <div style={{ fontSize: 12, color: t.red, marginTop: 10 }}>{error}</div>}
           </>
         )}
       </div>

@@ -7,6 +7,7 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { ContactBox } from "@/components/screens/ContactBox";
+import { FaqBox } from "@/components/screens/FaqBox";
 import { PushReminder } from "@/components/screens/PushReminder";
 import { fetchFriendComparison, removeFriend, searchProfilesByPrefix } from "@/lib/data/friends";
 
@@ -604,7 +605,7 @@ export function AccountScreen({
               alignItems: "center",
               justifyContent: "space-between",
               gap: 10,
-              background: t.primarySoft,
+              background: "transparent",
               border: `1.5px dashed ${t.primary}`,
               borderRadius: 12,
               padding: "12px 14px",
@@ -845,6 +846,8 @@ export function AccountScreen({
             ))}
           </div>
         </ExpandBox>
+
+        <FaqBox />
 
         <ContactBox supabase={supabase} userId={userId} />
 

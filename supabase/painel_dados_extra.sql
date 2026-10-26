@@ -5,7 +5,7 @@
 --   * quantos usuários usam fundo escuro, fundo claro, ou ainda não têm tema registrado (aba Usuários);
 --   * os 10 usuários que mais lançaram e os 10 que mais ganharam desafios (aba Desafios);
 --   * os 10 com maior sequência atual e os 10 com maior sequência de todos os tempos (aba Missão diária);
---   * quem usou o app nas últimas 24 h (aba Usuários) e os 10 usuários com mais questões nas últimas 24 h (aba Questões).
+--   * quem usou o app nas últimas 24 h (aba Usuários) e os usuários com mais questões hoje, top 10 (aba Questões).
 -- Rode uma vez no SQL Editor do Supabase. Pode rodar de novo (só recria a função). Só consulta: não altera
 -- nenhum dado. Não mexe na função admin_stats() do painel_dados_admin.sql.
 --
@@ -32,6 +32,7 @@ as $$
 declare
   v_email  text;
   v_today  date := public.app_today();
+  v_t0     timestamptz := (public.app_today()::timestamp at time zone 'America/Sao_Paulo');  -- começo de hoje (Brasília)
   v_now    timestamptz := now();
   v_result jsonb;
 begin
@@ -108,10 +109,11 @@ begin
     union all
     select h.from_user, h.created_at from public.challenges h where h.created_at >= v_now - interval '24 hours'
   ),
-  q24 as (
-    select a.user_id from public.user_question_attempts a where a.answered_at >= v_now - interval '24 hours'
+  -- Respostas de hoje (do começo do dia em Brasília até agora), avulsas + dentro de desafios.
+  qhoje as (
+    select a.user_id from public.user_question_attempts a where a.answered_at >= v_t0
     union all
-    select c.user_id from public.challenge_answers c where c.answered_at >= v_now - interval '24 hours'
+    select c.user_id from public.challenge_answers c where c.answered_at >= v_t0
   )
   select jsonb_build_object(
     'temas', (
@@ -138,12 +140,12 @@ begin
         ) x
     ),
     'ativos_24h_total', (select count(distinct e.user_id) from ev24 e join pessoas pe on pe.id = e.user_id),
-    -- Os 10 usuários que mais responderam questões nas últimas 24 h (avulsas + dentro de desafios).
-    'top_questoes_24h', (
+    -- Os 10 usuários que mais responderam questões hoje (avulsas + dentro de desafios).
+    'top_questoes_hoje', (
       select coalesce(jsonb_agg(jsonb_build_object('nome', x.name, 'email', x.email, 'n', x.n) order by x.n desc, x.name), '[]'::jsonb)
         from (
           select pe.name, pe.email, count(*) as n
-            from q24 q join pessoas pe on pe.id = q.user_id
+            from qhoje q join pessoas pe on pe.id = q.user_id
            group by pe.id, pe.name, pe.email
            order by count(*) desc, pe.name
            limit 10

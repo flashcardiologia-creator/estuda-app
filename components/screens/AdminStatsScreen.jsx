@@ -418,7 +418,7 @@ function AcessosTab({ supabase, refreshKey }) {
         aria-pressed={on}
         style={{ height: 32, padding: "0 14px", borderRadius: 999, cursor: "pointer", fontSize: 12.5, fontWeight: 700, background: on ? t.primarySoft : t.surface, border: `1px solid ${on ? t.primary : t.border}`, color: on ? (t.name === "dark" ? "#C4B5FF" : t.primary) : t.textMuted }}
       >
-        {n} dias
+        {n === 1 ? "Hoje" : `${n} dias`}
       </button>
     );
   };
@@ -426,7 +426,7 @@ function AcessosTab({ supabase, refreshKey }) {
   return (
     <>
       <Section title="Período">
-        <div style={{ display: "flex", gap: 8 }}>{[7, 30, 90].map(chip)}</div>
+        <div style={{ display: "flex", gap: 8 }}>{[1, 7, 30, 90].map(chip)}</div>
       </Section>
 
       {loading && <div style={{ fontSize: 13, color: t.textMuted, padding: "16px 2px" }}>Carregando…</div>}
@@ -502,14 +502,16 @@ function AcessosTab({ supabase, refreshKey }) {
             </Grid>
           </Section>
 
-          <Section title="Visitas por dia (14 dias)">
-            <ChartCard title="Visitas à tela de entrada">
-              <BarChart data={a.por_dia.slice(-14).map((p) => ({ d: p.d, n: p.visitas }))} color={blueAcessos} label="Visitas por dia" />
-            </ChartCard>
-            <ChartCard title="Contas criadas">
-              <BarChart data={a.por_dia.slice(-14).map((p) => ({ d: p.d, n: p.contas }))} color={t.green} label="Contas criadas por dia" />
-            </ChartCard>
-          </Section>
+          {dias > 1 && (
+            <Section title="Visitas por dia (14 dias)">
+              <ChartCard title="Visitas à tela de entrada">
+                <BarChart data={a.por_dia.slice(-14).map((p) => ({ d: p.d, n: p.visitas }))} color={blueAcessos} label="Visitas por dia" />
+              </ChartCard>
+              <ChartCard title="Contas criadas">
+                <BarChart data={a.por_dia.slice(-14).map((p) => ({ d: p.d, n: p.contas }))} color={t.green} label="Contas criadas por dia" />
+              </ChartCard>
+            </Section>
+          )}
 
           <Section title="De onde vêm">
             <SourceRows rows={a.origens} label={(r) => (r.origem === "direto" ? "Direto (sem origem)" : r.origem)} />
@@ -776,12 +778,12 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
               })()}
             </Section>
 
-            <CollapsibleSection id="top24h" title="10 usuários com mais questões nas últimas 24 h">
-              {ex?.top_questoes_24h ? (
+            <CollapsibleSection id="topHoje" title="Usuários com mais questões hoje">
+              {ex?.top_questoes_hoje ? (
                 <>
-                  <PeopleList rows={ex.top_questoes_24h} right={(r) => nf(r.n)} empty="Ninguém respondeu questões nas últimas 24 h." />
+                  <PeopleList rows={ex.top_questoes_hoje} right={(r) => nf(r.n)} empty="Ninguém respondeu questões hoje ainda." />
                   <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
-                    Contam as respostas avulsas e as dentro de desafios, nas últimas 24 horas corridas. O Bot Braunwald fica fora da lista.
+                    Mostra os 10 primeiros. Contam as respostas avulsas e as dentro de desafios, de hoje (desde a meia-noite, horário de Brasília). O Bot Braunwald fica fora da lista.
                   </div>
                 </>
               ) : (
