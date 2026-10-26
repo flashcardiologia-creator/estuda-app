@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, Chip, EmptyState } from "@/components/ui/Primitives";
 import { fetchFlashcardMeta } from "@/lib/data/flashcards";
-import { fetchFullStats } from "@/lib/data/stats";
+import { getFullStats } from "@/lib/data/stats";
 import { ExamStats } from "@/components/screens/ExamStats";
 
 const STATS_TABS = [
@@ -37,7 +37,7 @@ export function StatsScreen({ supabase, userId, allQuestions, challenges, onNavi
   const t = useT();
   const [fullStats, setFullStats] = useState(null);
   const [loadError, setLoadError] = useState("");
-  const [temaTab, setTemaTab] = useState("questoes");
+  const [temaTab, setTemaTab] = useState("acertos");
   const [tab, setTab] = useState("sua");
 
   const questionsById = useMemo(() => Object.fromEntries(allQuestions.map((q) => [q.id, q])), [allQuestions]);
@@ -54,7 +54,8 @@ export function StatsScreen({ supabase, userId, allQuestions, challenges, onNavi
     (async () => {
       try {
         // Uma busca só, leve (id e tema dos flashcards), em paralelo com as respostas e visualizações da pessoa.
-        const data = await fetchFullStats(supabase, userId, questionsById, () => fetchFlashcardMeta(supabase));
+        // Minha Conta já começou esta busca (preloadFullStats); aqui só se aproveita o resultado.
+        const data = await getFullStats(supabase, userId, questionsById, () => fetchFlashcardMeta(supabase));
         if (!cancelled) setFullStats(data);
       } catch (err) {
         if (!cancelled) setLoadError(err.message || "Não foi possível carregar as estatísticas.");
@@ -127,18 +128,18 @@ export function StatsScreen({ supabase, userId, allQuestions, challenges, onNavi
 
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               <Chip
-                active={temaTab === "questoes"}
-                onClick={() => setTemaTab("questoes")}
-                style={{ flex: 1, textAlign: "center", ...(temaTab !== "questoes" && t.name === "light" ? { background: t.surface } : {}) }}
-              >
-                Questões
-              </Chip>
-              <Chip
                 active={temaTab === "acertos"}
                 onClick={() => setTemaTab("acertos")}
                 style={{ flex: 1, textAlign: "center", ...(temaTab !== "acertos" && t.name === "light" ? { background: t.surface } : {}) }}
               >
                 Acertos
+              </Chip>
+              <Chip
+                active={temaTab === "questoes"}
+                onClick={() => setTemaTab("questoes")}
+                style={{ flex: 1, textAlign: "center", ...(temaTab !== "questoes" && t.name === "light" ? { background: t.surface } : {}) }}
+              >
+                Questões
               </Chip>
               <Chip
                 active={temaTab === "flashcards"}

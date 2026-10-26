@@ -65,7 +65,8 @@ import {
   fetchFavoriteIds,
   setFavorite,
 } from "@/lib/data/questions";
-import { fetchFlashcardCounts, fetchFlashcardsByTheme, fetchAllFlashcards, recordFlashcardView, sortLesson } from "@/lib/data/flashcards";
+import { fetchFlashcardCounts, fetchFlashcardsByTheme, fetchAllFlashcards, fetchFlashcardMeta, recordFlashcardView, sortLesson } from "@/lib/data/flashcards";
+import { preloadFullStats } from "@/lib/data/stats";
 import {
   countAnswered,
   createQuestionSession,
@@ -81,6 +82,7 @@ import { DROPDOWN_ALL } from "@/components/ui/Primitives";
 import { fetchDailyMissionItems, completeDailyMission, expireDailyMission } from "@/lib/data/mission";
 import {
   fetchFriends,
+  fetchFriendsStreaks,
   addFriendByName,
   addFriendById,
   fetchIncomingFriendRequests,
@@ -97,6 +99,7 @@ const HIDDEN_HEADER_SCREENS = [
   "questions-results",
   "account",
   "stats",
+  "admin-stats",
   "ranking",
   "questions-filters",
   "flashcards-select",
@@ -137,6 +140,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   const [pushPrompt, setPushPrompt] = useState(null);
   const [profile, setProfile] = useState(null);
   const [streakOpen, setStreakOpen] = useState(false); // painel que abre no foguinho
+  const [friendsStreaks, setFriendsStreaks] = useState(null); // sequência dos amigos, buscada antes de abrir o painel
   const [missionReward, setMissionReward] = useState(null); // { earned, used } da missão que acabou de ser concluída
   const [allQuestions, setAllQuestions] = useState([]);
   // Textos (enunciado/comentários) já baixados, por id; e a promessa do download
@@ -437,6 +441,25 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       });
     }
   }, [screen, supabase, userId]);
+
+  // Busca a sequência dos amigos assim que a lista de amigos chega, para o painel do foguinho abrir com tudo pronto.
+  useEffect(() => {
+    if (!friends.length) return;
+    let cancelled = false;
+    fetchFriendsStreaks(supabase, friends.map((f) => f.id)).then((list) => {
+      if (!cancelled && list) setFriendsStreaks(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, friends]);
+
+  // Ao entrar em Minha Conta, já busca as estatísticas pessoais para a tela de Estatísticas abrir pronta.
+  // Refaz quando as questões terminam de carregar (as contas por tema dependem delas).
+  useEffect(() => {
+    if (screen !== "account" || !allQuestions.length) return;
+    preloadFullStats(supabase, userId, Object.fromEntries(allQuestions.map((q) => [q.id, q])), () => fetchFlashcardMeta(supabase));
+  }, [screen, supabase, userId, allQuestions]);
 
   // Tema na conta: se a conta já tem um tema, ele vale (o tema segue a pessoa entre aparelhos); se não tem,
   // guarda o que a pessoa está usando agora; e a partir daí grava toda vez que ela troca o tema.
@@ -945,7 +968,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
         <ExpiryNotice access={access} days={expiryDays} onExtend={() => closeExpiryNotice(true)} onLater={() => closeExpiryNotice(false)} />
       )}
       {showHeader && <Header streak={profile.streak} onNavigate={setScreen} missionDone={missionDone} onOpenStreak={() => setStreakOpen(true)} />}
-      {streakOpen && <StreakSheet supabase={supabase} profile={profile} streak={profile.streak} subscribed={access.active} friends={friends} onClose={() => setStreakOpen(false)} />}
+      {streakOpen && <StreakSheet supabase={supabase} profile={profile} streak={profile.streak} subscribed={access.active} friends={friends} cachedStreaks={friendsStreaks} onLoaded={setFriendsStreaks} onClose={() => setStreakOpen(false)} />}
 
       {(paywalled || screen === "plans") && <PaywallScreen access={access} onBack={() => setScreen("home")} />}
 

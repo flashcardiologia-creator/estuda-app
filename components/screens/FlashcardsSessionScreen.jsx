@@ -50,7 +50,9 @@ function IncidenceBar({ level }) {
 // Imagem ilustrativa do card. Fica no verso (resposta) por padrão; cards cujo
 // pergunta depende da imagem (ex.: "qual o diagnóstico deste ECG?") mostram
 // a imagem nos dois lados. Se a imagem não carregar, some sem quebrar o card.
+// imagem_legenda explica as letras e números que aparecem na figura (uma linha por item).
 function CardImage({ card, flipped }) {
+  const t = useT();
   const [failed, setFailed] = useState(false);
   if (!card.imagem_url || failed) return null;
   if (!flipped && card.imagem_lado !== "pergunta") return null;
@@ -67,6 +69,12 @@ function CardImage({ card, flipped }) {
       />
       {card.imagem_credito && (
         <div style={{ fontSize: 10.5, color: "#8a8f98", marginTop: 6, textAlign: "center" }}>{card.imagem_credito}</div>
+      )}
+      {flipped && card.imagem_legenda && (
+        <div style={{ marginTop: 14, textAlign: "left" }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: t.textMuted, marginBottom: 4 }}>Legenda da imagem</div>
+          <div style={{ fontSize: 13, fontWeight: 400, color: t.text, lineHeight: 1.55, whiteSpace: "pre-line" }}>{card.imagem_legenda}</div>
+        </div>
       )}
     </div>
   );

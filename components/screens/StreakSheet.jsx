@@ -11,11 +11,16 @@ const days = (n) => `${n} ${n === 1 ? "dia" : "dias"}`;
 // Painel que abre ao tocar no foguinho: sequência atual, maior sequência, bandagem e a sequência dos amigos.
 // Mesmo layout da janela "Reportar um erro" (components/ui/ReportIssue.jsx).
 // streak = sequência atual já corrigida (effectiveStreak); profile traz best_streak e bandages; friends = [{ id, name }].
-export function StreakSheet({ supabase, profile, streak, subscribed, friends, onClose }) {
+// cachedStreaks = lista que o app já buscou antes de abrir o painel (ou null): aparece na hora e é atualizada em segundo plano;
+// onLoaded guarda a lista nova para a próxima abertura.
+export function StreakSheet({ supabase, profile, streak, subscribed, friends, cachedStreaks = null, onLoaded, onClose }) {
   const t = useT();
   const bandages = profile.bandages || 0;
   const [explainOpen, setExplainOpen] = useState(false);
-  const [friendsState, setFriendsState] = useState({ status: friends.length ? "loading" : "ok", list: [] });
+  const [friendsState, setFriendsState] = useState(() => {
+    if (cachedStreaks) return { status: "ok", list: cachedStreaks };
+    return { status: friends.length ? "loading" : "ok", list: [] };
+  });
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -31,15 +36,23 @@ export function StreakSheet({ supabase, profile, streak, subscribed, friends, on
       friends.map((f) => f.id)
     ).then((list) => {
       if (cancelled) return;
-      // list = null: o SQL ainda não foi rodado; mostra os amigos sem número.
-      setFriendsState(list ? { status: "ok", list } : { status: "missing", list: friends.map((f) => ({ id: f.id, name: f.name, streak: undefined })) });
+      if (list) {
+        setFriendsState({ status: "ok", list });
+        onLoaded?.(list);
+      } else {
+        // list = null: o SQL ainda não foi rodado (ou a busca falhou); mantém o que já estava na tela, ou mostra os amigos sem número.
+        setFriendsState((s) => (s.status === "ok" && s.list.length ? s : { status: "missing", list: friends.map((f) => ({ id: f.id, name: f.name, streak: undefined })) }));
+      }
     });
     return () => {
       cancelled = true;
     };
+    // onLoaded só guarda a lista; não precisa refazer a busca quando ele muda.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, friends]);
 
-  const sorted = [...friendsState.list].sort((a, b) => (b.streak ?? -1) - (a.streak ?? -1) || a.name.localeCompare(b.name));
+  const friendIds = new Set(friends.map((f) => f.id));
+  const sorted = friendsState.list.filter((f) => friendIds.has(f.id)).sort((a, b) => (b.streak ?? -1) - (a.streak ?? -1) || a.name.localeCompare(b.name));
 
   // Linha em cartão, igual às opções da janela de reporte.
   const card = { display: "flex", alignItems: "center", gap: 12, width: "100%", minHeight: 48, boxSizing: "border-box", padding: "10px 14px", borderRadius: 12, border: `1px solid ${t.border}`, background: t.surfaceAlt, color: t.text, fontSize: 14, lineHeight: 1.35, textAlign: "left", fontFamily: "inherit" };
