@@ -5,6 +5,12 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, Chip, EmptyState } from "@/components/ui/Primitives";
 import { fetchAllFlashcards, fetchFlashcardThemeCounts } from "@/lib/data/flashcards";
 import { fetchFullStats } from "@/lib/data/stats";
+import { ExamStats } from "@/components/screens/ExamStats";
+
+const STATS_TABS = [
+  { id: "sua", label: "Sua Estatística" },
+  { id: "provas", label: "Provas" },
+];
 
 function StatBar({ label, sublabel, pct, color, barBg }) {
   const t = useT();
@@ -32,6 +38,7 @@ export function StatsScreen({ supabase, userId, allQuestions, challenges, onNavi
   const [fullStats, setFullStats] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [temaTab, setTemaTab] = useState("questoes");
+  const [tab, setTab] = useState("sua");
 
   const questionsById = useMemo(() => Object.fromEntries(allQuestions.map((q) => [q.id, q])), [allQuestions]);
 
@@ -67,10 +74,31 @@ export function StatsScreen({ supabase, userId, allQuestions, challenges, onNavi
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
       <ScreenHeader title="Estatísticas" onBack={() => onNavigate("account")} />
       <div style={{ padding: "18px 22px" }}>
-        {loadError && <EmptyState text={loadError} />}
-        {!loadError && !fullStats && <EmptyState text="Carregando…" />}
+        <div role="tablist" aria-label="Seções das estatísticas" style={{ display: "flex", borderBottom: `1px solid ${t.border}`, marginBottom: 18 }}>
+          {STATS_TABS.map(({ id, label }) => {
+            const on = tab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setTab(id)}
+                style={{ flex: 1, minHeight: 44, padding: "0 8px", background: "transparent", border: "none", borderBottom: `2px solid ${on ? t.primary : "transparent"}`, marginBottom: -1, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 700, color: on ? t.primary : t.textMuted }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
 
-        {fullStats && (
+        {/* A aba Provas só usa as questões do banco (já carregadas), então não espera as estatísticas pessoais. */}
+        {tab === "provas" && <ExamStats allQuestions={allQuestions} />}
+
+        {tab === "sua" && loadError && <EmptyState text={loadError} />}
+        {tab === "sua" && !loadError && !fullStats && <EmptyState text="Carregando…" />}
+
+        {tab === "sua" && fullStats && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 22 }}>
               {[
