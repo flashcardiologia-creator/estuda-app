@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, Chip, EmptyState } from "@/components/ui/Primitives";
-import { fetchAllFlashcards, fetchFlashcardThemeCounts } from "@/lib/data/flashcards";
+import { fetchFlashcardMeta } from "@/lib/data/flashcards";
 import { fetchFullStats } from "@/lib/data/stats";
 import { ExamStats } from "@/components/screens/ExamStats";
 
@@ -53,12 +53,8 @@ export function StatsScreen({ supabase, userId, allQuestions, challenges, onNavi
     let cancelled = false;
     (async () => {
       try {
-        const [allFlashcards, flashcardThemeCounts] = await Promise.all([
-          fetchAllFlashcards(supabase),
-          fetchFlashcardThemeCounts(supabase),
-        ]);
-        const flashcardsById = Object.fromEntries(allFlashcards.map((f) => [f.id, f]));
-        const data = await fetchFullStats(supabase, userId, questionsById, flashcardsById, flashcardThemeCounts);
+        // Uma busca só, leve (id e tema dos flashcards), em paralelo com as respostas e visualizações da pessoa.
+        const data = await fetchFullStats(supabase, userId, questionsById, () => fetchFlashcardMeta(supabase));
         if (!cancelled) setFullStats(data);
       } catch (err) {
         if (!cancelled) setLoadError(err.message || "Não foi possível carregar as estatísticas.");
