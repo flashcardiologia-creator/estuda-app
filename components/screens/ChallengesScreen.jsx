@@ -99,10 +99,12 @@ function TimeLeftTag({ expiresAt }) {
   );
 }
 
-// Botão enxuto da tela de Desafios, no estilo da aba selecionada (borda e letra roxas, fundo roxo translúcido).
+// Botão enxuto da tela de Desafios. No tema escuro fica no estilo das abas Pendentes/Concluídos quando não estão
+// selecionadas (sem cor); no tema claro mantém o estilo da aba selecionada (borda e letra roxas, fundo roxo translúcido).
 // O texto visível é curto; o rótulo completo vai para leitores de tela.
 function CompactButton({ children, onClick, disabled, label, padding, fontSize, radius, full = false, height }) {
   const t = useT();
+  const dark = t.name === "dark";
   return (
     <button
       type="button"
@@ -115,9 +117,9 @@ function CompactButton({ children, onClick, disabled, label, padding, fontSize, 
         fontSize,
         padding,
         borderRadius: radius,
-        background: disabled ? t.border : t.primarySoft,
-        color: disabled ? t.textMuted : t.name === "dark" ? "#C4B5FF" : t.primary,
-        border: `1px solid ${disabled ? t.border : t.primary}`,
+        background: disabled ? t.border : dark ? t.surface : t.primarySoft,
+        color: disabled || dark ? t.textMuted : t.primary,
+        border: `1px solid ${disabled || dark ? t.border : t.primary}`,
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.6 : 1,
         display: "inline-flex",
@@ -380,6 +382,8 @@ export function ChallengesScreen({
           </div>
           <PrimaryButton
             small
+            variant={t.name === "dark" ? "ghost" : "primary"}
+            textColor={t.name === "dark" ? t.primary : undefined}
             disabled={dailyCount >= dailyLimit || waitingDayTema}
             onClick={() => (friends.length === 0 ? setShowNoFriends(true) : setShowNew(true))}
           >
