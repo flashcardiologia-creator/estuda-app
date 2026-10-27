@@ -1,19 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { clientIp } from "@/lib/clientIp";
 
 // Quiz de boas-vindas da tela de entrada (supabase/quiz_boas_vindas.sql). A tentativa fica gravada pelo IP de quem
 // respondeu: atualizar a página não dá outra chance, a pessoa vê o mesmo resultado.
 // Fica em /auth/* porque o proxy só libera rotas sem login sob /auth e /login.
 // O IP vem dos cabeçalhos da requisição (nunca do navegador), então cada visitante só mexe na tentativa do próprio IP.
 // Qualquer falha (variável ausente, SQL ainda não rodado, banco fora do ar) responde { erro: true } e o quiz não aparece.
-
-function clientIp(headers) {
-  const direct = headers.get("x-nf-client-connection-ip") || headers.get("x-real-ip");
-  const chain = headers.get("x-forwarded-for");
-  const first = chain ? chain.split(",")[0].trim() : null;
-  const ip = (direct || first || "").trim().slice(0, 64);
-  return ip || null;
-}
 
 const NO_STORE = { "Cache-Control": "no-store" };
 const FAIL = () => NextResponse.json({ erro: true }, { headers: NO_STORE });

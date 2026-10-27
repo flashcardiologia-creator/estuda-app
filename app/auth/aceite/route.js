@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
+import { clientIp } from "@/lib/clientIp";
 import { ACCEPT_LABEL, LEGAL_VERSION, PRIVACY, TERMS } from "@/lib/legal/content";
 
 // Registra o aceite dos Termos de Uso e da Política de Privacidade: no cadastro (context "signup")
@@ -14,13 +15,6 @@ const MAX_AGE_MS = 15 * 60 * 1000; // só aceita registrar para contas criadas h
 
 const sha256 = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const clip = (value, max) => (typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null);
-
-function clientIp(headers) {
-  const direct = headers.get("x-nf-client-connection-ip") || headers.get("x-real-ip");
-  const chain = headers.get("x-forwarded-for");
-  const first = chain ? chain.split(",")[0].trim() : null;
-  return { ip: clip(direct || first, 64), chain: clip(chain, 500) };
-}
 
 export async function POST(request) {
   let body;
@@ -64,7 +58,8 @@ export async function POST(request) {
   }
 
   const headers = request.headers;
-  const { ip, chain } = clientIp(headers);
+  const ip = clientIp(headers);
+  const chain = clip(headers.get("x-forwarded-for"), 500);
   const row = {
     user_id: user.id,
     email: (user.email || email || "").toLowerCase(),
