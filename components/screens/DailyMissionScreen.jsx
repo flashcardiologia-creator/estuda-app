@@ -352,7 +352,7 @@ function MissionFormat({ supabase, userId }) {
       </div>
 
       <div style={{ fontSize: 11.5, color: t.textMuted, textAlign: "center", marginTop: 10, lineHeight: 1.5 }}>
-        As questões vêm primeiro das que você já errou, na hora certa de revisar. Se faltarem, completamos com questões novas.
+        As questões vêm do pool de questões que você já errou, na hora certa de revisar. Se faltarem, completamos com questões novas.
       </div>
       {/* Só aparece depois de a pessoa trocar o formato: confirma que salvou (ou avisa que ficou só neste aparelho). */}
       {saved != null && (

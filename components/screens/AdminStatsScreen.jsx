@@ -468,7 +468,7 @@ function AcessosTab({ supabase, refreshKey }) {
           <Section title="Resumo">
             <Grid>
               <Kpi label="Visitas à tela de entrada" value={nf(f.tela)} color={blueAcessos} />
-              <Kpi label="Criaram conta" value={nf(f.conta)} color={t.green} sub={`${pct(f.conta, f.tela)} das visitas`} />
+              <Kpi label="Criaram conta" value={nf(a.contas_reais ?? f.conta)} color={t.green} sub={a.contas_reais == null ? `${pct(f.conta, f.tela)} das visitas` : `${nf(f.conta)} no rastreio das visitas`} />
               <Kpi label="Viram o resultado do quiz" value={nf(f.quiz_fim)} sub={`${pct(f.quiz_fim, f.tela)} das visitas`} />
               <Kpi label="Tempo mediano na tela" value={dur(a.tempo_tela.mediana)} sub="Da abertura até sair" />
               <Kpi label="Entraram em conta que já tinham" value={nf(a.login)} />
@@ -490,7 +490,7 @@ function AcessosTab({ supabase, refreshKey }) {
               })}
             />
             <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
-              Quem já respondeu o quiz neste IP vê o resultado direto, então pode aparecer em etapas finais sem ter passado pelas questões.
+              Quem já respondeu o quiz neste IP vê o resultado direto, então pode aparecer em etapas finais sem ter passado pelas questões. O funil só conta quem o navegador deixou rastrear: quem liga &quot;Não rastrear&quot; ou usa bloqueador cria conta e não aparece aqui. Por isso o total de contas criadas, no Resumo, vem direto do cadastro e pode ser maior que a última etapa.
             </div>
           </Section>
 
@@ -531,7 +531,7 @@ function AcessosTab({ supabase, refreshKey }) {
                 <BarChart data={a.por_dia.slice(-14).map((p) => ({ d: p.d, n: p.visitas }))} color={blueAcessos} label="Visitas por dia" />
               </ChartCard>
               <ChartCard title="Contas criadas">
-                <BarChart data={a.por_dia.slice(-14).map((p) => ({ d: p.d, n: p.contas }))} color={t.green} label="Contas criadas por dia" />
+                <BarChart data={a.por_dia.slice(-14).map((p) => ({ d: p.d, n: p.contas_reais ?? p.contas }))} color={t.green} label="Contas criadas por dia" />
               </ChartCard>
             </Section>
           )}
