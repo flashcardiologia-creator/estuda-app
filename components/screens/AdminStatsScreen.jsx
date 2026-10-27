@@ -691,6 +691,19 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                   <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
                     O tema é gravado na conta quando a pessoa abre o app e a cada troca no botão de sol/lua. Quem ainda não abriu o app depois da atualização aparece em &quot;Sem registro&quot;.
                   </div>
+                  {ex.temas.os_dois != null && (
+                    <>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: t.text, margin: "16px 0 8px" }}>Quem já experimentou</div>
+                      <Grid cols={3}>
+                        <Kpi label="Já usaram o escuro" value={nf(ex.temas.ja_usaram_escuro)} sub={pct(ex.temas.ja_usaram_escuro, d.usuarios.total)} />
+                        <Kpi label="Já usaram o claro" value={nf(ex.temas.ja_usaram_claro)} sub={pct(ex.temas.ja_usaram_claro, d.usuarios.total)} />
+                        <Kpi label="Experimentaram os dois" value={nf(ex.temas.os_dois)} sub={pct(ex.temas.os_dois, d.usuarios.total)} />
+                      </Grid>
+                      <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+                        Conta quem já teve cada fundo na conta. O histórico começa quando o SQL foi rodado: quem trocou de tema antes disso aparece só com o tema que usa hoje, então &quot;os dois&quot; tende a crescer com o tempo.
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <ExtraNotice extra={ex ? { status: "missing" } : extra} />
