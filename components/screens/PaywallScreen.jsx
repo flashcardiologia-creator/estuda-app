@@ -81,12 +81,38 @@ export function PaywallScreen({ access, onBack }) {
   const [coupon, setCoupon] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponResult, setCouponResult] = useState(null);
+  // Cupom de preço (supabase/cupom_preco.sql): { code, plan, priceCents }. Troca o valor do plano; o servidor confere de novo ao assinar.
+  const [priceCoupon, setPriceCoupon] = useState(null);
+  const PRICE_COUPON_MESSAGES = {
+    expirado: "Este cupom expirou.",
+    ja_usado: "Você já usou este cupom nesta conta.",
+    esgotado: "Este cupom atingiu o limite de usos.",
+    plano_incorreto: "Este cupom não vale para este plano.",
+  };
+  const removePriceCoupon = () => {
+    setPriceCoupon(null);
+    setCouponResult(null);
+    setCoupon("");
+  };
   const redeemCoupon = async (e) => {
     e.preventDefault();
     const code = coupon.trim();
     if (!code || couponBusy) return;
     setCouponBusy(true);
     setCouponResult(null);
+    // Primeiro vê se é um cupom de preço. Se o código não é de preço (ou o SQL ainda não foi rodado), segue para o cupom de dias.
+    const { data: priceData, error: priceError } = await createClient().rpc("check_price_coupon", { p_code: code });
+    const priceRow = Array.isArray(priceData) ? priceData[0] : priceData;
+    if (!priceError && priceRow && priceRow.out_status !== "invalido") {
+      if (priceRow.out_status === "ok") {
+        setPriceCoupon({ code: priceRow.out_code, plan: priceRow.out_plan, priceCents: priceRow.out_price_cents });
+        setCouponResult({ ok: true, kind: "price" });
+      } else {
+        setCouponResult({ ok: false, text: PRICE_COUPON_MESSAGES[priceRow.out_status] || "Cupom inválido." });
+      }
+      setCouponBusy(false);
+      return;
+    }
     const { data, error: rpcError } = await createClient().rpc("redeem_coupon", { p_code: code });
     const row = Array.isArray(data) ? data[0] : data;
     if (rpcError || !row) {
@@ -117,8 +143,20 @@ export function PaywallScreen({ access, onBack }) {
     setError("");
     setPaying(planId);
     try {
-      const res = await fetch("/api/pagamento/criar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: planId }) });
+      const withCoupon = priceCoupon && priceCoupon.plan === planId;
+      const res = await fetch("/api/pagamento/criar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(withCoupon ? { plan: planId, coupon: priceCoupon.code } : { plan: planId }),
+      });
       const data = await res.json().catch(() => ({}));
+      if (data.error === "coupon") {
+        // O servidor recusou o cupom (por exemplo, outro aparelho já usou): tira o preço novo e avisa.
+        setPriceCoupon(null);
+        setCouponResult({ ok: false, text: PRICE_COUPON_MESSAGES[data.status] || "Cupom inválido." });
+        setPaying(null);
+        return;
+      }
       if (!res.ok || !data.url) throw new Error("falhou");
       // Preferência: janela do Mercado Pago aqui mesmo, sem sair do site nem abrir o app do Mercado Pago.
       if (canOpenModal() && data.id) {
@@ -215,7 +253,16 @@ export function PaywallScreen({ access, onBack }) {
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                   <span style={{ fontWeight: 700, fontSize: 16, color: t.text }}>{p.label}</span>
                   <span style={{ fontWeight: 800, fontSize: 18, color: t.text }}>
-                    {p.id === "anual" ? `${formatBRL(Math.round(p.priceCents / 12))}/mês` : formatBRL(p.priceCents)}
+                    {priceCoupon?.plan === p.id ? (
+                      <>
+                        <span style={{ fontWeight: 500, fontSize: 14, color: t.textMuted, textDecoration: "line-through", marginRight: 8 }}>{formatBRL(p.priceCents)}</span>
+                        {formatBRL(priceCoupon.priceCents)}
+                      </>
+                    ) : p.id === "anual" ? (
+                      `${formatBRL(Math.round(p.priceCents / 12))}/mês`
+                    ) : (
+                      formatBRL(p.priceCents)
+                    )}
                   </span>
                 </div>
                 <div style={{ fontSize: 13, color: t.textMuted, margin: "4px 0 0", lineHeight: 1.5 }}>
@@ -236,7 +283,13 @@ export function PaywallScreen({ access, onBack }) {
                 {/* Só o plano clicado fica ativo ("Abrindo pagamento…"); o outro fica desativado até abrir. */}
                 <PrimaryButton full disabled={!!paying && paying !== p.id} onClick={() => pay(p.id)}>
                   <CreditCard size={15} style={{ marginRight: 7, verticalAlign: -3 }} />
-                  {paying === p.id ? "Abrindo pagamento…" : subscribed ? `Prolongar ${p.days} dias` : `Assinar ${p.label.toLowerCase()}`}
+                  {paying === p.id
+                    ? "Abrindo pagamento…"
+                    : subscribed
+                      ? `Prolongar ${p.days} dias`
+                      : priceCoupon?.plan === p.id
+                        ? `Assinar ${p.label.toLowerCase()} por ${formatBRL(priceCoupon.priceCents)}`
+                        : `Assinar ${p.label.toLowerCase()}`}
                 </PrimaryButton>
               </div>
             ))}
@@ -271,7 +324,20 @@ export function PaywallScreen({ access, onBack }) {
               </PrimaryButton>
             </div>
           </form>
-          {couponResult?.ok && (
+          {couponResult?.ok && couponResult.kind === "price" && priceCoupon && (
+            <div style={{ fontSize: 13, lineHeight: 1.5, color: t.text, background: "rgba(34,197,94,0.14)", borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
+              Cupom aplicado! O plano {PLANS[priceCoupon.plan].label.toLowerCase()} fica por <b>{formatBRL(priceCoupon.priceCents)}</b> (era {formatBRL(PLANS[priceCoupon.plan].priceCents)}). Toque em
+              &quot;Assinar&quot; no plano para pagar com o desconto. Uso único por conta.{" "}
+              <button
+                type="button"
+                onClick={removePriceCoupon}
+                style={{ background: "transparent", border: "none", padding: 0, color: t.primary, fontWeight: 600, fontSize: 13, cursor: "pointer", textDecoration: "underline" }}
+              >
+                Remover
+              </button>
+            </div>
+          )}
+          {couponResult?.ok && couponResult.kind !== "price" && (
             <div style={{ fontSize: 13, lineHeight: 1.5, color: t.text, background: "rgba(34,197,94,0.14)", borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
               Cupom aplicado! Você ganhou <b>{couponResult.days} dias</b> de acesso, até <b>{fmtDate(couponResult.until)}</b>.
             </div>

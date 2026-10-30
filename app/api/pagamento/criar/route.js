@@ -55,6 +55,28 @@ export async function POST(request) {
   if (!isPlan(body?.plan)) return NextResponse.json({ error: "invalid_plan" }, { status: 400 });
   const plan = PLANS[body.plan];
 
+  // Cupom de preço (supabase/cupom_preco.sql): o banco confere e reserva um uso; o preço cobrado vem daí, nunca do navegador.
+  let priceCents = plan.priceCents;
+  let reservation = null;
+  const couponCode = typeof body?.coupon === "string" ? body.coupon.trim().slice(0, 40) : "";
+  if (couponCode) {
+    try {
+      const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+      const { data, error } = await admin.rpc("reserve_price_coupon", { p_user_id: user.id, p_code: couponCode, p_plan: plan.id });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (error || !row) {
+        console.error("[pagamento] não foi possível reservar o cupom:", error?.message);
+        return NextResponse.json({ error: "coupon_unavailable" }, { status: 503 });
+      }
+      if (row.out_status !== "ok") return NextResponse.json({ error: "coupon", status: row.out_status }, { status: 400 });
+      priceCents = row.out_price_cents;
+      reservation = row.out_reservation;
+    } catch (err) {
+      console.error("[pagamento] erro ao reservar o cupom:", err.message);
+      return NextResponse.json({ error: "coupon_unavailable" }, { status: 503 });
+    }
+  }
+
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
   if (!token) {
     console.error("[pagamento] MERCADOPAGO_ACCESS_TOKEN não configurada");
@@ -75,15 +97,16 @@ export async function POST(request) {
     items: [
       {
         id: plan.id,
-        title: `FlashCardio - Plano ${plan.label} (${plan.days} dias)`,
+        title: `FlashCardio - Plano ${plan.label} (${plan.days} dias)${reservation ? " com cupom" : ""}`,
         quantity: 1,
         currency_id: "BRL",
-        unit_price: plan.priceCents / 100,
+        unit_price: priceCents / 100,
       },
     ],
     payer: { email: user.email },
     // Quem pagou e o que comprou: o webhook lê isto para liberar o acesso.
-    external_reference: `${user.id}:${plan.id}`,
+    // Com cupom de preço, o terceiro item é o número da reserva do cupom (o webhook consome no pagamento aprovado).
+    external_reference: reservation ? `${user.id}:${plan.id}:${reservation}` : `${user.id}:${plan.id}`,
     notification_url: `${site}/auth/mercadopago`,
     back_urls: {
       // Na volta do pagamento a pessoa entra sozinha (link de uso único, ver loginLink); se não for

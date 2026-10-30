@@ -46,8 +46,9 @@ async function handle(request) {
   }
   const pay = await res.json();
 
-  const [userId, planId] = String(pay.external_reference || "").split(":");
+  const [userId, planId, couponRef] = String(pay.external_reference || "").split(":");
   if (!UUID.test(userId || "") || !isPlan(planId)) return ok({ ignored: true });
+  if (couponRef !== undefined && !UUID.test(couponRef)) return ok({ ignored: true });
   const plan = PLANS[planId];
 
   const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -57,7 +58,30 @@ async function handle(request) {
 
   if (pay.status === "approved") {
     const cents = Math.round(Number(pay.transaction_amount) * 100);
-    if (pay.currency_id !== "BRL" || !(cents >= plan.priceCents)) {
+    if (pay.currency_id !== "BRL") {
+      console.error("[mercadopago] moeda diferente de BRL, ignorado:", paymentId, pay.currency_id);
+      return ok({ ignored: true });
+    }
+    if (couponRef) {
+      // Cupom de preço: o banco confere que o valor pago é o do cupom e gasta o uso (supabase/cupom_preco.sql).
+      // Reenvio do mesmo aviso devolve "ok" de novo; um segundo pagamento com o mesmo cupom não libera acesso.
+      const { data: used, error: couponError } = await admin.rpc("consume_price_coupon", {
+        p_reservation: couponRef,
+        p_user_id: userId,
+        p_plan: planId,
+        p_payment_ref: ref,
+        p_paid_cents: cents,
+      });
+      const couponStatus = (Array.isArray(used) ? used[0] : used)?.out_status;
+      if (couponError || !couponStatus) {
+        console.error("[mercadopago] falha ao conferir o cupom, o Mercado Pago tenta de novo:", paymentId, couponError?.message);
+        return NextResponse.json({ error: "coupon_failed" }, { status: 500 });
+      }
+      if (couponStatus !== "ok") {
+        console.error(`[mercadopago] ATENÇÃO: pagamento ${paymentId} com cupom ${couponStatus}, acesso NÃO liberado. Confira e devolva o valor se for o caso.`, pay.transaction_amount);
+        return ok({ ignored: true });
+      }
+    } else if (!(cents >= plan.priceCents)) {
       console.error("[mercadopago] valor diferente do plano, ignorado:", paymentId, pay.currency_id, pay.transaction_amount, planId);
       return ok({ ignored: true });
     }
