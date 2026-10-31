@@ -197,3 +197,29 @@ input {
     animation: none;
   }
 }
+
+/* Página de boas-vindas (components/screens/LandingPage.jsx): entrada suave do topo, perguntas frequentes e "reduzir movimento". */
+@keyframes lp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lp-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.lp-faq details[open] .lp-chev {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*="lp-rise"] {
+    animation: none !important;
+  }
+}

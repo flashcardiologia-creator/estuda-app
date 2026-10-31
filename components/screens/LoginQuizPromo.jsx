@@ -39,7 +39,9 @@ const sourceLabel = (instituicao) => (/^INCOR/.test(instituicao) ? "R+ INCOR" : 
 // estado: { quiz, feito, id, resultado } de /auth/quiz. Quando este IP já respondeu (feito), abre direto no resultado gravado.
 // deadline/initialRest: fim do contador e o que falta agora (calculados fora, no mesmo instante).
 // onDone(resultado): a pessoa clicou em "Criar minha conta". onClose: fechou.
-export function LoginQuizPromo({ estado, deadline, initialRest, onClose, onExpire, onDone }) {
+// inline: o quiz aparece dentro da página de boas-vindas (sem janela por cima, sem botão de fechar e sem o título "Crie sua
+// conta GRÁTIS", que a própria seção já traz).
+export function LoginQuizPromo({ estado, deadline, initialRest, onClose, onExpire, onDone, inline = false }) {
   const t = useT();
   const quiz = estado.quiz;
   const [rest, setRest] = useState(initialRest);
@@ -107,24 +109,35 @@ export function LoginQuizPromo({ estado, deadline, initialRest, onClose, onExpir
   };
   const small = { fontSize: 12.5, color: t.textMuted, lineHeight: 1.5 };
 
+  const outerProps = inline
+    ? { role: "region", "aria-label": "Quiz de boas-vindas", style: { width: "100%" } }
+    : {
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "Crie sua conta grátis",
+        style: { position: "fixed", inset: 0, zIndex: 80, background: veil, backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 },
+      };
+  const innerStyle = inline
+    ? { position: "relative", width: "100%", boxSizing: "border-box", background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: "22px 18px 20px", boxShadow: "0 10px 36px rgba(0,0,0,0.22)" }
+    : { position: "relative", width: "100%", maxWidth: 400, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", boxSizing: "border-box", background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: "26px 22px 22px", boxShadow: "0 18px 50px rgba(0,0,0,0.35)" };
+
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Crie sua conta grátis"
-      style={{ position: "fixed", inset: 0, zIndex: 80, background: veil, backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-    >
-      <div style={{ position: "relative", width: "100%", maxWidth: 400, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", boxSizing: "border-box", background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: "26px 22px 22px", boxShadow: "0 18px 50px rgba(0,0,0,0.35)" }}>
-        <button type="button" onClick={close} aria-label="Fechar" style={{ position: "absolute", top: 8, right: 8, width: 36, height: 36, border: "none", background: "transparent", color: t.textMuted, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <X size={18} />
-        </button>
+    <div {...outerProps}>
+      <div style={innerStyle}>
+        {!inline && (
+          <button type="button" onClick={close} aria-label="Fechar" style={{ position: "absolute", top: 8, right: 8, width: 36, height: 36, border: "none", background: "transparent", color: t.textMuted, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={18} />
+          </button>
+        )}
 
         {step === -1 && (
           <div style={{ textAlign: "center" }}>
-            <h2 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 800, color: t.text, margin: "0 18px" }}>
-              Crie sua conta <span style={{ color: t.primary }}>GRÁTIS</span>
-            </h2>
-            <div role="timer" aria-label="Tempo restante da oferta" style={{ marginTop: 12, fontSize: 32, lineHeight: 1.1, fontWeight: 800, color: t.text, fontVariantNumeric: "tabular-nums", letterSpacing: 0.5 }}>
+            {!inline && (
+              <h2 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 800, color: t.text, margin: "0 18px" }}>
+                Crie sua conta <span style={{ color: t.primary }}>GRÁTIS</span>
+              </h2>
+            )}
+            <div role="timer" aria-label="Tempo restante da oferta" style={{ marginTop: inline ? 0 : 12, fontSize: 32, lineHeight: 1.1, fontWeight: 800, color: t.text, fontVariantNumeric: "tabular-nums", letterSpacing: 0.5 }}>
               {clock(rest)}
             </div>
             <p style={{ margin: "16px 0 0", fontSize: 15, lineHeight: 1.5, fontWeight: 600, color: t.text }}>Faça 3 questões e ganhe dias grátis</p>

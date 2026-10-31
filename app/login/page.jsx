@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import { Flame, Eye, EyeOff, Smartphone, ChevronLeft } from "lucide-react";
 import { InstallGuide } from "@/components/screens/InstallGuide";
 import { SwipeBack } from "@/components/SwipeBack";
@@ -12,7 +12,8 @@ import { updateDisplayName } from "@/lib/data/profile";
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { sendTermsAcceptance } from "@/lib/legal/client";
 import { LegalModal } from "@/components/screens/LegalModal";
-import { LoginQuizPromo, PROMO_UNTIL, promoDeadline } from "@/components/screens/LoginQuizPromo";
+import { PROMO_UNTIL, promoDeadline } from "@/components/screens/LoginQuizPromo";
+import { LandingPage } from "@/components/screens/LandingPage";
 import { fetchQuizState, parseQuiz, quizSnapshot, saveQuiz, subscribeQuiz } from "@/lib/data/quiz";
 import { track } from "@/lib/data/visitTracking";
 
@@ -34,30 +35,35 @@ const rememberAccount = () => {
   }
 };
 
+// Sem Suspense nem useSearchParams: a página de boas-vindas sai pronta do servidor (rápida no primeiro acesso). Os parâmetros do
+// endereço (link de pagamento, de erro ou de renovação) são lidos no navegador logo depois, do mesmo jeito de antes.
+const searchSnapshot = () => window.location.search;
+
 export default function LoginPage() {
-  return (
-    <Suspense fallback={null}>
-      <LoginForm />
-    </Suspense>
-  );
+  return <LoginForm />;
 }
 
 function LoginForm() {
   const t = useT();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const search = useSyncExternalStore(noopSubscribe, searchSnapshot, () => "");
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   // Voltou do pagamento sem estar logado neste navegador: avisa que o pagamento foi recebido.
   const paymentReturn = ["ok", "pendente"].includes(searchParams.get("pagamento") || "");
   // Link do e-mail/notificação de vencimento (/?prolongar=1): depois de entrar, abre a tela de assinatura.
   const afterLoginPath = searchParams.get("prolongar") === "1" ? "/?prolongar=1" : "/";
-  const supabase = createClient();
-
   // Primeira tela: cadastro, a não ser que este navegador já tenha tido conta ou a pessoa tenha vindo por um link de
   // pagamento, de erro ou de renovação (esses pedem para entrar).
   const knownHere = useSyncExternalStore(noopSubscribe, hasAccountHere, () => false);
-  const wantsLogin = knownHere || paymentReturn || !!searchParams.get("error") || searchParams.get("prolongar") === "1";
+  const specialLink = paymentReturn || !!searchParams.get("error") || searchParams.get("prolongar") === "1";
+  const wantsLogin = knownHere || specialLink;
   const [chosenMode, setMode] = useState(null);
   const mode = chosenMode ?? (wantsLogin ? "login" : "signup");
+  // "landing" = página de boas-vindas (cadastro ou entrada em cima, explicação embaixo); "form" = o formulário. Quem vem de um
+  // link de pagamento, de erro ou de renovação abre direto no formulário, sem a propaganda.
+  const [chosenView, setView] = useState(null);
+  const view = chosenView ?? (specialLink ? "form" : "landing");
+  const landingAvailable = !specialLink;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -94,21 +100,25 @@ function LoginForm() {
     return () => document.removeEventListener("visibilitychange", onHide);
   }, []);
 
-  // Quiz de boas-vindas: ao abrir o site, a pessoa responde 3 questões e ganha de 3 a 10 dias grátis (supabase/quiz_boas_vindas.sql).
+  const openForm = (nextMode) => {
+    setMode(nextMode);
+    setError("");
+    setInfo("");
+    setView("form");
+    window.scrollTo(0, 0);
+  };
+
+  // Quiz de boas-vindas: a página mostra a oferta e, mais abaixo, 3 questões que dão de 3 a 10 dias grátis (supabase/quiz_boas_vindas.sql).
   // A tentativa fica gravada pelo IP no servidor: quem já respondeu (mesmo atualizando a página ou limpando o navegador) vê o
-  // mesmo resultado, sem refazer. O contador começa na primeira visita (fica salvo no navegador). O quiz não aparece quando a
-  // pessoa chegou por um link de redefinição de senha, de pagamento ou de renovação, depois da validade do cupom, quando já o
-  // fechou nesta visita, nem quando o IP de quem abriu o site já tem conta (se a consulta falhar, aparece). Sem o quiz no banco, nada aparece.
-  const [promo, setPromo] = useState(null); // { estado, deadline, rest } enquanto o quiz está aberto
-  const skipPromo = paymentReturn || !!searchParams.get("error") || searchParams.get("prolongar") === "1";
+  // mesmo resultado, sem refazer. O contador começa na primeira visita (fica salvo no navegador). A oferta não aparece quando a
+  // pessoa chegou por um link de redefinição de senha, de pagamento ou de renovação, depois da validade do cupom, nem quando o IP
+  // de quem abriu o site já tem conta (se a consulta falhar, aparece). Sem o quiz no banco, nada aparece. A busca roda depois da
+  // primeira pintura da tela, sem atrasar o que a pessoa vê.
+  const [promo, setPromo] = useState(null); // { estado, deadline, rest } enquanto a oferta está ativa
+  const skipPromo = specialLink;
   const savedQuiz = parseQuiz(useSyncExternalStore(subscribeQuiz, quizSnapshot, () => ""));
   useEffect(() => {
     if (skipPromo || Date.now() >= PROMO_UNTIL) return undefined;
-    try {
-      if (window.sessionStorage.getItem("fc-quiz-visto")) return undefined;
-    } catch {
-      // sem armazenamento: o quiz aparece a cada abertura
-    }
     let cancelled = false;
     fetch("/auth/promo", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { mostrar: true }))
@@ -119,7 +129,7 @@ function LoginForm() {
       })
       .then((estado) => {
         if (cancelled || !estado) return;
-        // Este IP já respondeu: guarda o número da tentativa aqui também (o cadastro precisa dele), mesmo que a pessoa feche o aviso.
+        // Este IP já respondeu: guarda o número da tentativa aqui também (o cadastro precisa dele).
         if (estado.feito) saveQuiz(estado.id, estado.resultado);
         const deadline = promoDeadline();
         const rest = deadline - Date.now();
@@ -130,20 +140,8 @@ function LoginForm() {
     };
   }, [skipPromo]);
   const endPromo = useCallback(() => setPromo(null), []);
-  const closePromo = useCallback(() => {
-    try {
-      window.sessionStorage.setItem("fc-quiz-visto", "1");
-    } catch {
-      // sem armazenamento: o quiz volta na próxima abertura
-    }
-    setPromo(null);
-  }, []);
-  const quizDone = useCallback(() => {
-    closePromo();
-    setMode("signup");
-    setError("");
-    setInfo("");
-  }, [closePromo]);
+  // A pessoa terminou o quiz e tocou em "Criar minha conta": abre o cadastro (os dias seguem junto, pelo número da tentativa).
+  const quizDone = () => openForm("signup");
 
   const inputStyle = {
     width: "100%",
@@ -170,6 +168,7 @@ function LoginForm() {
 
   const submit = async (e) => {
     e.preventDefault();
+    const supabase = createClient();
     setError("");
     setInfo("");
     setLoading(true);
@@ -232,15 +231,37 @@ function LoginForm() {
     }
   };
 
+  if (view === "landing" && !showInstall) {
+    return (
+      <div id="swipe-root" style={{ minHeight: "100vh" }}>
+        <LandingPage
+          knownHere={knownHere}
+          offer={promo}
+          onExpire={endPromo}
+          onQuizDone={quizDone}
+          onSignup={() => openForm("signup")}
+          onLogin={() => openForm("login")}
+          onInstall={() => setShowInstall(true)}
+          onLegal={setLegal}
+        />
+        {legal && <LegalModal initial={legal} onClose={() => setLegal(null)} closeLabel="Voltar" />}
+      </div>
+    );
+  }
+
+  // Cabeçalho compacto (com Voltar) na tela "Baixar aplicativo" e no formulário aberto pela página de boas-vindas.
+  const compact = showInstall || landingAvailable;
+  const goBack = () => (showInstall ? setShowInstall(false) : setView("landing"));
+
   return (
     <div id="swipe-root" className="login-screen" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: 20, boxSizing: "border-box" }}>
       <SwipeBack rootId="swipe-root" />
       {/* Na tela "Baixar aplicativo" o botão Voltar (o mesmo das outras telas) fica no alto à esquerda, na linha do logo. */}
-      <div style={showInstall ? { width: "100%", maxWidth: 440, display: "flex", alignItems: "center", gap: 12 } : undefined}>
-        {showInstall && (
+      <div style={compact ? { width: "100%", maxWidth: 440, display: "flex", alignItems: "center", gap: 12 } : undefined}>
+        {compact && (
           <button
             type="button"
-            onClick={() => setShowInstall(false)}
+            onClick={goBack}
             style={{
               display: "flex",
               alignItems: "center",
@@ -259,9 +280,9 @@ function LoginForm() {
             <ChevronLeft size={16} /> Voltar
           </button>
         )}
-        <div style={{ display: "flex", alignItems: "center", gap: showInstall ? 8 : 12, ...(showInstall ? { flex: 1, justifyContent: "center" } : {}) }}>
-          <Flame size={showInstall ? 30 : 38} color={t.amber} fill={t.amber} />
-          <h1 style={{ fontSize: showInstall ? 24 : 30, fontWeight: 700, color: t.text, margin: 0 }}>FlashCardio</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: compact ? 8 : 12, ...(compact ? { flex: 1, justifyContent: "center" } : {}) }}>
+          <Flame size={compact ? 30 : 38} color={t.amber} fill={t.amber} />
+          <h1 style={{ fontSize: compact ? 24 : 30, fontWeight: 700, color: t.text, margin: 0 }}>FlashCardio</h1>
         </div>
       </div>
       {showInstall ? (
@@ -435,9 +456,6 @@ function LoginForm() {
           </div>
         )}
       </div>
-      )}
-      {promo && !showInstall && !legal && (
-        <LoginQuizPromo estado={promo.estado} deadline={promo.deadline} initialRest={promo.rest} onClose={closePromo} onExpire={endPromo} onDone={quizDone} />
       )}
       {legal && <LegalModal initial={legal} onClose={() => setLegal(null)} closeLabel="Voltar ao cadastro" />}
     </div>
