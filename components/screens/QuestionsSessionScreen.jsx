@@ -203,7 +203,7 @@ export function QuestionsSessionScreen({
         onPointerMove={handleBarPointerMove}
         onPointerUp={handleBarPointerUp}
         onPointerCancel={handleBarPointerUp}
-        style={{ position: "relative", margin: "14px 22px 0", padding: "13px 0", cursor: "pointer", touchAction: "none" }}
+        style={{ position: "relative", margin: "7px 22px 0", padding: "13px 0", cursor: "pointer", touchAction: "none" }}
       >
         <div style={{ height: 4, background: t.border, borderRadius: 999 }}>
           <div
@@ -266,7 +266,7 @@ export function QuestionsSessionScreen({
         )}
       </div>
 
-      <div style={{ padding: "22px" }}>
+      <div style={{ padding: "12px 22px 22px" }}>
         <QuestionCard
           q={q}
           options={options}
