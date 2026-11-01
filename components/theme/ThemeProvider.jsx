@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { THEMES } from "@/lib/theme";
 
 const ThemeCtx = createContext(THEMES.dark);
@@ -32,7 +33,11 @@ export function ThemeProvider({ children }) {
     }
   };
 
-  const t = THEMES[theme];
+  // A tela de entrada (/login: boas-vindas, cadastro e login) fica sempre no tema claro, qualquer que seja o tema guardado.
+  // Vem do endereço, então já sai certa do servidor (sem piscar o escuro) e não mexe no tema que a pessoa escolheu para o app.
+  const pathname = usePathname();
+  const forced = pathname === "/login" || pathname?.startsWith("/login/") ? "light" : null;
+  const t = THEMES[forced ?? theme];
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');

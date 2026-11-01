@@ -1,5 +1,6 @@
 -- Cupom de PREÇO: troca o valor de um plano por um preço fixo, de uso único por conta.
--- Primeiro cupom: BLACK50, plano mensal de R$ 99,00 por R$ 49,00 (os mesmos 30 dias de acesso).
+-- Primeiro cupom: BLACK50, plano mensal de R$ 99,00 por R$ 59,00 (os mesmos 30 dias de acesso). Começou em R$ 49,00 e passou a R$ 59,00
+-- com: update public.price_coupons set price_cents = 5900 where code = 'BLACK50';
 -- Rode UMA vez no SQL Editor do Supabase (depois do assinaturas.sql). Pode rodar de novo: não apaga nem duplica nada.
 --
 -- Como funciona:
@@ -51,7 +52,7 @@ revoke all on public.price_coupons from anon, authenticated;
 revoke all on public.price_coupon_uses from anon, authenticated;
 
 insert into public.price_coupons (code, plan, price_cents)
-values ('BLACK50', 'mensal', 4900)
+values ('BLACK50', 'mensal', 5900)
 on conflict (code) do nothing;
 
 -- Se uma versão anterior deste SQL criou o cupom MENSAL49, ele é desligado (não apaga ninguém que já usou).
