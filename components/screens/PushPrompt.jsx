@@ -6,8 +6,9 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { PrimaryButton } from "@/components/ui/Primitives";
 import { enablePush } from "@/lib/push";
 
-// Convite para ativar o lembrete da missão diária (primeira abertura do app e primeira missão concluída).
-export function PushPrompt({ supabase, userId, onClose }) {
+// Convite para ativar as notificações (lembrete da missão diária e aviso de desafio). kind = "mission" (ao concluir a primeira
+// missão diária) ou "challenge" (ao abrir um desafio de outra pessoa).
+export function PushPrompt({ supabase, userId, kind = "mission", onClose }) {
   const t = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -33,10 +34,18 @@ export function PushPrompt({ supabase, userId, onClose }) {
       <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 380, width: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
           <Bell size={20} color={t.amber} />
-          <h3 style={{ fontSize: 16.5, color: t.text, margin: 0 }}>Lembrete da missão diária</h3>
+          <h3 style={{ fontSize: 16.5, color: t.text, margin: 0 }}>{kind === "challenge" ? "Avisos de desafios e da missão diária" : "Lembrete da missão diária"}</h3>
         </div>
         <p style={{ fontSize: 13.5, color: t.textMuted, lineHeight: 1.6, margin: 0 }}>
-          Quer receber um aviso às <b style={{ color: t.text }}>10h</b> e às <b style={{ color: t.text }}>22h</b>, com o tempo que falta, se você ainda não tiver feito a missão do dia? Dá para mudar isso depois em Minha Conta → Permissões.
+          {kind === "challenge" ? (
+            <>
+              Quer receber uma notificação quando um amigo te desafiar, e um aviso às <b style={{ color: t.text }}>22h</b>, com o tempo que falta, se você ainda não tiver feito a missão do dia? Dá para mudar isso depois em Minha Conta → Permissões.
+            </>
+          ) : (
+            <>
+              Quer receber um aviso às <b style={{ color: t.text }}>22h</b>, com o tempo que falta, se você ainda não tiver feito a missão do dia, e um aviso quando um amigo te desafiar? Dá para mudar isso depois em Minha Conta → Permissões.
+            </>
+          )}
         </p>
         {error && <div style={{ fontSize: 12.5, color: t.red, marginTop: 12, lineHeight: 1.5 }}>{error}</div>}
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
@@ -48,7 +57,7 @@ export function PushPrompt({ supabase, userId, onClose }) {
           {!error && (
             <div style={{ flex: 1 }}>
               <PrimaryButton full disabled={busy} onClick={activate}>
-                {busy ? "Ativando…" : "Ativar lembrete"}
+                {busy ? "Ativando…" : "Ativar avisos"}
               </PrimaryButton>
             </div>
           )}

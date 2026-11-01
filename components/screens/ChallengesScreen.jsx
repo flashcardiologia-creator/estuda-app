@@ -245,6 +245,7 @@ export function ChallengesScreen({
   onNavigate,
   onGoToAccountFriends,
   onAnsweringChange,
+  onOfferPush,
   fontSize,
   dailyLimit = 5,
   maxQuestions = 10,
@@ -268,6 +269,12 @@ export function ChallengesScreen({
   const [showNew, setShowNew] = useState(false);
   const [showNoFriends, setShowNoFriends] = useState(false);
   const [respondingId, setRespondingId] = useState(null);
+  // Ao abrir um desafio criado por outra pessoa, convida a ativar as notificações (desafios e missão diária). O convite
+  // aparece uma vez por pessoa e aparelho, e só se as notificações ainda não estiverem ativadas nem bloqueadas.
+  const openChallenge = (c) => {
+    setRespondingId(c.id);
+    if (!c.isMine && onOfferPush) onOfferPush("challenge");
+  };
 
   const pendentes = challenges.filter((c) => c.status === "pending");
   const byExpiry = (x, y) => new Date(x.expires_at) - new Date(y.expires_at);
@@ -308,6 +315,12 @@ export function ChallengesScreen({
 
   const criarDesafio = async (friendIds, tema, qtd) => {
     const id = await createChallenge(supabase, friendIds, tema, qtd);
+    // Aviso "Você foi desafiado por ..." para os convidados que ativaram as notificações (não bloqueia nem falha o desafio).
+    fetch("/api/push/desafio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ challengeId: id }),
+    }).catch(() => {});
     await onRefreshChallenges();
     setShowNew(false);
     setRespondingId(id);
@@ -445,9 +458,9 @@ export function ChallengesScreen({
         {tab === "pendentes" && pendentes.length === 0 && <EmptyState text="Nenhum desafio pendente. Chame um amigo para jogar!" />}
         {tab === "pendentes" && esperandoVoce.length > 0 && <SectionLabel>Esperando você</SectionLabel>}
         {tab === "pendentes" &&
-          esperandoVoce.map((c) => <PendingCard key={c.id} c={c} onRespond={() => setRespondingId(c.id)} />)}
+          esperandoVoce.map((c) => <PendingCard key={c.id} c={c} onRespond={() => openChallenge(c)} />)}
         {tab === "pendentes" && aguardando.length > 0 && <SectionLabel>Aguardando amigos</SectionLabel>}
-        {tab === "pendentes" && aguardando.map((c) => <PendingCard key={c.id} c={c} onRespond={() => setRespondingId(c.id)} />)}
+        {tab === "pendentes" && aguardando.map((c) => <PendingCard key={c.id} c={c} onRespond={() => openChallenge(c)} />)}
 
         {tab === "concluidos" && concluidos.length === 0 && <EmptyState text="Ainda não há desafios concluídos." />}
         {tab === "concluidos" &&

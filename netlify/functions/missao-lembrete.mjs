@@ -1,6 +1,6 @@
-// Função agendada do Netlify: lembrete da missão diária por notificação (push), às 10h e às 22h
-// de Brasília (13:00 e 01:00 UTC; o Brasil não tem horário de verão). Avisa só quem ativou os
-// lembretes e ainda não fez a missão de hoje. Precisa das variáveis de ambiente do Netlify:
+// Função agendada do Netlify: lembrete da missão diária por notificação (push), uma vez por dia, às 22h
+// de Brasília (01:00 UTC; o Brasil não tem horário de verão). Avisa só quem ativou os lembretes e ainda
+// não fez a missão de hoje. Precisa das variáveis de ambiente do Netlify:
 // VAPID_PRIVATE_KEY, SUPABASE_SERVICE_ROLE_KEY e NEXT_PUBLIC_SUPABASE_URL.
 import { createClient } from "@supabase/supabase-js";
 import { appToday, configurePush, reminderPayload, sendPush } from "../../lib/pushServer.js";
@@ -57,4 +57,4 @@ export default async () => {
   });
 };
 
-export const config = { schedule: "0 13,1 * * *" };
+export const config = { schedule: "0 1 * * *" };

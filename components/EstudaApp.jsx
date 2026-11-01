@@ -960,7 +960,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   return (
     <div id="swipe-root">
       <SwipeBack rootId="swipe-root" />
-      {pushPrompt && <PushPrompt supabase={supabase} userId={userId} onClose={() => setPushPrompt(null)} />}
+      {pushPrompt && <PushPrompt supabase={supabase} userId={userId} kind={pushPrompt} onClose={() => setPushPrompt(null)} />}
       <PaymentReturn status={paymentReturn} active={access.active} expiresAt={access.expiresAt} />
       {screen === "home" && quizReward && <QuizReward reward={quizReward} onClose={() => window.location.replace("/")} />}
       {screen === "home" && couponOffer && !quizReward && <CouponOffer supabase={supabase} offer={couponOffer} onClose={() => setCouponOffer(null)} />}
@@ -1146,6 +1146,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
           maxQuestions={access.active ? PAID_CHALLENGE_QUESTIONS : FREE_CHALLENGE_QUESTIONS}
           isFree={!access.active}
           onAnsweringChange={setChallengeAnswering}
+          onOfferPush={offerPush}
           fontSize={filters.fontSize}
         />
       )}

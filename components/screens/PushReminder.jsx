@@ -5,7 +5,7 @@ import { useT } from "@/components/theme/ThemeProvider";
 import { Toggle } from "@/components/ui/Primitives";
 import { disablePush, enablePush, isPushSubscribed, pushSupport } from "@/lib/push";
 
-// Permissões > lembrete da missão diária por notificação (10h e 22h, se a missão ainda não foi feita).
+// Permissões > lembrete da missão diária por notificação (uma vez por dia, às 22h, se a missão ainda não foi feita) e aviso de desafio novo.
 export function PushReminder({ supabase, userId }) {
   const t = useT();
   const [support] = useState(() => pushSupport());
@@ -46,7 +46,7 @@ export function PushReminder({ supabase, userId }) {
     }
   };
 
-  let sub = "Aviso às 10h e às 22h, com o tempo que falta, se você ainda não fez a missão diária";
+  let sub = "Aviso às 22h, com o tempo que falta, se você ainda não fez a missão diária, e aviso quando um amigo te desafiar";
   if (busy) sub = "Salvando…";
   else if (support === "ios-install") sub = "No iPhone, adicione o FlashCardio à tela inicial (Baixar aplicativo, na tela de login) e abra por ele para ativar";
   else if (support === "unsupported") sub = "Este navegador não permite notificações";

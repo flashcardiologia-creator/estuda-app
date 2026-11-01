@@ -136,7 +136,7 @@ function faqItems(B) {
       q: "Posso receber um lembrete da missão diária?",
       a: (
         <>
-          Sim. Em <B>Minha Conta → Permissões</B>, ative o lembrete para receber uma notificação no aparelho. O aparelho precisa permitir notificações do FlashCardio.
+          Sim. Em <B>Minha Conta → Permissões</B>, ative o lembrete para receber uma notificação no aparelho às <B>22h</B>, só se você ainda não tiver feito a missão do dia. A mesma opção avisa quando um amigo te desafia. O aparelho precisa permitir notificações do FlashCardio.
         </>
       ),
     },
