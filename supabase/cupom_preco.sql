@@ -1,7 +1,9 @@
--- Cupom de PREÇO: troca o valor de um plano por um preço fixo, de uso único por conta.
--- Primeiro cupom: BLACK50, plano mensal de R$ 99,00 por R$ 59,00 (os mesmos 30 dias de acesso). Começou em R$ 49,00 e passou a R$ 59,00
--- com: update public.price_coupons set price_cents = 5900 where code = 'BLACK50';
--- Rode UMA vez no SQL Editor do Supabase (depois do assinaturas.sql). Pode rodar de novo: não apaga nem duplica nada.
+-- Cupom de PREÇO: troca o valor de um ou mais planos por preços fixos, de uso único por conta.
+-- Primeiro cupom: BLACK50. Plano mensal de R$ 99,00 por R$ 59,00 e plano anual de R$ 468,00 por R$ 358,80 (R$ 29,90 por mês), com os
+-- mesmos dias de acesso de cada plano. O mensal começou em R$ 49,00 e passou a R$ 59,00; o anual entrou depois.
+-- O preço de cada plano fica em price_coupon_prices (um cupom pode ter um preço por plano).
+-- Rode UMA vez no SQL Editor do Supabase (depois do assinaturas.sql). Pode rodar de novo: não apaga nem duplica nada, e rodar de novo
+-- também atualiza o preço do BLACK50 se você mudar os números lá embaixo.
 --
 -- Como funciona:
 --   * A pessoa digita o cupom na tela Assinatura. O app pergunta ao banco (check_price_coupon); se vale, o plano mostra
@@ -9,8 +11,8 @@
 --   * Ao tocar em Assinar, o SERVIDOR confere o cupom de novo e RESERVA um uso por 2 horas (reserve_price_coupon). O preço
 --     cobrado sai daqui, nunca do navegador. Cobrança abandonada não queima o cupom: a reserva expira.
 --   * Quando o Mercado Pago confirma o pagamento, o servidor consome o cupom (consume_price_coupon): confere que o valor
---     pago é pelo menos o do cupom, marca como usado e libera os 30 dias. Uso único = uma vez por conta (pelo e-mail da
---     conta; apagar e recriar a conta com o mesmo e-mail não libera outro uso).
+--     pago é pelo menos o do cupom, marca como usado e libera os dias do plano. Uso único = uma vez por conta, em UM dos planos
+--     (pelo e-mail da conta; apagar e recriar a conta com o mesmo e-mail não libera outro uso).
 --   * Um segundo pagamento com o mesmo cupom (por exemplo, dois checkouts abertos ao mesmo tempo) NÃO é liberado: o
 --     servidor registra no log para você conferir e devolver o dinheiro no Mercado Pago.
 --   * max_uses (opcional) limita quantas pessoas, no total, podem usar o cupom; vazio = sem limite.
@@ -46,14 +48,50 @@ create table if not exists public.price_coupon_uses (
 create unique index if not exists price_coupon_uses_once
   on public.price_coupon_uses (code, lower(email)) where status in ('reserved', 'used');
 
+-- Preço de cada plano do cupom. As colunas plan e price_cents de price_coupons ficam só como o primeiro preço (e para quem cria
+-- o cupom no formato antigo, ver o gatilho abaixo); quem manda é esta tabela.
+create table if not exists public.price_coupon_prices (
+  code        text not null references public.price_coupons (code),
+  plan        text not null check (plan in ('mensal', 'anual')),
+  price_cents integer not null check (price_cents > 0),
+  primary key (code, plan)
+);
+
 alter table public.price_coupons enable row level security;
 alter table public.price_coupon_uses enable row level security;
+alter table public.price_coupon_prices enable row level security;
 revoke all on public.price_coupons from anon, authenticated;
 revoke all on public.price_coupon_uses from anon, authenticated;
+revoke all on public.price_coupon_prices from anon, authenticated;
+
+-- Cupom criado no formato antigo (insert em price_coupons com plan e price_cents) ganha o preço correspondente aqui.
+create or replace function public._price_coupon_first_price()
+returns trigger
+language plpgsql
+as $$
+begin
+  insert into public.price_coupon_prices (code, plan, price_cents) values (new.code, new.plan, new.price_cents)
+  on conflict (code, plan) do nothing;
+  return new;
+end;
+$$;
+drop trigger if exists price_coupons_first_price on public.price_coupons;
+create trigger price_coupons_first_price after insert on public.price_coupons
+  for each row execute function public._price_coupon_first_price();
 
 insert into public.price_coupons (code, plan, price_cents)
 values ('BLACK50', 'mensal', 5900)
 on conflict (code) do nothing;
+
+-- Cupons que já existiam (antes desta tabela) ganham o preço do plano que já tinham.
+insert into public.price_coupon_prices (code, plan, price_cents)
+select code, plan, price_cents from public.price_coupons
+on conflict (code, plan) do nothing;
+
+-- BLACK50: mensal R$ 59,00 e anual R$ 358,80 (R$ 29,90 por mês x 12). Rodar de novo atualiza os dois preços.
+insert into public.price_coupon_prices (code, plan, price_cents)
+values ('BLACK50', 'mensal', 5900), ('BLACK50', 'anual', 35880)
+on conflict (code, plan) do update set price_cents = excluded.price_cents;
 
 -- Se uma versão anterior deste SQL criou o cupom MENSAL49, ele é desligado (não apaga ninguém que já usou).
 update public.price_coupons set active = false where code = 'MENSAL49';
@@ -69,6 +107,7 @@ $$;
 
 -- Situação do cupom para esta conta, sem reservar nada. O app usa para mostrar o preço novo.
 -- out_status: ok | invalido | expirado | ja_usado | esgotado
+-- Quando está ok, devolve UMA LINHA POR PLANO com preço (mensal primeiro): out_plan e out_price_cents de cada um.
 create or replace function public.check_price_coupon(p_code text)
 returns table(out_status text, out_code text, out_plan text, out_price_cents integer)
 language plpgsql
@@ -110,7 +149,8 @@ begin
       return;
     end if;
   end if;
-  return query select 'ok'::text, c.code, c.plan, c.price_cents;
+  return query select 'ok'::text, c.code, pp.plan, pp.price_cents
+                 from public.price_coupon_prices pp where pp.code = c.code order by pp.plan desc;
 end;
 $$;
 
@@ -127,6 +167,7 @@ declare
   c       public.price_coupons;
   r       public.price_coupon_uses;
   v_n     integer;
+  v_price integer;
 begin
   select lower(u.email) into v_email from auth.users u where u.id = p_user_id;
   if v_email is null then
@@ -146,7 +187,8 @@ begin
     return query select 'expirado'::text, null::uuid, null::integer;
     return;
   end if;
-  if c.plan <> p_plan then
+  select pp.price_cents into v_price from public.price_coupon_prices pp where pp.code = c.code and pp.plan = p_plan;
+  if v_price is null then
     return query select 'plano_incorreto'::text, null::uuid, null::integer;
     return;
   end if;
@@ -161,8 +203,9 @@ begin
   select * into r from public.price_coupon_uses x
    where x.code = c.code and lower(x.email) = v_email and x.status = 'reserved';
   if found then
-    update public.price_coupon_uses set reserved_until = now() + interval '2 hours' where id = r.id;
-    return query select 'ok'::text, r.id, r.price_cents;
+    -- A pessoa pode trocar de plano com a reserva aberta: a mesma reserva passa para o plano e o preço novos.
+    update public.price_coupon_uses set reserved_until = now() + interval '2 hours', plan = p_plan, price_cents = v_price where id = r.id;
+    return query select 'ok'::text, r.id, v_price;
     return;
   end if;
 
@@ -176,7 +219,7 @@ begin
   end if;
 
   insert into public.price_coupon_uses (code, user_id, email, plan, price_cents, reserved_until)
-  values (c.code, p_user_id, v_email, c.plan, c.price_cents, now() + interval '2 hours')
+  values (c.code, p_user_id, v_email, p_plan, v_price, now() + interval '2 hours')
   returning * into r;
   return query select 'ok'::text, r.id, r.price_cents;
 end;
@@ -208,8 +251,11 @@ begin
     return;
   end if;
   begin
-    -- Reserva vencida (a pessoa demorou para pagar) ainda vale: o dinheiro entrou. Se outra reserva ou uso da mesma conta
-    -- existir, o índice único recusa e fica como ja_usado.
+    -- O dinheiro entrou, então este pagamento vale mesmo que a reserva dele tenha vencido. Se a pessoa tocou em Assinar de novo
+    -- depois do vencimento e ficou com outra reserva em aberto, essa outra é liberada (ela pagou este código, não aquele).
+    -- Só um uso JÁ GASTO por outro pagamento recusa: o índice único barra e fica como ja_usado (o servidor avisa no log).
+    update public.price_coupon_uses x set status = 'released'
+     where x.code = r.code and lower(x.email) = lower(r.email) and x.status = 'reserved' and x.id <> r.id;
     update public.price_coupon_uses set status = 'used', payment_ref = p_payment_ref, used_at = now() where id = r.id;
   exception when unique_violation then
     return query select 'ja_usado'::text;
@@ -219,6 +265,7 @@ begin
 end;
 $$;
 
+revoke all on function public._price_coupon_first_price() from public, anon, authenticated;
 revoke all on function public._price_coupon_code(text) from public, anon;
 revoke all on function public.check_price_coupon(text) from public, anon;
 revoke all on function public.reserve_price_coupon(uuid, text, text) from public, anon, authenticated;
@@ -240,8 +287,13 @@ grant execute on function public.consume_price_coupon(uuid, uuid, text, text, in
 --   -- Limitar a 50 pessoas e dar prazo até 00:00 de 01/12/2026 (Brasília):
 --   update public.price_coupons set max_uses = 50, valid_until = '2026-12-01 00:00:00-03' where code = 'BLACK50';
 --
---   -- Criar outro (código sempre em MAIÚSCULAS, sem # e sem espaço; preço em centavos):
+--   -- Criar outro (código sempre em MAIÚSCULAS, sem # e sem espaço; preço em centavos). O primeiro preço vai junto;
+--   -- para outro plano do mesmo cupom, acrescente em price_coupon_prices:
 --   insert into public.price_coupons (code, plan, price_cents) values ('ANUAL390', 'anual', 39000);
+--   insert into public.price_coupon_prices (code, plan, price_cents) values ('ANUAL390', 'mensal', 7900);
+--
+--   -- Mudar o preço de um plano do cupom:
+--   update public.price_coupon_prices set price_cents = 34900 where code = 'BLACK50' and plan = 'anual';
 --
 --   -- Liberar de novo uma pessoa que já usou (apaga o uso dela):
 --   delete from public.price_coupon_uses where code = 'BLACK50' and lower(email) = 'pessoa@email.com';

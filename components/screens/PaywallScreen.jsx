@@ -81,7 +81,8 @@ export function PaywallScreen({ access, onBack }) {
   const [coupon, setCoupon] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponResult, setCouponResult] = useState(null);
-  // Cupom de preço (supabase/cupom_preco.sql): { code, plan, priceCents }. Troca o valor do plano; o servidor confere de novo ao assinar.
+  // Cupom de preço (supabase/cupom_preco.sql): { code, prices: { mensal: centavos, anual: centavos } }. Troca o valor dos planos que
+  // têm preço no cupom; o servidor confere de novo ao assinar.
   const [priceCoupon, setPriceCoupon] = useState(null);
   const PRICE_COUPON_MESSAGES = {
     expirado: "Este cupom expirou.",
@@ -102,10 +103,14 @@ export function PaywallScreen({ access, onBack }) {
     setCouponResult(null);
     // Primeiro vê se é um cupom de preço. Se o código não é de preço (ou o SQL ainda não foi rodado), segue para o cupom de dias.
     const { data: priceData, error: priceError } = await createClient().rpc("check_price_coupon", { p_code: code });
-    const priceRow = Array.isArray(priceData) ? priceData[0] : priceData;
+    const priceRows = Array.isArray(priceData) ? priceData : priceData ? [priceData] : [];
+    const priceRow = priceRows[0];
     if (!priceError && priceRow && priceRow.out_status !== "invalido") {
       if (priceRow.out_status === "ok") {
-        setPriceCoupon({ code: priceRow.out_code, plan: priceRow.out_plan, priceCents: priceRow.out_price_cents });
+        // Uma linha por plano com preço no cupom (mensal primeiro).
+        const prices = {};
+        for (const row of priceRows) if (row.out_status === "ok" && row.out_plan) prices[row.out_plan] = row.out_price_cents;
+        setPriceCoupon({ code: priceRow.out_code, prices });
         setCouponResult({ ok: true, kind: "price" });
       } else {
         setCouponResult({ ok: false, text: PRICE_COUPON_MESSAGES[priceRow.out_status] || "Cupom inválido." });
@@ -143,7 +148,7 @@ export function PaywallScreen({ access, onBack }) {
     setError("");
     setPaying(planId);
     try {
-      const withCoupon = priceCoupon && priceCoupon.plan === planId;
+      const withCoupon = priceCoupon && priceCoupon.prices[planId] != null;
       const res = await fetch("/api/pagamento/criar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -248,15 +253,20 @@ export function PaywallScreen({ access, onBack }) {
           )}
           <MercadoPagoNotice t={t} />
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {Object.values(PLANS).map((p) => (
+            {Object.values(PLANS).map((p) => {
+              // Preço do cupom para este plano (null = o cupom não muda este plano).
+              const couponPrice = priceCoupon?.prices[p.id] ?? null;
+              return (
               <div key={p.id} style={{ border: `1px solid ${t.border}`, background: t.surfaceAlt, borderRadius: 14, padding: "14px 16px" }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                   <span style={{ fontWeight: 700, fontSize: 16, color: t.text }}>{p.label}</span>
                   <span style={{ fontWeight: 800, fontSize: 18, color: t.text }}>
-                    {priceCoupon?.plan === p.id ? (
+                    {couponPrice != null ? (
                       <>
-                        <span style={{ fontWeight: 500, fontSize: 14, color: t.textMuted, textDecoration: "line-through", marginRight: 8 }}>{formatBRL(p.priceCents)}</span>
-                        {formatBRL(priceCoupon.priceCents)}
+                        <span style={{ fontWeight: 500, fontSize: 14, color: t.textMuted, textDecoration: "line-through", marginRight: 8 }}>
+                          {p.id === "anual" ? `${formatBRL(Math.round(p.priceCents / 12))}/mês` : formatBRL(p.priceCents)}
+                        </span>
+                        {p.id === "anual" ? `${formatBRL(Math.round(couponPrice / 12))}/mês` : formatBRL(couponPrice)}
                       </>
                     ) : p.id === "anual" ? (
                       `${formatBRL(Math.round(p.priceCents / 12))}/mês`
@@ -270,7 +280,15 @@ export function PaywallScreen({ access, onBack }) {
                 </div>
                 {p.id === "anual" ? (
                   <div style={{ fontSize: 14.5, fontWeight: 800, color: t.primary, margin: "6px 0 12px" }}>
-                    Total de {formatBRL(p.priceCents)} em um único pagamento
+                    {couponPrice != null ? (
+                      <>
+                        Total de{" "}
+                        <span style={{ fontWeight: 500, fontSize: 13, color: t.textMuted, textDecoration: "line-through" }}>{formatBRL(p.priceCents)}</span>{" "}
+                        {formatBRL(couponPrice)} em um único pagamento
+                      </>
+                    ) : (
+                      `Total de ${formatBRL(p.priceCents)} em um único pagamento`
+                    )}
                   </div>
                 ) : (
                   <div style={{ height: 12 }} />
@@ -287,12 +305,13 @@ export function PaywallScreen({ access, onBack }) {
                     ? "Abrindo pagamento…"
                     : subscribed
                       ? `Prolongar ${p.days} dias`
-                      : priceCoupon?.plan === p.id
-                        ? `Assinar ${p.label.toLowerCase()} por ${formatBRL(priceCoupon.priceCents)}`
+                      : couponPrice != null
+                        ? `Assinar ${p.label.toLowerCase()} por ${formatBRL(couponPrice)}`
                         : `Assinar ${p.label.toLowerCase()}`}
                 </PrimaryButton>
               </div>
-            ))}
+              );
+            })}
           </div>
           <form onSubmit={redeemCoupon} style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <input
@@ -326,8 +345,18 @@ export function PaywallScreen({ access, onBack }) {
           </form>
           {couponResult?.ok && couponResult.kind === "price" && priceCoupon && (
             <div style={{ fontSize: 13, lineHeight: 1.5, color: t.text, background: "rgba(34,197,94,0.14)", borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
-              Cupom aplicado! O plano {PLANS[priceCoupon.plan].label.toLowerCase()} fica por <b>{formatBRL(priceCoupon.priceCents)}</b> (era {formatBRL(PLANS[priceCoupon.plan].priceCents)}). Toque em
-              &quot;Assinar&quot; no plano para pagar com o desconto. Uso único por conta.{" "}
+              Cupom aplicado!{" "}
+              {Object.values(PLANS)
+                .filter((p) => priceCoupon.prices[p.id] != null)
+                .map((p, i, list) => (
+                  <span key={p.id}>
+                    {i > 0 ? (i === list.length - 1 ? " e o" : ", o") : "O"} plano {p.label.toLowerCase()} fica por <b>{formatBRL(priceCoupon.prices[p.id])}</b>
+                    {p.id === "anual"
+                      ? ` (${formatBRL(Math.round(priceCoupon.prices[p.id] / 12))} por mês; era ${formatBRL(p.priceCents)})`
+                      : ` (era ${formatBRL(p.priceCents)})`}
+                  </span>
+                ))}
+              . Toque em &quot;Assinar&quot; no plano que quiser para pagar com o desconto. Uso único por conta, em um dos planos.{" "}
               <button
                 type="button"
                 onClick={removePriceCoupon}
