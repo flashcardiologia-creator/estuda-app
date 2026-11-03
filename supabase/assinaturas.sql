@@ -130,11 +130,17 @@ begin
     raise exception 'not_authenticated';
   end if;
 
-  select p.plan, p.expires_at into v_plan, v_exp
-    from public.payments p
-    where p.user_id = v_user and p.status = 'approved' and p.starts_at <= now() and p.expires_at > now()
-    order by p.expires_at desc
-    limit 1;
+  -- Com acesso agora, mostra até onde o acesso vai de verdade: conta também os períodos que ainda vão começar. Quem paga
+  -- antes de a cortesia ou o plano acabar tem os dias novos somados ao fim (grant_access), e a tela precisa mostrar isso.
+  -- plan = o plano do período que termina por último (o da compra mais recente).
+  if exists (select 1 from public.payments a
+              where a.user_id = v_user and a.status = 'approved' and a.starts_at <= now() and a.expires_at > now()) then
+    select p.plan, p.expires_at into v_plan, v_exp
+      from public.payments p
+      where p.user_id = v_user and p.status = 'approved' and p.expires_at > now()
+      order by p.expires_at desc
+      limit 1;
+  end if;
 
   select max(p.expires_at) into v_last
     from public.payments p
