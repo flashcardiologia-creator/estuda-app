@@ -14,6 +14,8 @@ import { sendTermsAcceptance } from "@/lib/legal/client";
 import { LegalModal } from "@/components/screens/LegalModal";
 import { PROMO_UNTIL, promoDeadline } from "@/components/screens/LoginQuizPromo";
 import { LandingPage } from "@/components/screens/LandingPage";
+import { SignupGoalsFields } from "@/components/screens/SignupGoalsFields";
+import { EMPTY_GOALS, goalsError, goalsMetadata } from "@/lib/data/cardioFormacao";
 import { fetchQuizState, parseQuiz, quizSnapshot, saveQuiz, subscribeQuiz } from "@/lib/data/quiz";
 import { track } from "@/lib/data/visitTracking";
 
@@ -75,6 +77,13 @@ function LoginForm() {
   const [info, setInfo] = useState("");
   const [showInstall, setShowInstall] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // Prova que vai prestar (TEC, R+ ou Ambos), especialidade do R+ e instituição: vão junto com o cadastro (supabase/user_goals.sql).
+  const [goals, setGoals] = useState(EMPTY_GOALS);
+  // Mudou uma resposta: some o aviso anterior (por exemplo, "Escolha a especialidade" depois de trocar para TEC).
+  const changeGoals = useCallback((patch) => {
+    setGoals((g) => ({ ...g, ...patch }));
+    setError("");
+  }, []);
   // Termos / Política abrem numa janela por cima do cadastro: não saem da tela, então nada se perde.
   const [legal, setLegal] = useState(null);
   const openLegal = (e, which) => {
@@ -190,6 +199,11 @@ function LoginForm() {
           setError("As senhas não coincidem.");
           return;
         }
+        const goalsProblem = goalsError(goals);
+        if (goalsProblem) {
+          setError(goalsProblem);
+          return;
+        }
         if (!acceptedTerms) {
           setError("Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.");
           return;
@@ -199,7 +213,7 @@ function LoginForm() {
           email,
           password,
           // O número da tentativa do quiz de boas-vindas vai junto: depois do login o app libera os dias (o banco confere a tentativa).
-          options: { data: { name: trimmedName, ...(savedQuiz ? { quiz_id: savedQuiz.id } : {}) } },
+          options: { data: { name: trimmedName, ...goalsMetadata(goals), ...(savedQuiz ? { quiz_id: savedQuiz.id } : {}) } },
         });
         if (error) throw error;
         rememberAccount();
@@ -365,6 +379,8 @@ function LoginForm() {
               </div>
             </div>
           )}
+
+          {mode === "signup" && <SignupGoalsFields value={goals} onChange={changeGoals} />}
 
           {mode === "signup" && (
             <label style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 12.5, lineHeight: 1.5, color: t.textMuted, cursor: "pointer" }}>
