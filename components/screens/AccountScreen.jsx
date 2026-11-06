@@ -8,6 +8,7 @@ import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/componen
 import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { ContactBox } from "@/components/screens/ContactBox";
 import { FaqBox } from "@/components/screens/FaqBox";
+import { InviteFriendsBox } from "@/components/screens/InviteFriendsBox";
 import { PushReminder } from "@/components/screens/PushReminder";
 import { fetchFriendComparison, removeFriend, searchProfilesByPrefix } from "@/lib/data/friends";
 
@@ -908,6 +909,8 @@ export function AccountScreen({
             ))}
           </div>
         </ExpandBox>
+
+        <InviteFriendsBox supabase={supabase} />
 
         <FaqBox />
 

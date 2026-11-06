@@ -16,6 +16,7 @@ import { PROMO_UNTIL, promoDeadline } from "@/components/screens/LoginQuizPromo"
 import { LandingPage } from "@/components/screens/LandingPage";
 import { SignupGoalsFields } from "@/components/screens/SignupGoalsFields";
 import { EMPTY_GOALS, goalsError, goalsMetadata } from "@/lib/data/cardioFormacao";
+import { REFERRAL_DAYS, clearRef, loadRef, parseRef, saveRef } from "@/lib/data/referral";
 import { fetchQuizState, parseQuiz, quizSnapshot, saveQuiz, subscribeQuiz } from "@/lib/data/quiz";
 import { track } from "@/lib/data/visitTracking";
 
@@ -58,7 +59,15 @@ function LoginForm() {
   // pagamento, de erro ou de renovação (esses pedem para entrar).
   const knownHere = useSyncExternalStore(noopSubscribe, hasAccountHere, () => false);
   const specialLink = paymentReturn || !!searchParams.get("error") || searchParams.get("prolongar") === "1";
-  const wantsLogin = knownHere || specialLink;
+  // Convite de amigo (/?ref=<código>): o código fica guardado neste navegador até a conta ser criada. Quem abre o link abre no
+  // cadastro, mesmo que este navegador já tenha tido uma conta.
+  const urlRef = parseRef(searchParams.get("ref"));
+  const savedRef = useSyncExternalStore(noopSubscribe, loadRef, () => "");
+  const refCode = urlRef || savedRef;
+  useEffect(() => {
+    if (urlRef) saveRef(urlRef);
+  }, [urlRef]);
+  const wantsLogin = (knownHere && !urlRef) || specialLink;
   const [chosenMode, setMode] = useState(null);
   const mode = chosenMode ?? (wantsLogin ? "login" : "signup");
   // "landing" = página de boas-vindas (cadastro ou entrada em cima, explicação embaixo); "form" = o formulário. Quem vem de um
@@ -213,9 +222,10 @@ function LoginForm() {
           email,
           password,
           // O número da tentativa do quiz de boas-vindas vai junto: depois do login o app libera os dias (o banco confere a tentativa).
-          options: { data: { name: trimmedName, ...goalsMetadata(goals), ...(savedQuiz ? { quiz_id: savedQuiz.id } : {}) } },
+          options: { data: { name: trimmedName, ...goalsMetadata(goals), ...(refCode ? { ref: refCode } : {}), ...(savedQuiz ? { quiz_id: savedQuiz.id } : {}) } },
         });
         if (error) throw error;
+        clearRef();
         rememberAccount();
         track("cadastro_ok");
         // Se o registro falhar, a tela de aceite após o login pede o aceite de novo.
@@ -249,7 +259,8 @@ function LoginForm() {
     return (
       <div id="swipe-root" style={{ minHeight: "100vh" }}>
         <LandingPage
-          knownHere={knownHere}
+          knownHere={knownHere && !urlRef}
+          invited={!!refCode}
           offer={promo}
           onExpire={endPromo}
           onQuizDone={quizDone}
@@ -303,6 +314,11 @@ function LoginForm() {
         <InstallGuide onBack={() => setShowInstall(false)} />
       ) : (
       <div style={{ width: "100%", maxWidth: 380, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: 30 }}>
+        {mode === "signup" && refCode && (
+          <p style={{ fontSize: 13, lineHeight: 1.5, color: t.text, margin: "0 0 16px", padding: "10px 12px", borderRadius: 12, background: t.primarySoft, textAlign: "center" }}>
+            Você foi convidado por um amigo! Quando fechar um plano, vocês dois ganham dias grátis: <strong>{REFERRAL_DAYS.mensal} dias</strong> no mensal ou <strong>{REFERRAL_DAYS.anual} dias</strong> no anual.
+          </p>
+        )}
         {mode === "signup" && savedQuiz && (
           <p style={{ fontSize: 14, lineHeight: 1.5, fontWeight: 600, color: t.text, margin: "0 0 20px", textAlign: "center" }}>
             Você garantiu <span style={{ color: t.primary }}>{savedQuiz.dias} dias GRÁTIS</span> ({savedQuiz.acertos} de {savedQuiz.total} acertos). Eles entram sozinhos quando a conta for criada.
