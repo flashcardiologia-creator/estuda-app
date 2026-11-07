@@ -56,6 +56,7 @@ import {
   fetchAllQuestions,
   fetchQuestionTexts,
   applyQuestionFilters,
+  fetchAnsweredQuestionIds,
   deriveFilterOptions,
   fetchOptionsForQuestions,
   fetchOptionsWithAnswerKey,
@@ -114,6 +115,7 @@ const DEFAULT_FILTERS = {
   anos: [],
   instituicoes: [],
   favoritasOnly: false,
+  somente: "", // "" = todas; "resolvidas" = só as já respondidas; "ineditas" = só as nunca respondidas
   modoProva: false,
   mostrarAntigas: false,
   cronometro: false,
@@ -164,6 +166,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   const themeSavedRef = useRef(undefined);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  // ids das questões que a pessoa já respondeu (filtro "apenas resolvidas / inéditas"); null = ainda não carregou
+  const [answeredIds, setAnsweredIds] = useState(null);
   const [flashcardFontSize, setFlashcardFontSize] = useState("md");
 
   const [session, setSession] = useState(null);
@@ -432,6 +436,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
     }
     if (screen === "questions-filters") {
       fetchQuestionSessions(supabase, userId).then(setPastSessions);
+      fetchAnsweredQuestionIds(supabase, userId).then(setAnsweredIds).catch(() => {});
     }
     if (screen === "flashcards-select") {
       fetchFlashcardCounts(supabase, { trash: true, custom: true }).then(({ themeCounts, favoriteCounts, favorites }) => {
@@ -529,7 +534,17 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   /* ---- Questões ---- */
   const startQuestions = async () => {
     // Sorteia primeiro e só depois corta na quantidade escolhida (5, 10, ... ou "Todas").
-    const sorted = shuffle(applyQuestionFilters(allQuestions, filters, favorites));
+    // "Apenas resolvidas / inéditas": confere na hora quais questões a pessoa já respondeu (não depende do que a tela carregou antes).
+    let answeredNow = null;
+    if (filters.somente) {
+      try {
+        answeredNow = await fetchAnsweredQuestionIds(supabase, userId);
+        setAnsweredIds(answeredNow);
+      } catch {
+        throw new Error("Não foi possível conferir quais questões você já respondeu. Tente de novo.");
+      }
+    }
+    const sorted = shuffle(applyQuestionFilters(allQuestions, filters, favorites, answeredNow));
     const filtered = Number.isInteger(filters.quantidade) ? sorted.slice(0, filters.quantidade) : sorted;
     // Garante os textos (enunciado/comentários) das questões escolhidas: espera o
     // download em segundo plano e baixa na hora só o que ainda faltar.
@@ -1035,6 +1050,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
         <QuestionsFilterScreen
           allQuestions={allQuestions}
           favorites={favorites}
+          answeredIds={answeredIds}
           filters={filters}
           setFilters={setFilters}
           onSetFontSize={saveQuestionFontSize}

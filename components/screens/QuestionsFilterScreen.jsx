@@ -45,6 +45,7 @@ function juntarFaltando(itens) {
 export function QuestionsFilterScreen({
   allQuestions,
   favorites,
+  answeredIds = null,
   filters,
   setFilters,
   onSetFontSize,
@@ -63,6 +64,7 @@ export function QuestionsFilterScreen({
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [sessionError, setSessionError] = useState("");
   const [pagina, setPagina] = useState(0);
+  const [startError, setStartError] = useState("");
 
   // Sessões antigas: 2 por página (até 10 sessões = 5 páginas).
   const totalPaginas = Math.max(1, Math.ceil(pastSessions.length / SESSOES_POR_PAGINA));
@@ -141,19 +143,40 @@ export function QuestionsFilterScreen({
       return { ...f, anos: novos, instituicoes: f.instituicoes.filter((i) => instOk.has(i)) };
     });
 
-  const previewCount = useMemo(
-    () => applyQuestionFilters(allQuestions, filters, favorites).length,
-    [allQuestions, filters, favorites]
-  );
-  // Quantas questões entram de fato na sessão (limitada pela quantidade escolhida).
-  const sessionCount = Number.isInteger(filters.quantidade) ? Math.min(filters.quantidade, previewCount) : previewCount;
-
   // Filtros obrigatórios que estão sem nenhuma seleção (ordem: tema, ano, instituição).
   const faltando = [
     filters.temas.length === 0 && { nome: "tema", fem: false },
     filters.anos.length === 0 && { nome: "ano", fem: false },
     filters.instituicoes.length === 0 && { nome: "instituição", fem: true },
   ].filter(Boolean);
+
+  const previewCount = useMemo(
+    () => applyQuestionFilters(allQuestions, filters, favorites, answeredIds).length,
+    [allQuestions, filters, favorites, answeredIds]
+  );
+
+  // "Apenas resolvidas / inéditas": quantas questões, dentro dos temas, provas e anos escolhidos, a pessoa já respondeu e quantas nunca respondeu.
+  const { resolvidasCount, ineditasCount } = useMemo(() => {
+    if (!answeredIds) return { resolvidasCount: null, ineditasCount: null };
+    const base = applyQuestionFilters(allQuestions, { ...filters, somente: "" }, favorites);
+    let resolvidas = 0;
+    for (const q of base) if (answeredIds.has(q.id)) resolvidas++;
+    return { resolvidasCount: resolvidas, ineditasCount: base.length - resolvidas };
+  }, [allQuestions, filters, favorites, answeredIds]);
+  const historicoPronto = !filters.somente || !!answeredIds;
+  // Quantas questões entram de fato na sessão (limitada pela quantidade escolhida).
+  const sessionCount = Number.isInteger(filters.quantidade) ? Math.min(filters.quantidade, previewCount) : previewCount;
+
+  const subSomente = (descricao, n) => (!answeredIds ? "Carregando o seu histórico…" : faltando.length ? descricao : `${descricao} · ${n} agora`);
+
+  const iniciar = async () => {
+    setStartError("");
+    try {
+      await onStart();
+    } catch (err) {
+      setStartError(err?.message || "Não foi possível iniciar as questões.");
+    }
+  };
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", paddingBottom: 90 }}>
@@ -237,6 +260,18 @@ export function QuestionsFilterScreen({
             onChange={(v) => setFilters((f) => ({ ...f, modoProva: v }))}
             label="Ativar Modo Prova"
             sub="Respostas só aparecem ao final, em uma revisão completa"
+          />
+          <Toggle
+            checked={filters.somente === "resolvidas"}
+            onChange={(v) => setFilters((f) => ({ ...f, somente: v ? "resolvidas" : "" }))}
+            label="Apenas questões já resolvidas"
+            sub={subSomente("Só questões que você já respondeu, dentro dos filtros escolhidos", resolvidasCount)}
+          />
+          <Toggle
+            checked={filters.somente === "ineditas"}
+            onChange={(v) => setFilters((f) => ({ ...f, somente: v ? "ineditas" : "" }))}
+            label="Apenas questões inéditas"
+            sub={subSomente("Só questões que você ainda não respondeu, dentro dos filtros escolhidos", ineditasCount)}
           />
           <Toggle
             checked={filters.mostrarAntigas}
@@ -373,7 +408,13 @@ export function QuestionsFilterScreen({
           <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center" }}>
             {faltando.length
               ? `Selecione ao menos ${juntarFaltando(faltando)}`
-              : sessionCount < previewCount
+              : !historicoPronto
+                ? "Carregando o seu histórico de questões…"
+                : previewCount === 0 && filters.somente
+                  ? filters.somente === "resolvidas"
+                    ? "Você ainda não respondeu nenhuma questão com esses filtros"
+                    : "Não há questões inéditas com esses filtros: você já respondeu todas"
+                  : sessionCount < previewCount
                 ? `${sessionCount} questões nesta sessão (de ${previewCount} encontradas)`
                 : `${previewCount} questões encontradas`}
           </div>
@@ -383,7 +424,8 @@ export function QuestionsFilterScreen({
               Continuar Sessão
             </PrimaryButton>
           )}
-          <PrimaryButton full disabled={faltando.length > 0 || previewCount === 0} onClick={onStart}>
+          {startError && <div style={{ fontSize: 12.5, color: t.red, textAlign: "center" }}>{startError}</div>}
+          <PrimaryButton full disabled={faltando.length > 0 || previewCount === 0 || !historicoPronto} onClick={iniciar}>
             Iniciar Questões
           </PrimaryButton>
         </div>
