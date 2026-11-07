@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Star, Check, X, ChevronDown, ChevronUp, Ban } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { Tag, PrimaryButton } from "@/components/ui/Primitives";
@@ -32,6 +32,7 @@ export function QuestionCard({
   // Não reseta por questão de propósito: se a pessoa minimizar o comentário,
   // essa preferência continua valendo ao responder as próximas questões.
   const [commentOpen, setCommentOpen] = useState(true);
+  const commentRef = useRef(null);
   const struck = struckLetras || [];
   // Anulada = todas as alternativas corretas no banco (answerResult.annulled); o texto do comentário fica de reserva.
   const annulled = !!answerResult?.annulled || isAnnulled(answerResult?.comentario || q.comentario);
@@ -39,6 +40,12 @@ export function QuestionCard({
   useEffect(() => {
     setShowFull(false);
   }, [q.id]);
+
+  // Volta do comentário completo para o resumido e mantém o comentário à vista (o texto completo é bem mais longo).
+  const backToShort = () => {
+    setShowFull(false);
+    requestAnimationFrame(() => commentRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+  };
 
   return (
     <div>
@@ -211,6 +218,7 @@ export function QuestionCard({
 
       {answered && !filters.modoProva && answerResult && (
         <div
+          ref={commentRef}
           style={{
             marginTop: 16,
             padding: 14,
@@ -247,6 +255,38 @@ export function QuestionCard({
               wrapStyle={{ marginTop: 12 }}
               style={{ display: "block", maxWidth: "100%", borderRadius: 10, border: `1px solid ${t.border}` }}
             />
+          )}
+          {commentOpen && showFull && q.comentario_completo && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  backToShort();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: t.surfaceAlt,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 8,
+                  padding: "9px 14px",
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  transition: "transform .1s, filter .15s",
+                }}
+                onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.95)")}
+                onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                <ChevronUp size={12} />
+                Comentário resumido
+              </button>
+            </div>
           )}
           {commentOpen && !showFull && q.comentario_completo && (
             <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>

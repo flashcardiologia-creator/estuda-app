@@ -89,18 +89,29 @@ export function MissionShell({ idx, total, onNavigate, children }) {
   );
 }
 
-export function MissionNav({ canNext, idx, total, onNext, onFinish, color, finishing }) {
+export function MissionNav({ canNext, idx, total, onNext, onFinish, color, finishing, onPrev, hideNext }) {
   const isLast = idx === total - 1;
   return (
-    <div style={{ marginTop: 24 }}>
-      {isLast ? (
-        <PrimaryButton full disabled={!canNext || finishing} color={color} onClick={onFinish}>
-          Concluir Missão
+    <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 10 }}>
+      {/* Voltar a um exercício já feito: as questões respondidas aparecem só para ler, sem trocar a resposta. */}
+      {onPrev && idx > 0 && (
+        <PrimaryButton variant="ghost" onClick={onPrev}>
+          <ChevronLeft size={16} style={{ marginRight: 2, marginLeft: -4 }} />
+          Anterior
         </PrimaryButton>
-      ) : (
-        <PrimaryButton full disabled={!canNext} color={color} onClick={onNext}>
-          Próxima
-        </PrimaryButton>
+      )}
+      {!hideNext && (
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {isLast ? (
+            <PrimaryButton full disabled={!canNext || finishing} color={color} onClick={onFinish}>
+              Concluir Missão
+            </PrimaryButton>
+          ) : (
+            <PrimaryButton full disabled={!canNext} color={color} onClick={onNext}>
+              Próxima
+            </PrimaryButton>
+          )}
+        </div>
       )}
     </div>
   );
@@ -125,6 +136,7 @@ export function DailyMissionScreen({
   const idx = session.index;
   const item = items[idx];
   const total = items.length;
+  const goPrev = idx > 0 ? () => setSession((s) => ({ ...s, index: Math.max(0, s.index - 1) })) : undefined;
   const dailyFilters = { fontSize: questionFontSize || "md", modoProva: false, mostrarAntigas: false };
 
   if (item.type === "question") {
@@ -168,12 +180,14 @@ export function DailyMissionScreen({
           isFav={favorites.includes(q.id)}
           onToggleFav={onToggleFav}
         />
-        {answered && (
+        {(answered || goPrev) && (
           <MissionNav
             canNext={answered}
+            hideNext={!answered}
             idx={idx}
             total={total}
             finishing={finishing}
+            onPrev={goPrev}
             onNext={() => setSession((s) => ({ ...s, index: s.index + 1 }))}
             onFinish={finish}
           />
@@ -212,6 +226,7 @@ export function DailyMissionScreen({
       total={total}
       onFlip={flip}
       onNavigate={onNavigate}
+      onPrev={goPrev}
       onNext={() => setSession((s) => ({ ...s, index: s.index + 1 }))}
       onFinish={finishFlash}
       finishing={finishing}
@@ -220,7 +235,7 @@ export function DailyMissionScreen({
   );
 }
 
-function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate, onNext, onFinish, finishing, fontSize }) {
+function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate, onPrev, onNext, onFinish, finishing, fontSize }) {
   const t = useT();
   const cardFontSize = FLASHCARD_FONT_SIZES[fontSize] || FLASHCARD_FONT_SIZES.md;
   const answerBg = t.name === "light" ? "linear-gradient(135deg, #A9DDBD 0%, #C7C7CE 100%)" : "rgba(19,46,36,0.5)";
@@ -252,7 +267,7 @@ function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate,
           {flipped ? "Clique para ver a pergunta" : "Clique para ver a resposta"}
         </div>
       </div>
-      <MissionNav canNext={viewed} idx={idx} total={total} color="#21512E" finishing={finishing} onNext={onNext} onFinish={onFinish} />
+      <MissionNav canNext={viewed} idx={idx} total={total} color="#21512E" finishing={finishing} onPrev={onPrev} onNext={onNext} onFinish={onFinish} />
     </MissionShell>
   );
 }
