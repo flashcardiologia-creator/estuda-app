@@ -46,7 +46,7 @@ export function PushReminder({ supabase, userId }) {
     }
   };
 
-  let sub = "Aviso às 22h, com o tempo que falta, se você ainda não fez a missão diária, e aviso quando um amigo te desafiar";
+  let sub = "Aviso às 22h, com o tempo que falta, se você ainda não fez a revisão diária, e aviso quando um amigo te desafiar";
   if (busy) sub = "Salvando…";
   else if (support === "ios-install") sub = "No iPhone, adicione o FlashCardio à tela inicial (Baixar aplicativo, na tela de login) e abra por ele para ativar";
   else if (support === "unsupported") sub = "Este navegador não permite notificações";
@@ -64,7 +64,7 @@ export function PushReminder({ supabase, userId }) {
       <Toggle
         checked={on}
         onChange={(v) => !busy && support === "ok" && change(v)}
-        label="Lembrete da missão diária"
+        label="Lembrete da revisão diária"
         labelStyle={{ fontSize: 13.5, color: t.text, fontWeight: 700 }}
         sub={sub}
         style={{ padding: 0, opacity: support === "ok" ? 1 : 0.6 }}

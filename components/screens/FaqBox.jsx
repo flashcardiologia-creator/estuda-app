@@ -16,7 +16,7 @@ function faqItems(B) {
       q: "O que é o FlashCardio?",
       a: (
         <>
-          Um aplicativo para estudar cardiologia com <B>questões comentadas</B> de provas anteriores (TEC, residência R+ e outras), <B>flashcards</B>, missão diária, desafios com amigos e ranking.
+          Um aplicativo para estudar cardiologia com <B>questões comentadas</B> de provas anteriores (TEC, residência R+ e outras), <B>flashcards</B>, revisão diária, desafios com amigos e ranking.
         </>
       ),
     },
@@ -24,15 +24,15 @@ function faqItems(B) {
       q: "O que posso usar sem assinatura?",
       a: (
         <>
-          A <B>missão diária</B> (3 questões, sem flashcards), o ranking, as estatísticas, os amigos e {FREE_CHALLENGES_PER_DAY} desafio criado por dia com {FREE_CHALLENGE_QUESTIONS} questões. As telas de <B>Questões</B> e <B>Flashcards</B> ficam bloqueadas até você assinar ou usar dias grátis.
+          A <B>revisão diária</B> (3 questões, sem flashcards), o ranking, as estatísticas, os amigos e {FREE_CHALLENGES_PER_DAY} desafio criado por dia com {FREE_CHALLENGE_QUESTIONS} questões. As telas de <B>Questões</B> e <B>Flashcards</B> ficam bloqueadas até você assinar ou usar dias grátis.
         </>
       ),
     },
     {
-      q: "Como funciona a missão diária?",
+      q: "Como funciona a revisão diária?",
       a: (
         <>
-          Todo dia você recebe um conjunto de questões para resolver. Quem assina escolhe entre <B>10 questões</B> ou <B>5 questões + 5 flashcards</B> (a escolha vale a partir do dia seguinte). A sua <B>sequência</B> conta os dias seguidos em que você concluiu a missão. Para assinantes, as questões que você errou voltam na hora certa, pela curva de Ebbinghaus, para fixar o conteúdo.
+          Todo dia você recebe um conjunto de questões para resolver. Quem assina escolhe entre <B>10 questões</B> ou <B>5 questões + 5 flashcards</B> (a escolha vale a partir do dia seguinte). A sua <B>sequência</B> conta os dias seguidos em que você concluiu a revisão. Para assinantes, as questões que você errou voltam na hora certa, pela curva de Ebbinghaus, para fixar o conteúdo.
         </>
       ),
     },
@@ -40,7 +40,7 @@ function faqItems(B) {
       q: "O que é a bandagem da sequência?",
       a: (
         <>
-          Se você <B>acertar todas as questões</B> da missão diária, tem <B>50% de chance</B> de ganhar uma bandagem. Ela <B>salva sua sequência</B> quando você passa um dia sem fazer a missão: ao voltar e concluir a missão seguinte, a sequência continua e a bandagem é gasta. Só cabe <B>uma</B> por vez (com uma guardada, não há novo sorteio), e ela cobre apenas um dia perdido. Para ver quantas bandagens você tem, toque no <B>foguinho</B> no alto da tela. As bandagens são para assinantes.
+          Se você <B>acertar todas as questões</B> da revisão diária, tem <B>50% de chance</B> de ganhar uma bandagem. Ela <B>salva sua sequência</B> quando você passa um dia sem fazer a revisão: ao voltar e concluir a revisão seguinte, a sequência continua e a bandagem é gasta. Só cabe <B>uma</B> por vez (com uma guardada, não há novo sorteio), e ela cobre apenas um dia perdido. Para ver quantas bandagens você tem, toque no <B>foguinho</B> no alto da tela. As bandagens são para assinantes.
         </>
       ),
     },
@@ -133,10 +133,10 @@ function faqItems(B) {
       ),
     },
     {
-      q: "Posso receber um lembrete da missão diária?",
+      q: "Posso receber um lembrete da revisão diária?",
       a: (
         <>
-          Sim. Em <B>Minha Conta → Permissões</B>, ative o lembrete para receber uma notificação no aparelho às <B>22h</B>, só se você ainda não tiver feito a missão do dia. A mesma opção avisa quando um amigo te desafia. O aparelho precisa permitir notificações do FlashCardio.
+          Sim. Em <B>Minha Conta → Permissões</B>, ative o lembrete para receber uma notificação no aparelho às <B>22h</B>, só se você ainda não tiver feito a revisão do dia. A mesma opção avisa quando um amigo te desafia. O aparelho precisa permitir notificações do FlashCardio.
         </>
       ),
     },

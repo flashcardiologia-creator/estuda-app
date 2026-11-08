@@ -19,7 +19,7 @@ export async function POST() {
   const { data: subs } = await supabase.from("push_subscriptions").select("endpoint, p256dh, auth").eq("user_id", user.id);
   const payload = {
     title: "Lembretes ativados",
-    body: "Você vai receber um aviso às 22h se ainda não tiver feito a missão diária, e quando um amigo te desafiar.",
+    body: "Você vai receber um aviso às 22h se ainda não tiver feito a revisão diária, e quando um amigo te desafiar.",
     tag: "lembretes-ativados",
     url: "/",
   };

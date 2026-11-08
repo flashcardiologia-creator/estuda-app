@@ -143,7 +143,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   const [profile, setProfile] = useState(null);
   const [streakOpen, setStreakOpen] = useState(false); // painel que abre no foguinho
   const [friendsStreaks, setFriendsStreaks] = useState(null); // sequência dos amigos, buscada antes de abrir o painel
-  const [missionReward, setMissionReward] = useState(null); // { earned, used } da missão que acabou de ser concluída
+  const [missionReward, setMissionReward] = useState(null); // { earned, used } da revisão que acabou de ser concluída
   const [allQuestions, setAllQuestions] = useState([]);
   // Textos (enunciado/comentários) já baixados, por id; e a promessa do download
   // em segundo plano, para a sessão de questões esperar por ele se precisar.

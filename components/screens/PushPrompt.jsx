@@ -34,16 +34,16 @@ export function PushPrompt({ supabase, userId, kind = "mission", onClose }) {
       <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: 22, maxWidth: 380, width: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
           <Bell size={20} color={t.amber} />
-          <h3 style={{ fontSize: 16.5, color: t.text, margin: 0 }}>{kind === "challenge" ? "Avisos de desafios e da missão diária" : "Lembrete da missão diária"}</h3>
+          <h3 style={{ fontSize: 16.5, color: t.text, margin: 0 }}>{kind === "challenge" ? "Avisos de desafios e da revisão diária" : "Lembrete da revisão diária"}</h3>
         </div>
         <p style={{ fontSize: 13.5, color: t.textMuted, lineHeight: 1.6, margin: 0 }}>
           {kind === "challenge" ? (
             <>
-              Quer receber uma notificação quando um amigo te desafiar, e um aviso às <b style={{ color: t.text }}>22h</b>, com o tempo que falta, se você ainda não tiver feito a missão do dia? Dá para mudar isso depois em Minha Conta → Permissões.
+              Quer receber uma notificação quando um amigo te desafiar, e um aviso às <b style={{ color: t.text }}>22h</b>, com o tempo que falta, se você ainda não tiver feito a revisão do dia? Dá para mudar isso depois em Minha Conta → Permissões.
             </>
           ) : (
             <>
-              Quer receber um aviso às <b style={{ color: t.text }}>22h</b>, com o tempo que falta, se você ainda não tiver feito a missão do dia, e um aviso quando um amigo te desafiar? Dá para mudar isso depois em Minha Conta → Permissões.
+              Quer receber um aviso às <b style={{ color: t.text }}>22h</b>, com o tempo que falta, se você ainda não tiver feito a revisão do dia, e um aviso quando um amigo te desafiar? Dá para mudar isso depois em Minha Conta → Permissões.
             </>
           )}
         </p>

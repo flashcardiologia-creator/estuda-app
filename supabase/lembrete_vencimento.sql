@@ -95,7 +95,7 @@ begin
         v_assunto := case when r.dias = 1 then 'Sua assinatura do FlashCardio vence amanhã' else 'Sua assinatura do FlashCardio vence em ' || r.dias || ' dias' end;
         v_restam := case when r.dias = 1 then '1 dia' else r.dias || ' dias' end;
         v_cor := '#B45309';
-        v_texto := 'Sua assinatura do FlashCardio termina em ' || v_data || '. Depois disso, Questões e Flashcards ficam bloqueados (a Missão diária e os Desafios continuam livres).';
+        v_texto := 'Sua assinatura do FlashCardio termina em ' || v_data || '. Depois disso, Questões e Flashcards ficam bloqueados (a Revisão diária e os Desafios continuam livres).';
       end if;
 
       v_html := format(

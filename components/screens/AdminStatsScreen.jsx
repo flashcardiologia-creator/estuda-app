@@ -189,7 +189,7 @@ const TABS = [
   { id: "questoes", label: "Questões" },
   { id: "flashcards", label: "Flashcards" },
   { id: "desafios", label: "Desafios" },
-  { id: "missao", label: "Missão diária" },
+  { id: "missao", label: "Revisão diária" },
   { id: "acessos", label: "Acessos" },
 ];
 
@@ -724,7 +724,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
               </Grid>
               <ChartCard
                 title="Usuários ativos por dia (14 dias)"
-                note="Ativo = respondeu questão (inclusive em desafio), viu flashcard, abriu a missão diária ou criou desafio."
+                note="Ativo = respondeu questão (inclusive em desafio), viu flashcard, abriu a revisão diária ou criou desafio."
               >
                 <BarChart data={d.series.ativos} color={purple} label="Usuários ativos por dia" />
               </ChartCard>
@@ -740,7 +740,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                     numbered={false}
                   />
                   <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
-                    Entrou = respondeu questão, viu flashcard, abriu a missão diária (acontece ao abrir o app) ou criou desafio. A hora é do último uso, no horário de Brasília.
+                    Entrou = respondeu questão, viu flashcard, abriu a revisão diária (acontece ao abrir o app) ou criou desafio. A hora é do último uso, no horário de Brasília.
                     {ex.ativos_24h_total > ex.ativos_24h.length ? ` Mostrando os ${ex.ativos_24h.length} mais recentes de ${nf(ex.ativos_24h_total)}.` : ""}
                   </div>
                 </>
@@ -792,7 +792,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                 return (
                   <>
                     <Grid>
-                      <Kpi label="Respondidas hoje" value={nf(q.hoje)} color={blue} sub={`${nf(q.diarias_hoje)} na missão diária`} />
+                      <Kpi label="Respondidas hoje" value={nf(q.hoje)} color={blue} sub={`${nf(q.diarias_hoje)} na revisão diária`} />
                       <Kpi label="Respondidas em 7 dias" value={nf(q.d7)} color={blue} sub={`Acerto: ${pct(q.acertos_d7, q.d7)}`} />
                       <Kpi
                         label="Média diária por usuário (7 dias)"
@@ -889,7 +889,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
 
             {tab === "missao" && (
               <>
-            <Section title="Missão diária">
+            <Section title="Revisão diária">
               {(() => {
                 const m = d.missao;
                 if (!m) {
@@ -903,7 +903,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                   <>
                     <Grid>
                       <Kpi
-                        label="Missões concluídas hoje"
+                        label="Revisões concluídas hoje"
                         value={nf(m.concluidas_hoje)}
                         color={t.green}
                         sub={`${pct(m.concluidas_hoje, m.recebidas_hoje)} de quem abriu o app hoje (${nf(m.recebidas_hoje)})`}
@@ -918,10 +918,10 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                       <Kpi label="Sequência média" value={`${nf(m.sequencia_media, 1)} dias`} sub={`Maior sequência: ${nf(m.sequencia_maxima)} dias`} color={t.amber} />
                     </Grid>
                     <ChartCard
-                      title="Missões concluídas por dia (14 dias)"
-                      note="Concluída = respondeu todas as questões da missão do dia (3 no plano gratuito). A missão é sorteada quando a pessoa abre o app. Sequência ativa = concluiu a missão hoje ou ontem."
+                      title="Revisões concluídas por dia (14 dias)"
+                      note="Concluída = respondeu todas as questões da revisão do dia (3 no plano gratuito). A revisão é sorteada quando a pessoa abre o app. Sequência ativa = concluiu a revisão hoje ou ontem."
                     >
-                      <BarChart data={d.series.missoes || []} color={t.green} label="Missões concluídas por dia" />
+                      <BarChart data={d.series.missoes || []} color={t.green} label="Revisões concluídas por dia" />
                     </ChartCard>
                   </>
                 );
@@ -935,7 +935,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
             <Section title="Maiores sequências atuais">
               {ex ? <PeopleList rows={ex.sequencias_atuais} right={(r) => `${nf(r.n)} ${r.n === 1 ? "dia" : "dias"}`} empty="Ninguém com sequência ativa agora." /> : <ExtraNotice extra={extra} />}
               {ex && (
-                <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>Sequência ativa = concluiu a missão hoje ou ontem.</div>
+                <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>Sequência ativa = concluiu a revisão hoje ou ontem.</div>
               )}
             </Section>
 

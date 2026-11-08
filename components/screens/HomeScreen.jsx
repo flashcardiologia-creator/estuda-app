@@ -49,7 +49,7 @@ export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily, pending
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--home-gap, 14px)" }}>
         <HomeBox
           icon={<Flame fill={missionAccent} />}
-          title="Missão Diária"
+          title="Revisão Diária"
           onClick={onOpenDaily}
           heroBg={tone.hero}
           accentColor={missionAccent}

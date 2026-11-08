@@ -125,8 +125,8 @@ export function StreakSheet({ supabase, profile, streak, subscribed, friends, ca
         {explainOpen && (
           <p id="bandage-explain" style={{ margin: "10px 2px 0", fontSize: 12.5, lineHeight: 1.55, color: t.textMuted }}>
             {subscribed
-              ? "Acertando todas as questões da missão diária, você tem 50% de chance de ganhar uma bandagem. Se ficar um dia sem fazer a missão, ela salva sua sequência quando você voltar. Só cabe uma: com uma guardada, não há novo sorteio."
-              : "As bandagens são para assinantes: quem assina ganha uma chance de bandagem a cada missão em que acerta todas as questões."}
+              ? "Acertando todas as questões da revisão diária, você tem 50% de chance de ganhar uma bandagem. Se ficar um dia sem fazer a revisão, ela salva sua sequência quando você voltar. Só cabe uma: com uma guardada, não há novo sorteio."
+              : "As bandagens são para assinantes: quem assina ganha uma chance de bandagem a cada revisão em que acerta todas as questões."}
           </p>
         )}
 

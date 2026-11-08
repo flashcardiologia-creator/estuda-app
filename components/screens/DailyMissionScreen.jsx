@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bandage, Check, ChevronLeft, Layers, ListChecks, Target } from "lucide-react";
+import { Bandage, Brain, Check, ChevronLeft, Layers, ListChecks, Target } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
-import { PrimaryButton, Tag, Flame_ } from "@/components/ui/Primitives";
+import { ExpandBox, PrimaryButton, Tag, Flame_ } from "@/components/ui/Primitives";
+import { ForgettingCurve, REVISOES } from "@/components/screens/ForgettingCurve";
 import { QuestionCard } from "@/components/screens/QuestionCard";
 import { fetchFriendsMissionStatus, fetchFriendsStreaks } from "@/lib/data/friends";
 import { getDailyMode, setDailyMode } from "@/lib/data/dailyMode";
@@ -78,7 +79,7 @@ export function MissionShell({ idx, total, onNavigate, children }) {
             gap: 6,
           }}
         >
-          <Target size={14} color={t.amber} /> Missão {idx + 1} de {total}
+          <Target size={14} color={t.amber} /> Revisão {idx + 1} de {total}
         </span>
       </div>
       <div style={{ height: 4, background: t.border, margin: "14px 22px 0", borderRadius: 999 }}>
@@ -104,7 +105,7 @@ export function MissionNav({ canNext, idx, total, onNext, onFinish, color, finis
         <div style={{ flex: 1, minWidth: 0 }}>
           {isLast ? (
             <PrimaryButton full disabled={!canNext || finishing} color={color} onClick={onFinish}>
-              Concluir Missão
+              Concluir Revisão
             </PrimaryButton>
           ) : (
             <PrimaryButton full disabled={!canNext} color={color} onClick={onNext}>
@@ -273,9 +274,43 @@ function DailyFlashcard({ card, flipped, viewed, idx, total, onFlip, onNavigate,
 }
 
 const MISSION_FORMATS = [
-  { id: "mix", big: "5+5", title: "5 questões + 5 flashcards", sub: "Questões que errou, para revisar, e flashcards do mesmo assunto", Icon: Layers, gradient: "linear-gradient(135deg, #7C5CFC 0%, #4F46E5 100%)" },
-  { id: "questions", big: "10", title: "10 questões", sub: "Só questões que você já errou, para revisar e treinar mais prova", Icon: ListChecks, gradient: "linear-gradient(135deg, #F2A93B 0%, #E5484D 100%)" },
+  { id: "mix", big: "5+5", title: "Questões + flashcards", sub: "5 de cada", Icon: Layers, gradient: "linear-gradient(135deg, #7C5CFC 0%, #4F46E5 100%)" },
+  { id: "questions", big: "10", title: "Só questões", sub: "10 para revisar", Icon: ListChecks, gradient: "linear-gradient(135deg, #F2A93B 0%, #E5484D 100%)" },
 ];
+
+// Box "Por que revisar na hora certa?": começa fechado e abre ao tocar. Explica a curva do esquecimento de Ebbinghaus,
+// com o gráfico das revisões (ilustração).
+function WhyReview() {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginTop: 14, textAlign: "left" }}>
+      <ExpandBox title="Por que revisar na hora certa?" icon={<Brain size={17} color={t.primary} />} open={open} onToggle={() => setOpen((o) => !o)}>
+        <p style={{ fontSize: 12.5, lineHeight: 1.55, color: t.textMuted, margin: "0 0 10px" }}>
+          Pela <b style={{ color: t.text }}>curva do esquecimento de Ebbinghaus</b>, sem revisão a memória despenca logo nas primeiras horas. Cada revisão na hora certa a leva de volta a 100%, e a curva seguinte cai cada vez mais devagar. Por isso a revisão traz as questões que você errou, na hora de revisar. Se faltar, completamos com outras que acertou ou ainda não realizou.
+        </p>
+        <ForgettingCurve />
+        <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "4px 16px", marginTop: 6, fontSize: 11, color: t.textMuted }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <i style={{ width: 16, height: 0, borderTop: `2.5px solid ${t.red}` }} />
+            Sem revisar
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ display: "inline-flex", gap: 2 }}>
+              {REVISOES.map((r) => (
+                <i key={r.n} style={{ width: 5, height: 5, borderRadius: 3, background: r.color }} />
+              ))}
+            </span>
+            Com revisões
+          </span>
+        </div>
+        <div style={{ fontSize: 10.5, color: t.textMuted, textAlign: "center", marginTop: 4, opacity: 0.85 }}>
+          Ilustração: 1ª revisão em 20 min, 2ª em 24 h, 3ª em 7 dias e 4ª em 30 dias.
+        </div>
+      </ExpandBox>
+    </div>
+  );
+}
 
 // Escolha do formato da missão diária, na tela de conclusão. Vale a partir da missão de amanhã
 // (a de hoje já foi sorteada) e continua até a pessoa trocar.
@@ -301,12 +336,12 @@ function MissionFormat({ supabase, userId }) {
   };
 
   return (
-    <div style={{ marginTop: 28, textAlign: "left" }}>
-      <p style={{ fontSize: 14, fontWeight: 700, color: t.amber, textAlign: "center", margin: "0 0 14px", lineHeight: 1.5 }}>
-        A partir de amanhã, como você quer a sua missão?
+    <div style={{ marginTop: 16, textAlign: "left" }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: t.amber, textAlign: "center", margin: "0 0 10px", lineHeight: 1.4 }}>
+        A partir de amanhã, como você quer a sua revisão?
       </p>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {MISSION_FORMATS.map(({ id, big, title, sub, Icon, gradient }) => {
           const selected = choice === id;
           return (
@@ -315,66 +350,44 @@ function MissionFormat({ supabase, userId }) {
               onClick={() => pick(id)}
               aria-pressed={selected}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                width: "100%",
                 textAlign: "left",
                 border: "none",
-                borderRadius: 18,
-                padding: "16px 16px",
+                borderRadius: 16,
+                padding: 12,
                 background: gradient,
                 color: "#fff",
                 cursor: "pointer",
+                fontFamily: "inherit",
                 opacity: choice && !selected ? 0.6 : 1,
-                boxShadow: selected ? `0 0 0 2px ${t.bg}, 0 0 0 4px ${t.primary}, 0 10px 24px rgba(0,0,0,0.28)` : "0 6px 16px rgba(0,0,0,0.2)",
-                transition: "opacity .15s, box-shadow .15s, transform .15s",
-                transform: selected ? "scale(1.01)" : "scale(1)",
+                boxShadow: selected ? `0 0 0 2px ${t.bg}, 0 0 0 4px ${t.primary}, 0 8px 18px rgba(0,0,0,0.28)` : "0 5px 12px rgba(0,0,0,0.2)",
+                transition: "opacity .15s, box-shadow .15s",
               }}
             >
-              <span
-                style={{
-                  flexShrink: 0,
-                  minWidth: 64,
-                  height: 56,
-                  padding: "0 8px",
-                  borderRadius: 14,
-                  background: "rgba(255,255,255,0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 25,
-                  fontWeight: 800,
-                  letterSpacing: -0.5,
-                }}
-              >
-                {big}
+              <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1 }}>{big}</span>
+                {selected ? (
+                  <span style={{ width: 22, height: 22, borderRadius: 11, background: "#fff", color: "#1a1a2e", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Check size={14} strokeWidth={3} />
+                  </span>
+                ) : (
+                  <Icon size={19} style={{ opacity: 0.85 }} />
+                )}
               </span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 15.5, fontWeight: 700 }}>{title}</span>
-                <span style={{ display: "block", fontSize: 12.5, opacity: 0.88, marginTop: 3, lineHeight: 1.4 }}>{sub}</span>
-              </span>
-              {selected ? (
-                <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 13, background: "#fff", color: "#1a1a2e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Check size={16} strokeWidth={3} />
-                </span>
-              ) : (
-                <Icon size={22} style={{ flexShrink: 0, opacity: 0.85 }} />
-              )}
+              <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, marginTop: 8, lineHeight: 1.25 }}>{title}</span>
+              <span style={{ display: "block", fontSize: 11.5, opacity: 0.88, marginTop: 2, lineHeight: 1.3 }}>{sub}</span>
             </button>
           );
         })}
       </div>
 
-      <div style={{ fontSize: 11.5, color: t.textMuted, textAlign: "center", marginTop: 10, lineHeight: 1.5 }}>
-        As questões vêm do pool de questões que você já errou, na hora certa de revisar. Se faltarem, completamos com questões novas.
-      </div>
       {/* Só aparece depois de a pessoa trocar o formato: confirma que salvou (ou avisa que ficou só neste aparelho). */}
       {saved != null && (
-        <div role="status" style={{ fontSize: 11.5, color: saved ? t.textMuted : t.red, textAlign: "center", marginTop: 6, lineHeight: 1.5 }}>
+        <div role="status" style={{ fontSize: 11.5, color: saved ? t.textMuted : t.red, textAlign: "center", marginTop: 8, lineHeight: 1.5 }}>
           {saved ? "Salvo!" : "Salvo só neste aparelho por enquanto. Vale a partir de amanhã."}
         </div>
       )}
+
+      <WhyReview />
     </div>
   );
 }
@@ -384,16 +397,16 @@ function PlanComparison({ t, onSubscribe }) {
   const rows = [
     {
       title: "Dias seguidos",
-      free: "Os dias de missão não são contados.",
-      paid: "Cada missão conta e a sua sequência de dias cresce.",
+      free: "Os dias de revisão não são contados.",
+      paid: "Cada revisão conta e a sua sequência de dias cresce.",
     },
     {
       title: "Quais questões vêm",
       free: "Questões aleatórias do banco.",
-      paid: "Revisão pela curva de Ebbinghaus: as questões que você errou voltam na missão diária, no momento certo, para fixar o conteúdo.",
+      paid: "Revisão pela curva de Ebbinghaus: as questões que você errou voltam na revisão diária, no momento certo, para fixar o conteúdo.",
     },
     {
-      title: "Tamanho da missão",
+      title: "Tamanho da revisão",
       free: "3 questões, sem flashcards.",
       paid: "Até 10 questões, ou 5 questões + 5 flashcards.",
     },
@@ -401,7 +414,7 @@ function PlanComparison({ t, onSubscribe }) {
   return (
     <div style={{ marginTop: 26, textAlign: "left", background: t.surface, border: `1px solid ${t.border}`, borderRadius: 18, padding: "18px 18px 20px" }}>
       <div style={{ fontSize: 16.5, fontWeight: 800, color: t.text, textAlign: "center" }}>Plano gratuito x Assinatura</div>
-      <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center", marginTop: 4 }}>Veja o que muda na missão diária</div>
+      <div style={{ fontSize: 12.5, color: t.textMuted, textAlign: "center", marginTop: 4 }}>Veja o que muda na revisão diária</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 16 }}>
         {rows.map((r) => (
           <div key={r.title} style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: 14, padding: "12px 14px" }}>
@@ -446,13 +459,13 @@ export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate,
   }, [supabase, friends]);
 
   return (
-    <div style={{ maxWidth: 480, margin: "10px auto 80px", textAlign: "center", padding: 22 }}>
-      <Flame_ done size={54} />
-      <h2 style={{ fontSize: 24, color: t.text, marginTop: 16 }}>Missão concluída!</h2>
+    <div style={{ maxWidth: 480, margin: "0 auto 70px", textAlign: "center", padding: "6px 20px 22px" }}>
+      <Flame_ done size={40} />
+      <h2 style={{ fontSize: 22, color: t.text, marginTop: 8 }}>Revisão concluída!</h2>
       {isFree ? (
-        <p style={{ color: t.textMuted, fontSize: 14, marginTop: 14, lineHeight: 1.6 }}>Volte amanhã para uma nova missão.</p>
+        <p style={{ color: t.textMuted, fontSize: 13.5, marginTop: 8, lineHeight: 1.5 }}>Volte amanhã para uma nova revisão.</p>
       ) : (
-        <p style={{ color: t.textMuted, fontSize: 14, marginTop: 14, lineHeight: 1.6 }}>
+        <p style={{ color: t.textMuted, fontSize: 13.5, marginTop: 8, lineHeight: 1.5 }}>
           Você está numa sequência de <b style={{ color: t.green }}>{streak} {streak === 1 ? "dia" : "dias"}</b>.
           <br />
           Volte amanhã para manter a chama acesa.
@@ -468,18 +481,18 @@ export function DailyDoneScreen({ supabase, userId, streak, friends, onNavigate,
       {!isFree && reward?.earned && (
         <p role="status" style={{ margin: "12px 0 0", padding: "10px 14px", borderRadius: 12, background: t.primarySoft, border: `1px solid ${t.primary}`, fontSize: 13.5, lineHeight: 1.5, color: t.text }}>
           <Bandage size={15} color={t.primary} style={{ marginRight: 8, verticalAlign: -2 }} />
-          Você acertou tudo e ganhou uma <b>bandagem</b>! Ela salva sua sequência se você ficar um dia sem fazer a missão.
+          Você acertou tudo e ganhou uma <b>bandagem</b>! Ela salva sua sequência se você ficar um dia sem fazer a revisão.
         </p>
       )}
-      {/* Sem assinatura a missão é sempre de 3 questões: não há formato para escolher. */}
+      {/* Sem assinatura a revisão é sempre de 3 questões: não há formato para escolher. */}
       {canChooseFormat && <MissionFormat supabase={supabase} userId={userId} />}
       {isFree && <PlanComparison t={t} onSubscribe={() => onNavigate("plans")} />}
-      <div style={{ marginTop: 22 }}>
+      <div style={{ marginTop: 16 }}>
         <PrimaryButton variant={isFree ? "ghost" : "primary"} onClick={() => onNavigate("home")}>Voltar ao início</PrimaryButton>
       </div>
 
       {friendsStatus && friendsStatus.length > 0 && (
-        <div style={{ marginTop: 32, textAlign: "left" }}>
+        <div style={{ marginTop: 24, textAlign: "left" }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: t.textMuted, marginBottom: 10, textAlign: "center" }}>
             SEUS AMIGOS
           </div>

@@ -192,7 +192,7 @@ function InstChips() {
 const FEATURES = [
   { icon: BookOpen, title: "Questões comentadas", text: "Provas anteriores das principais instituições. Cada questão tem comentário curto e resposta completa. Filtre por tema, ano e instituição, use o cronômetro ou o modo prova.", extra: <InstChips /> },
   { icon: Layers, title: "Flashcards", text: "Cartões para revisar os conceitos que mais caem. Você também pode criar os seus." },
-  { icon: Flame, title: "Missão diária e sequência", text: "Todo dia, um conjunto de questões. Conclua a missão e mantenha sua sequência de dias seguidos." },
+  { icon: Flame, title: "Revisão diária e sequência", text: "Todo dia, um conjunto de questões. Conclua a revisão e mantenha sua sequência de dias seguidos." },
   { icon: Repeat, title: "Revisão dos erros", text: "Para assinantes, as questões que você errou voltam na hora certa, pela curva de Ebbinghaus, para fixar o conteúdo." },
   { icon: Swords, title: "Desafios e ranking", text: "Desafie seus amigos com um conjunto de questões, veja quem acerta mais e suba no ranking." },
   { icon: ChartColumn, title: "Estatísticas", text: "Acompanhe seus acertos por tema e por prova para saber onde focar o estudo." },
@@ -240,7 +240,7 @@ function PlansBlock() {
         <CheckList
           accent={t.green}
           items={[
-            "Missão diária com 3 questões e sequência",
+            "Revisão diária com 3 questões e sequência",
             "Ranking, estatísticas e amigos",
             `${FREE_CHALLENGES_PER_DAY} desafio por dia`,
             "Dias grátis liberam Questões e Flashcards",
@@ -254,7 +254,7 @@ function PlansBlock() {
           accent={t.primary}
           items={[
             "Telas de Questões e Flashcards liberadas",
-            "Missão com 10 questões, ou 5 questões e 5 flashcards",
+            "Revisão com 10 questões, ou 5 questões e 5 flashcards",
             "Revisão dos erros na hora certa",
             `Até ${PAID_CHALLENGES_PER_DAY} desafios por dia e bandagem para salvar a sequência`,
           ]}
@@ -322,7 +322,7 @@ export function LandingPage({ knownHere, invited, offer, onExpire, onQuizDone, o
   };
 
   const faq = [
-    { q: "Preciso pagar para começar?", a: "Não. Criar a conta é grátis, e a missão diária, o ranking, as estatísticas e os amigos ficam liberados sem assinatura. Para usar as telas de Questões e Flashcards, você assina ou usa os dias grátis." },
+    { q: "Preciso pagar para começar?", a: "Não. Criar a conta é grátis, e a revisão diária, o ranking, as estatísticas e os amigos ficam liberados sem assinatura. Para usar as telas de Questões e Flashcards, você assina ou usa os dias grátis." },
     { q: "Como ganho dias grátis?", a: "Respondendo ao quiz de boas-vindas: 3 questões, de 3 a 10 dias grátis conforme os acertos, liberados sozinhos quando você cria a conta. Não precisa de cupom, e só vale uma tentativa por aparelho." },
     { q: "Quais provas tem no app?", a: `Questões de provas anteriores de ${listaPt(INSTITUICOES)}, com comentário curto e resposta completa. Você filtra por tema, ano e instituição.` },
     { q: "Como instalo no celular?", a: "O FlashCardio abre no navegador e também pode ser instalado como aplicativo, sem loja. Toque em Baixar aplicativo e siga o passo a passo para iPhone ou Android." },
@@ -360,7 +360,7 @@ export function LandingPage({ knownHere, invited, offer, onExpire, onQuizDone, o
               ) : (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 999, border: `1px solid ${t.border}`, background: t.surface, color: t.textMuted, fontSize: 13, fontWeight: 700 }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: t.green }} />
-                  Missão diária grátis
+                  Revisão diária grátis
                 </span>
               )}
             </div>
@@ -370,7 +370,7 @@ export function LandingPage({ knownHere, invited, offer, onExpire, onQuizDone, o
               em <span style={{ color: t.amber }}>qualquer lugar</span>
             </h1>
             <p style={{ margin: "16px 0 0", fontSize: 16.5, lineHeight: 1.6, color: t.textMuted, ...rise(0.12) }}>
-              Questões comentadas de provas anteriores, flashcards, missão diária e desafios com amigos. Tudo no celular, em poucos minutos por dia.
+              Questões comentadas de provas anteriores, flashcards, revisão diária e desafios com amigos. Tudo no celular, em poucos minutos por dia.
             </p>
             {invited && (
               <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 20, padding: "12px 14px", borderRadius: 14, border: `1px solid ${t.amber}66`, background: `${t.amber}1a`, fontSize: 14, lineHeight: 1.5, color: t.text, ...rise(0.15) }}>
@@ -413,7 +413,7 @@ export function LandingPage({ knownHere, invited, offer, onExpire, onQuizDone, o
           </div>
         </Section>
 
-        <Section id="planos" eyebrow="Grátis e assinatura" title="Comece grátis. Assine quando quiser." intro="Você usa a missão diária e o que mais vier sem pagar nada. A assinatura libera o estudo completo.">
+        <Section id="planos" eyebrow="Grátis e assinatura" title="Comece grátis. Assine quando quiser." intro="Você usa a revisão diária e o que mais vier sem pagar nada. A assinatura libera o estudo completo.">
           <PlansBlock />
         </Section>
 
@@ -421,9 +421,9 @@ export function LandingPage({ knownHere, invited, offer, onExpire, onQuizDone, o
           <Faq items={faq} />
         </Section>
 
-        <Section id="comece" eyebrow="Comece em 1 minuto" title="Sua primeira missão é hoje.">
+        <Section id="comece" eyebrow="Comece em 1 minuto" title="Sua primeira revisão é hoje.">
           <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-            {["Crie a conta com nome, e-mail e senha.", "Faça a missão diária: 3 questões grátis.", "Mantenha a sequência e suba no ranking."].map((txt, i) => (
+            {["Crie a conta com nome, e-mail e senha.", "Faça a revisão diária: 3 questões grátis.", "Mantenha a sequência e suba no ranking."].map((txt, i) => (
               <li key={txt} style={{ display: "flex", gap: 14, alignItems: "center", fontSize: 15.5, color: t.text }}>
                 <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: t.primarySoft, color: t.primary, display: "grid", placeItems: "center", fontWeight: 800, fontSize: 14 }}>{i + 1}</span>
                 {txt}
