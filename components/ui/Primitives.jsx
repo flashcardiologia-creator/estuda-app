@@ -34,20 +34,23 @@ export function Chip({ active, onClick, children, disabled, style }) {
   );
 }
 
-// Escolha do tamanho da letra (questões e flashcards): frase à esquerda e três balões P, M e G na mesma linha.
+// Escolha do tamanho da letra (questões e flashcards): frase à esquerda e os balões P, M e G na mesma linha.
+// Nas questões (withXL) entra também o GG, a letra maior ainda; os flashcards seguem só com P, M e G.
 const FONT_SIZE_BUBBLES = [
   { value: "sm", letter: "P", label: "Letra pequena", size: 11.5 },
   { value: "md", letter: "M", label: "Letra média", size: 13.5 },
   { value: "lg", letter: "G", label: "Letra grande", size: 15.5 },
 ];
+const FONT_SIZE_XL = { value: "xl", letter: "GG", label: "Letra muito grande", size: 14.5 };
 
-export function FontSizePicker({ value, onChange }) {
+export function FontSizePicker({ value, onChange, withXL = false }) {
   const t = useT();
+  const bubbles = withXL ? [...FONT_SIZE_BUBBLES, FONT_SIZE_XL] : FONT_SIZE_BUBBLES;
   return (
     <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
       <span style={{ fontSize: 13, color: t.text, fontWeight: 600, whiteSpace: "nowrap" }}>Tamanho da letra</span>
-      <div role="radiogroup" aria-label="Tamanho da letra" style={{ display: "flex", gap: 8 }}>
-        {FONT_SIZE_BUBBLES.map((o) => {
+      <div role="radiogroup" aria-label="Tamanho da letra" style={{ display: "flex", gap: withXL ? 6 : 8 }}>
+        {bubbles.map((o) => {
           const on = value === o.value;
           return (
             <button

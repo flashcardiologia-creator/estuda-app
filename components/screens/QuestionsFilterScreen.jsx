@@ -251,7 +251,7 @@ export function QuestionsFilterScreen({
               />
             </div>
           )}
-          <FontSizePicker value={filters.fontSize} onChange={onSetFontSize} />
+          <FontSizePicker value={filters.fontSize} onChange={onSetFontSize} withXL />
         </ExpandBox>
 
         <ExpandBox title="Modos" icon={<Lock size={17} color={t.primary} />} open={open.provas} onToggle={() => toggle("provas")}>

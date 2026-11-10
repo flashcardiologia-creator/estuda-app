@@ -7,7 +7,7 @@ import { Tag, PrimaryButton } from "@/components/ui/Primitives";
 import { ZoomableImage } from "@/components/ui/ImageZoom";
 import { isAnnulled } from "@/lib/util";
 
-const FONT_SIZES = { sm: 14, md: 16.5, lg: 19 };
+const FONT_SIZES = { sm: 14, md: 16.5, lg: 19, xl: 22 };
 
 export function QuestionCard({
   q,
