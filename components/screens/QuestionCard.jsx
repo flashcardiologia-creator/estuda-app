@@ -54,7 +54,7 @@ export function QuestionCard({
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
         <Tag>{q.ano}</Tag>
         <Tag>{q.instituicao}</Tag>
-        <Tag>{temaHidden ? "Tema oculto" : q.tema}</Tag>
+        {!temaHidden && <Tag>{q.tema}</Tag>}
         {onToggleFav && (
           <button
             onClick={() => onToggleFav(q.id)}
