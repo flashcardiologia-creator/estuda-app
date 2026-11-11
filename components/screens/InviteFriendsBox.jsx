@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Check, Copy, Gift, MessageCircle, Share2 } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ExpandBox } from "@/components/ui/Primitives";
-import { REFERRAL_DAYS, fetchMyReferral, inviteMessage, inviteUrl } from "@/lib/data/referral";
+import { REFERRAL_DAYS, cachedReferral, inviteMessage, inviteUrl, prefetchReferral } from "@/lib/data/referral";
 
 const STATUS_TEXT = (item) => {
   if (item.status === "premiado") return `fechou o plano ${item.plan || ""}${item.days ? ` · +${item.days} dias` : ""}`.replace("  ", " ");
@@ -13,26 +13,47 @@ const STATUS_TEXT = (item) => {
 };
 
 // Caixa "Convidar amigos" da Minha Conta: link com o código de amigo, regras, totais e últimos convidados.
-// Só aparece depois que o SQL supabase/convite_amigos.sql foi rodado (sem ele a função my_referral não existe).
-export function InviteFriendsBox({ supabase }) {
+// Só continua aparecendo depois que o SQL supabase/convite_amigos.sql foi rodado (sem ele a função my_referral não existe).
+// A caixa abre na hora: os dados vêm do cache (o app já os busca ao abrir) e são atualizados em seguida; se ainda não há nada,
+// ela aparece com um indicador de carregamento em vez de surgir só depois da resposta do servidor.
+export function InviteFriendsBox({ supabase, userId }) {
   const t = useT();
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => cachedReferral(userId));
+  const [gone, setGone] = useState(false); // recurso inexistente ou falha sem nada guardado: a caixa some
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    fetchMyReferral(supabase)
+    prefetchReferral(supabase, userId)
       .then((d) => {
-        if (!cancelled) setData(d);
+        if (cancelled) return;
+        setData(d);
+        setGone(!d);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setGone((g) => g || !cachedReferral(userId));
+      });
     return () => {
       cancelled = true;
     };
-  }, [supabase]);
+  }, [supabase, userId]);
 
-  if (!data) return null;
+  if (gone) return null;
+
+  if (!data) {
+    const bar = (w, h = 12) => <div style={{ width: w, height: h, borderRadius: 6, background: t.border, animation: "fc-pulse 1.2s ease-in-out infinite" }} />;
+    return (
+      <ExpandBox title="Convidar amigos" icon={<Gift size={17} color={t.primary} />} open={open} onToggle={() => setOpen((o) => !o)}>
+        <div role="status" aria-label="Carregando seu link de convite" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {bar("92%")}
+          {bar("70%")}
+          {bar("100%", 48)}
+          {bar("100%", 38)}
+        </div>
+      </ExpandBox>
+    );
+  }
 
   const url = inviteUrl(window.location.origin, data.code);
   const message = inviteMessage(url);

@@ -90,6 +90,7 @@ import {
   respondToFriendRequest,
 } from "@/lib/data/friends";
 import { fetchChallenges } from "@/lib/data/challenges";
+import { prefetchReferral } from "@/lib/data/referral";
 import { SwipeBack } from "@/components/SwipeBack";
 import { shuffle, todayStr, msUntilNextDayBoundary, MISSION_GRACE_MS, effectiveStreak } from "@/lib/util";
 
@@ -118,6 +119,7 @@ const DEFAULT_FILTERS = {
   somente: "", // "" = todas; "resolvidas" = só as já respondidas; "ineditas" = só as nunca respondidas
   modoProva: false,
   mostrarAntigas: false,
+  esconderTemas: false, // não mostra o tema da questão enquanto ela não é respondida
   cronometro: false,
   minutos: 20,
   quantidade: "Todas",
@@ -303,6 +305,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       setFavorites(favIds);
       setFriends(friendsData);
       setLoading(false);
+      // Não bloqueia o app: a caixa "Convidar amigos" da Minha Conta já abre pronta quando a pessoa chegar lá.
+      prefetchReferral(supabase, userId).catch(() => {});
       // Não bloqueia o app: o balão de pendentes só precisa aparecer assim que chegar.
       fetchChallenges(supabase, userId)
         .then((data) => {
@@ -640,7 +644,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
     const pool = ids.map((id) => (textsRef.current[id] ? { ...byId[id], ...textsRef.current[id] } : byId[id]));
     const options = await fetchOptionsForQuestions(supabase, ids);
     const saved = full.filters || {};
-    setFilters((f) => ({ ...f, modoProva: !!saved.modoProva, mostrarAntigas: !!saved.mostrarAntigas }));
+    setFilters((f) => ({ ...f, modoProva: !!saved.modoProva, mostrarAntigas: !!saved.mostrarAntigas, esconderTemas: !!saved.esconderTemas }));
     const restored = unpackProgress(full.progress, ids);
     setSessionQuestionsById(Object.fromEntries(pool.map((q) => [q.id, q])));
     setSessionOptionsByQuestion(options);

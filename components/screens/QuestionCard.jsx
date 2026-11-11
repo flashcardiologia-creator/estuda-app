@@ -36,6 +36,8 @@ export function QuestionCard({
   const struck = struckLetras || [];
   // Anulada = todas as alternativas corretas no banco (answerResult.annulled); o texto do comentário fica de reserva.
   const annulled = !!answerResult?.annulled || isAnnulled(answerResult?.comentario || q.comentario);
+  // Esconder Temas: o tema só aparece depois que o gabarito está à vista (no Modo Prova, só na revisão final).
+  const temaHidden = !!filters.esconderTemas && !(answered && !filters.modoProva && answerResult);
 
   useEffect(() => {
     setShowFull(false);
@@ -52,7 +54,7 @@ export function QuestionCard({
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
         <Tag>{q.ano}</Tag>
         <Tag>{q.instituicao}</Tag>
-        <Tag>{q.tema}</Tag>
+        <Tag>{temaHidden ? "Tema oculto" : q.tema}</Tag>
         {onToggleFav && (
           <button
             onClick={() => onToggleFav(q.id)}

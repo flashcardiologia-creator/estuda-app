@@ -910,7 +910,7 @@ export function AccountScreen({
           </div>
         </ExpandBox>
 
-        <InviteFriendsBox supabase={supabase} />
+        <InviteFriendsBox supabase={supabase} userId={userId} />
 
         <FaqBox />
 

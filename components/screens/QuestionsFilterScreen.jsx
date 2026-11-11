@@ -262,6 +262,12 @@ export function QuestionsFilterScreen({
             sub="Respostas só aparecem ao final, em uma revisão completa"
           />
           <Toggle
+            checked={!!filters.esconderTemas}
+            onChange={(v) => setFilters((f) => ({ ...f, esconderTemas: v }))}
+            label="Esconder Temas"
+            sub="O tema não aparece enquanto você resolve, para não sugerir a resposta. Ele é mostrado depois que você responde"
+          />
+          <Toggle
             checked={filters.somente === "resolvidas"}
             onChange={(v) => setFilters((f) => ({ ...f, somente: v ? "resolvidas" : "" }))}
             label="Apenas questões já resolvidas"
