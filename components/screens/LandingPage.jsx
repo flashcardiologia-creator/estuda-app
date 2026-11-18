@@ -8,7 +8,7 @@ import { QuestionCard } from "@/components/screens/QuestionCard";
 import { LoginQuizPromo } from "@/components/screens/LoginQuizPromo";
 import { PLANS, formatBRL } from "@/lib/billing";
 import { FREE_CHALLENGES_PER_DAY, PAID_CHALLENGES_PER_DAY } from "@/lib/access";
-import { REFERRAL_DAYS } from "@/lib/data/referral";
+import { REFERRAL_INVITEE_DAYS } from "@/lib/data/referral";
 
 // Página de boas-vindas (quem abre o site sem conta). Em cima: cadastro ou entrada. Embaixo: tudo o que o app tem, o quiz
 // dos dias grátis, o que é grátis e o que é assinatura, e as dúvidas mais comuns. Os textos de preço e limites vêm dos mesmos
@@ -376,7 +376,7 @@ export function LandingPage({ knownHere, invited, offer, onExpire, onQuizDone, o
               <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 20, padding: "12px 14px", borderRadius: 14, border: `1px solid ${t.amber}66`, background: `${t.amber}1a`, fontSize: 14, lineHeight: 1.5, color: t.text, ...rise(0.15) }}>
                 <Gift size={18} color={t.amber} style={{ flexShrink: 0, marginTop: 2 }} />
                 <span>
-                  <strong>Você foi convidado por um amigo.</strong> Crie sua conta: quando fechar um plano, vocês dois ganham dias grátis ({REFERRAL_DAYS.mensal} no mensal, {REFERRAL_DAYS.anual} no anual).
+                  <strong>Você foi convidado por um amigo.</strong> Crie sua conta: quando fechar um plano, você ganha <strong>{REFERRAL_INVITEE_DAYS} dias grátis</strong> de acesso.
                 </span>
               </div>
             )}

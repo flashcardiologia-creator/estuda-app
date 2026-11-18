@@ -12,6 +12,7 @@ import { InviteFriendsBox } from "@/components/screens/InviteFriendsBox";
 import { SubscriptionCard } from "@/components/screens/SubscriptionCard";
 import { PushReminder } from "@/components/screens/PushReminder";
 import { fetchFriendComparison, removeFriend, searchProfilesByPrefix } from "@/lib/data/friends";
+import { pointsToBrl } from "@/lib/data/referral";
 
 function PasswordField({ value, onChange, placeholder, visible, onToggleVisible }) {
   const t = useT();
@@ -110,6 +111,10 @@ export function AccountScreen({
   const [viewingFriend, setViewingFriend] = useState(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [friendsOpen, setFriendsOpen] = useState(initialFocus === "friends");
+  // Botão "Solicitar saque" do Convidar amigos: abre a aba Contato já em Comissão, com o valor escrito (a chave muda para recomeçar o formulário).
+  const [contactRequest, setContactRequest] = useState(null);
+  const requestPayout = (points) =>
+    setContactRequest({ id: Date.now(), message: `SOLICITAÇÃO DE COMISSÃO\nQuero sacar ${pointsToBrl(points)} (${points} pontos liberados).\nMinha chave PIX: ` });
 
   useEffect(() => {
     if (initialFocus) onFocusConsumed?.();
@@ -909,11 +914,11 @@ export function AccountScreen({
           </div>
         </ExpandBox>
 
-        <InviteFriendsBox supabase={supabase} userId={userId} />
+        <InviteFriendsBox supabase={supabase} userId={userId} onRequestPayout={requestPayout} />
 
         <FaqBox />
 
-        <ContactBox supabase={supabase} userId={userId} />
+        <ContactBox key={contactRequest?.id || "contato"} supabase={supabase} userId={userId} preset={contactRequest} />
 
         <div style={{ marginTop: 20 }}>
           <PrimaryButton

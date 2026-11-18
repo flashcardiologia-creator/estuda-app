@@ -16,7 +16,7 @@ import { PROMO_UNTIL, promoDeadline } from "@/components/screens/LoginQuizPromo"
 import { LandingPage } from "@/components/screens/LandingPage";
 import { SignupGoalsFields } from "@/components/screens/SignupGoalsFields";
 import { EMPTY_GOALS, goalsError, goalsMetadata } from "@/lib/data/cardioFormacao";
-import { REFERRAL_DAYS, clearRef, loadRef, parseRef, saveRef } from "@/lib/data/referral";
+import { REFERRAL_INVITEE_DAYS, clearRef, loadRef, parseRef, saveRef } from "@/lib/data/referral";
 import { fetchQuizState, parseQuiz, quizSnapshot, saveQuiz, subscribeQuiz } from "@/lib/data/quiz";
 import { track } from "@/lib/data/visitTracking";
 
@@ -316,7 +316,7 @@ function LoginForm() {
       <div style={{ width: "100%", maxWidth: 380, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: 30 }}>
         {mode === "signup" && refCode && (
           <p style={{ fontSize: 13, lineHeight: 1.5, color: t.text, margin: "0 0 16px", padding: "10px 12px", borderRadius: 12, background: t.primarySoft, textAlign: "center" }}>
-            Você foi convidado por um amigo! Quando fechar um plano, vocês dois ganham dias grátis: <strong>{REFERRAL_DAYS.mensal} dias</strong> no mensal ou <strong>{REFERRAL_DAYS.anual} dias</strong> no anual.
+            Você foi convidado por um amigo! Quando fechar um plano, você ganha <strong>{REFERRAL_INVITEE_DAYS} dias grátis</strong> de acesso.
           </p>
         )}
         {mode === "signup" && savedQuiz && (
