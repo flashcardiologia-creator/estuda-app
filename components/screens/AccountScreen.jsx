@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ADMIN_DASHBOARD_EMAILS, PLAN_LABEL } from "@/lib/access";
+import { ADMIN_DASHBOARD_EMAILS } from "@/lib/access";
 import { User, Users, Flame, BookOpen, Award, Plus, LogOut, Copy, Check, X, Trash2, BarChart3, Trophy, Shield, KeyRound, Eye, EyeOff, ChevronRight, Swords, Rocket } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, ExpandBox, PrimaryButton, Toggle, Chip } from "@/components/ui/Primitives";
@@ -9,6 +9,7 @@ import { MAX_NAME_LEN, sanitizeName } from "@/lib/util";
 import { ContactBox } from "@/components/screens/ContactBox";
 import { FaqBox } from "@/components/screens/FaqBox";
 import { InviteFriendsBox } from "@/components/screens/InviteFriendsBox";
+import { SubscriptionCard } from "@/components/screens/SubscriptionCard";
 import { PushReminder } from "@/components/screens/PushReminder";
 import { fetchFriendComparison, removeFriend, searchProfilesByPrefix } from "@/lib/data/friends";
 
@@ -440,38 +441,36 @@ export function AccountScreen({
               >
                 Assinatura
               </label>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  padding: "11px 13px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.border}`,
-                  background: t.surfaceAlt,
-                  fontSize: 14,
-                  color: t.text,
-                  boxSizing: "border-box",
-                }}
-              >
-                <span style={{ minWidth: 0 }}>
-                  {access.active
-                    ? `${PLAN_LABEL[access.plan] || "Ativa"} · até ${new Date(access.expiresAt).toLocaleDateString("pt-BR")}${
-                        access.daysLeft != null ? ` (${access.daysLeft} ${access.daysLeft === 1 ? "dia" : "dias"})` : ""
-                      }`
-                    : access.lastExpiredAt
-                    ? `Venceu em ${new Date(access.lastExpiredAt).toLocaleDateString("pt-BR")}`
-                    : "Gratuita"}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onNavigate("plans")}
-                  style={{ background: "transparent", border: "none", padding: 0, color: t.primary, fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0 }}
+              {access.active ? (
+                <SubscriptionCard access={access} onProlongar={() => onNavigate("plans")} />
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    padding: "11px 13px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.border}`,
+                    background: t.surfaceAlt,
+                    fontSize: 14,
+                    color: t.text,
+                    boxSizing: "border-box",
+                  }}
                 >
-                  {access.active ? "Prolongar" : "Ver planos"}
-                </button>
-              </div>
+                  <span style={{ minWidth: 0 }}>
+                    {access.lastExpiredAt ? `Venceu em ${new Date(access.lastExpiredAt).toLocaleDateString("pt-BR")}` : "Gratuita"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("plans")}
+                    style={{ background: "transparent", border: "none", padding: 0, color: t.primary, fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0 }}
+                  >
+                    Ver planos
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
