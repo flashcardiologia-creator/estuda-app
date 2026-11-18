@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { RefreshCw, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, PrimaryButton } from "@/components/ui/Primitives";
-import { fetchAdminStats, fetchAdminExtra, fetchAdminAcessos } from "@/lib/data/adminStats";
+import { fetchAdminStats, fetchAdminExtra, fetchAdminAcessos, fetchAdminComissoes } from "@/lib/data/adminStats";
 import { formatBRL } from "@/lib/billing";
 
 const nf = (n, digits = 0) => Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -119,14 +119,14 @@ function BarChart({ data, color, label }) {
 }
 
 // Rosca com legenda. parts = [{ label, value, color }].
-function Donut({ parts, centerLabel }) {
+function Donut({ parts, centerLabel, ariaLabel = "Distribuição dos usuários por plano", showPct = true }) {
   const t = useT();
   const total = parts.reduce((s, p) => s + p.value, 0);
   const R = 15.9155; // circunferência = 100
   let acc = 0;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
-      <svg viewBox="0 0 42 42" width="132" height="132" role="img" aria-label="Distribuição dos usuários por plano" style={{ flexShrink: 0 }}>
+      <svg viewBox="0 0 42 42" width="132" height="132" role="img" aria-label={ariaLabel} style={{ flexShrink: 0 }}>
         <circle cx="21" cy="21" r={R} fill="none" stroke={t.surfaceAlt} strokeWidth="6" />
         {total > 0 &&
           parts
@@ -162,7 +162,7 @@ function Donut({ parts, centerLabel }) {
             <span style={{ width: 10, height: 10, borderRadius: 3, background: p.color, flexShrink: 0 }} />
             <span style={{ flex: 1, minWidth: 0 }}>{p.label}</span>
             <b style={{ fontVariantNumeric: "tabular-nums" }}>{nf(p.value)}</b>
-            <span style={{ color: t.textMuted, width: 52, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{pct(p.value, total)}</span>
+            {showPct && <span style={{ color: t.textMuted, width: 52, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{pct(p.value, total)}</span>}
           </div>
         ))}
       </div>
@@ -186,6 +186,7 @@ function dataHora(iso) {
 const TABS = [
   { id: "usuarios", label: "Usuários" },
   { id: "assinantes", label: "Assinantes" },
+  { id: "comissao", label: "Comissão" },
   { id: "questoes", label: "Questões" },
   { id: "flashcards", label: "Flashcards" },
   { id: "desafios", label: "Desafios" },
@@ -406,6 +407,261 @@ function SourceRows({ rows, label }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+// Aba Comissão: convite por pontos (supabase/convite_pontos.sql e supabase/painel_comissao.sql). 1 ponto = R$ 1,00.
+const brl = (n) => `R$ ${nf(n, 2)}`;
+const diaMes = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }) : "");
+
+// Pedido de saque ainda sem pagamento registrado: existe pedido e ele é mais novo que o último saque pago (ou não houve saque).
+const pedidoAberto = (p) => !!p.pedido && (!p.ultimo_saque || !p.pedido.em || new Date(p.pedido.em) > new Date(p.ultimo_saque));
+
+export function ComissaoTab({ supabase, refreshKey }) {
+  const t = useT();
+  const key = String(refreshKey);
+  const [res, setRes] = useState({ key: "", status: "loading", data: null, error: "" });
+  const [filtro, setFiltro] = useState("todos");
+  const [busca, setBusca] = useState("");
+  const [aberta, setAberta] = useState(null);
+  const [copiado, setCopiado] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdminComissoes(supabase).then(
+      (data) => !cancelled && setRes({ key, status: data ? "ok" : "missing", data, error: "" }),
+      (err) => !cancelled && setRes({ key, status: "error", data: null, error: err.message })
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, key]);
+
+  const loading = res.key !== key;
+  const c = !loading && res.status === "ok" ? res.data : null;
+  const g = c?.geral;
+  const pessoas = c?.pessoas || [];
+
+  const copiar = async (id, texto) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(id);
+      setTimeout(() => setCopiado(""), 1800);
+    } catch {
+      window.prompt("Copie o comando:", texto);
+    }
+  };
+
+  const filtros = [
+    { id: "todos", label: "Todas", n: pessoas.length, ok: () => true },
+    { id: "sacar", label: "Podem sacar", n: pessoas.filter((p) => p.pode_sacar).length, ok: (p) => p.pode_sacar },
+    { id: "pedido", label: "Pedidos abertos", n: pessoas.filter(pedidoAberto).length, ok: pedidoAberto },
+    { id: "aguardando", label: "Aguardando", n: pessoas.filter((p) => p.aguardando > 0).length, ok: (p) => p.aguardando > 0 },
+    { id: "sacaram", label: "Já sacaram", n: pessoas.filter((p) => p.saques_qtd > 0).length, ok: (p) => p.saques_qtd > 0 },
+  ];
+  const atual = filtros.find((f) => f.id === filtro) || filtros[0];
+  const q = busca.trim().toLowerCase();
+  const lista = pessoas.filter((p) => atual.ok(p) && (!q || `${p.nome} ${p.email}`.toLowerCase().includes(q)));
+
+  const chip = (f) => {
+    const on = filtro === f.id;
+    return (
+      <button
+        key={f.id}
+        type="button"
+        onClick={() => setFiltro(f.id)}
+        aria-pressed={on}
+        style={{ height: 32, padding: "0 12px", borderRadius: 999, cursor: "pointer", fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap", flex: "none", background: on ? t.primarySoft : t.surface, border: `1px solid ${on ? t.primary : t.border}`, color: on ? (t.name === "dark" ? "#C4B5FF" : t.primary) : t.textMuted }}
+      >
+        {f.label} <span style={{ opacity: 0.75 }}>{f.n}</span>
+      </button>
+    );
+  };
+
+  // Mesma lógica de cores da tela da pessoa: amarelo = aguardando os 7 dias, verde = liberado, cinza = estornado.
+  const look = (cv) => {
+    const pts = cv.pontos > 0 ? cv.pontos : 0;
+    if (cv.status === "premiado" && pts > 0) {
+      return cv.liberado
+        ? { cor: t.green, sub: `assinou o ${cv.plano || "plano"} · liberado`, right: `+${pts}` }
+        : { cor: t.amber, sub: `assinou o ${cv.plano || "plano"} · libera em ${diaMes(cv.liberar_em)}`, right: `+${pts}` };
+    }
+    if (cv.status === "premiado") return { cor: t.text, sub: `assinou o ${cv.plano || "plano"} (antes dos pontos)`, right: "" };
+    if (cv.status === "revertido") return { cor: t.textMuted, sub: "plano estornado", right: "" };
+    return { cor: t.text, sub: "criou a conta", right: "" };
+  };
+
+  const card = { background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14 };
+  const mini = (label, value, color) => (
+    <div style={{ ...card, background: t.surfaceAlt, padding: "9px 12px", minWidth: 0 }}>
+      <div style={{ fontSize: 11, color: t.textMuted, fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: color || t.text, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{value}</div>
+    </div>
+  );
+
+  return (
+    <>
+      {loading && <div style={{ fontSize: 13, color: t.textMuted, padding: "16px 2px" }}>Carregando…</div>}
+
+      {!loading && res.status === "missing" && (
+        <div style={{ ...card, padding: 16, marginTop: 22, fontSize: 13.5, lineHeight: 1.5, color: t.textMuted }}>
+          Esta aba precisa dos SQLs convite_pontos.sql e painel_comissao.sql rodados no Supabase. Rode-os e toque em Atualizar.
+        </div>
+      )}
+      {!loading && res.status === "error" && <div style={{ ...card, padding: 16, marginTop: 22, fontSize: 13.5, lineHeight: 1.5, color: t.red }}>{res.error}</div>}
+
+      {g && (
+        <>
+          <Section title="Resumo geral">
+            <Grid>
+              <Kpi label="A pagar agora" value={brl(g.a_pagar)} color={t.green} sub={g.podem_sacar_qtd > 0 ? `${g.podem_sacar_qtd} ${g.podem_sacar_qtd === 1 ? "pessoa pode sacar" : "pessoas podem sacar"} (${brl(g.podem_sacar_valor)})` : "Ninguém chegou aos 250 pontos ainda"} wide />
+              <Kpi label="Aguardando 7 dias" value={brl(g.aguardando)} color={t.amber} sub="ainda pode ser estornado" />
+              <Kpi label="Já pago (saques)" value={brl(g.sacados)} color={t.red} sub={`${nf(g.saques_qtd)} ${g.saques_qtd === 1 ? "saque" : "saques"}`} />
+              <Kpi label="Convites" value={nf(g.convites)} sub={`${nf(g.assinaram)} assinaram (${pct(g.assinaram, g.convites)}) · ${nf(g.estornados)} estornados`} />
+              <Kpi label="Pessoas que convidaram" value={nf(g.pessoas)} sub={`${nf(g.mensal)} mensais · ${nf(g.anual)} anuais`} />
+              <Kpi label="Pedidos de saque" value={nf(g.pedidos_qtd)} sub="feitos pela aba Contato" />
+              <Kpi label="Pontos gerados" value={nf(g.pontos_ganhos)} sub={`= ${brl(g.pontos_ganhos)} (1 ponto = R$ 1,00)`} />
+            </Grid>
+            <ChartCard title="Para onde foram os pontos" note="Já pago + a pagar (liberado) + aguardando os 7 dias = pontos gerados. Pontos de convites estornados não entram.">
+              <Donut
+                centerLabel="pontos"
+                showPct={false}
+                ariaLabel="Divisão dos pontos entre já pagos, a pagar e aguardando"
+                parts={[
+                  { label: "Já pago", value: g.sacados, color: t.red },
+                  { label: "A pagar agora", value: g.a_pagar, color: t.green },
+                  { label: "Aguardando 7 dias", value: g.aguardando, color: t.amber },
+                ]}
+              />
+            </ChartCard>
+          </Section>
+
+          <Section title="Resumo de cada pessoa">
+            <div role="group" aria-label="Filtrar pessoas" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -22px", padding: "2px 22px 8px", scrollbarWidth: "none" }}>
+              {filtros.map(chip)}
+            </div>
+            <input
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por nome ou e-mail"
+              aria-label="Buscar pessoa"
+              style={{ width: "100%", boxSizing: "border-box", margin: "2px 0 10px", padding: "10px 12px", borderRadius: 12, border: `1px solid ${t.border}`, background: t.surfaceAlt, color: t.text, fontSize: 16, fontFamily: "inherit" }}
+            />
+
+            {!lista.length && <div style={{ fontSize: 13, color: t.textMuted, padding: "4px 2px" }}>{pessoas.length ? "Ninguém nesse filtro." : "Ainda ninguém convidou amigos."}</div>}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {lista.map((p) => {
+                const open = aberta === p.id;
+                const pedido = pedidoAberto(p);
+                const cmd = `select public.admin_registrar_saque('${String(p.email || "").replace(/'/g, "''")}', ${p.saldo});`;
+                return (
+                  <div key={p.id} style={{ ...card, overflow: "hidden" }}>
+                    <button
+                      type="button"
+                      onClick={() => setAberta(open ? null : p.id)}
+                      aria-expanded={open}
+                      style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 14px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nome}</div>
+                        <div style={{ fontSize: 11.5, color: t.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.email}</div>
+                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>
+                          {p.convidados} {p.convidados === 1 ? "convidado" : "convidados"} · {p.assinaram} {p.assinaram === 1 ? "assinou" : "assinaram"}
+                          {p.estornados > 0 ? ` · ${p.estornados} estornado${p.estornados > 1 ? "s" : ""}` : ""}
+                        </div>
+                        {(p.pode_sacar || pedido) && (
+                          <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                            {p.pode_sacar && <span style={{ fontSize: 10.5, fontWeight: 800, color: t.green, border: `1px solid ${t.green}`, borderRadius: 999, padding: "1px 8px" }}>PODE SACAR</span>}
+                            {pedido && <span style={{ fontSize: 10.5, fontWeight: 800, color: t.amber, border: `1px solid ${t.amber}`, borderRadius: 999, padding: "1px 8px" }}>PEDIU SAQUE</span>}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: p.saldo > 0 ? t.green : t.textMuted, fontVariantNumeric: "tabular-nums" }}>{brl(p.saldo)}</div>
+                        <div style={{ fontSize: 11, color: t.textMuted }}>liberado</div>
+                        {p.aguardando > 0 && <div style={{ fontSize: 11.5, fontWeight: 700, color: t.amber, marginTop: 3 }}>+{brl(p.aguardando)} aguardando</div>}
+                      </div>
+                      {open ? <ChevronUp size={16} color={t.textMuted} /> : <ChevronDown size={16} color={t.textMuted} />}
+                    </button>
+
+                    {open && (
+                      <div style={{ padding: "0 14px 14px", borderTop: `1px solid ${t.border}` }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginTop: 12 }}>
+                          {mini("Ganhos no total", brl(p.ganhos))}
+                          {mini("Liberado agora", brl(p.saldo), t.green)}
+                          {mini("Aguardando 7 dias", brl(p.aguardando), t.amber)}
+                          {mini("Já sacou", brl(p.sacados), t.red)}
+                        </div>
+
+                        {p.pedido && (
+                          <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 12, border: `1px solid ${pedido ? t.amber : t.border}`, background: t.surfaceAlt }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase", color: pedido ? t.amber : t.textMuted }}>
+                              {pedido ? "Pedido de saque em aberto" : "Último pedido de saque (já pago)"}
+                              {p.pedido.em ? ` · ${dataHora(p.pedido.em)}` : ""}
+                            </div>
+                            <div style={{ fontSize: 13, color: t.text, marginTop: 6, lineHeight: 1.45, whiteSpace: "pre-line", wordBreak: "break-word" }}>{p.pedido.mensagem}</div>
+                          </div>
+                        )}
+
+                        {p.pode_sacar && (
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6 }}>Depois de pagar o PIX, registre o saque no SQL Editor:</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <code style={{ flex: 1, minWidth: 0, fontSize: 11.5, padding: "8px 10px", borderRadius: 10, background: t.surfaceAlt, border: `1px solid ${t.border}`, color: t.text, wordBreak: "break-all" }}>{cmd}</code>
+                              <button
+                                type="button"
+                                onClick={() => copiar(p.id, cmd)}
+                                aria-label="Copiar comando"
+                                style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0, background: "transparent", border: `1px solid ${copiado === p.id ? t.green : t.border}`, color: copiado === p.id ? t.green : t.text, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                              >
+                                {copiado === p.id ? <Check size={13} /> : <Copy size={13} />}
+                                {copiado === p.id ? "Copiado" : "Copiar"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {(p.convites?.length > 0 || p.saques?.length > 0) && (
+                          <ul style={{ listStyle: "none", margin: "14px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 9 }}>
+                            {p.convites.map((cv, i) => {
+                              const l = look(cv);
+                              return (
+                                <li key={`c-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: l.cor, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cv.nome}</div>
+                                    <div style={{ fontSize: 11.5, color: t.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      {l.sub}
+                                      {cv.email ? ` · ${cv.email}` : ""}
+                                    </div>
+                                  </div>
+                                  {l.right && <span style={{ fontSize: 13, fontWeight: 800, color: l.cor, flexShrink: 0 }}>{l.right}</span>}
+                                </li>
+                              );
+                            })}
+                            {p.saques.map((s, i) => (
+                              <li key={`s-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: t.red }}>Saque pago</div>
+                                  <div style={{ fontSize: 11.5, color: t.textMuted }}>{dataHora(s.em)}</div>
+                                </div>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: t.red }}>-{s.pontos}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {pessoas.length >= 300 && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 10 }}>Mostrando as 300 pessoas com mais saldo a pagar.</div>}
+          </Section>
+        </>
+      )}
+    </>
   );
 }
 
@@ -956,6 +1212,8 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
             </Section>
               </>
             )}
+
+            {tab === "comissao" && <ComissaoTab supabase={supabase} refreshKey={acessosKey} />}
 
             {tab === "acessos" && <AcessosTab supabase={supabase} refreshKey={acessosKey} />}
           </>
