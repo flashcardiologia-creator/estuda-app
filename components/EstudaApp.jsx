@@ -56,7 +56,7 @@ import {
   fetchAllQuestions,
   fetchQuestionTexts,
   applyQuestionFilters,
-  fetchAnsweredQuestionIds,
+  fetchAttemptSets,
   deriveFilterOptions,
   fetchOptionsForQuestions,
   fetchOptionsWithAnswerKey,
@@ -117,6 +117,7 @@ const DEFAULT_FILTERS = {
   instituicoes: [],
   favoritasOnly: false,
   somente: "", // "" = todas; "resolvidas" = só as já respondidas; "ineditas" = só as nunca respondidas
+  apenasErradas: false, // só as que a última resposta foi errada (liga junto "resolvidas")
   modoProva: false,
   mostrarAntigas: false,
   esconderTemas: false, // não mostra o tema da questão enquanto ela não é respondida
@@ -170,6 +171,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   // ids das questões que a pessoa já respondeu (filtro "apenas resolvidas / inéditas"); null = ainda não carregou
   const [answeredIds, setAnsweredIds] = useState(null);
+  const [wrongIds, setWrongIds] = useState(null);
   const [flashcardFontSize, setFlashcardFontSize] = useState("md");
 
   const [session, setSession] = useState(null);
@@ -372,7 +374,8 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   }, [appReady, supabase, userId]);
 
   // Quiz de boas-vindas: conta criada depois de responder o quiz na tela de entrada ganha de 3 a 10 dias, sem cupom. O banco
-  // corrige as respostas guardadas no cadastro (supabase/quiz_boas_vindas.sql). A consulta roda uma vez por conta e aparelho.
+  // corrige as respostas guardadas no cadastro (supabase/quiz_boas_vindas.sql). Conta criada SEM o quiz ganha o mínimo (3 dias, o de
+  // 0 acertos; supabase/quiz_sem_quiz_dias_minimos.sql, status ok_sem_quiz). A consulta roda uma vez por conta e aparelho.
   const [quizReward, setQuizReward] = useState(null);
   useEffect(() => {
     if (!appReady) return;
@@ -390,7 +393,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
       } catch {
         // ignora
       }
-      if (r.status === "ok") setQuizReward(r);
+      if (r.status === "ok" || r.status === "ok_sem_quiz") setQuizReward(r);
     });
     return () => {
       cancelled = true;
@@ -440,7 +443,12 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
     }
     if (screen === "questions-filters") {
       fetchQuestionSessions(supabase, userId).then(setPastSessions);
-      fetchAnsweredQuestionIds(supabase, userId).then(setAnsweredIds).catch(() => {});
+      fetchAttemptSets(supabase, userId)
+        .then(({ answered, wrong }) => {
+          setAnsweredIds(answered);
+          setWrongIds(wrong);
+        })
+        .catch(() => {});
     }
     if (screen === "flashcards-select") {
       fetchFlashcardCounts(supabase, { trash: true, custom: true }).then(({ themeCounts, favoriteCounts, favorites }) => {
@@ -538,17 +546,19 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
   /* ---- Questões ---- */
   const startQuestions = async () => {
     // Sorteia primeiro e só depois corta na quantidade escolhida (5, 10, ... ou "Todas").
-    // "Apenas resolvidas / inéditas": confere na hora quais questões a pessoa já respondeu (não depende do que a tela carregou antes).
+    // "Apenas resolvidas / inéditas / que errei": confere na hora o histórico da pessoa (não depende do que a tela carregou antes).
     let answeredNow = null;
-    if (filters.somente) {
+    let wrongNow = null;
+    if (filters.somente || filters.apenasErradas) {
       try {
-        answeredNow = await fetchAnsweredQuestionIds(supabase, userId);
+        ({ answered: answeredNow, wrong: wrongNow } = await fetchAttemptSets(supabase, userId));
         setAnsweredIds(answeredNow);
+        setWrongIds(wrongNow);
       } catch {
         throw new Error("Não foi possível conferir quais questões você já respondeu. Tente de novo.");
       }
     }
-    const sorted = shuffle(applyQuestionFilters(allQuestions, filters, favorites, answeredNow));
+    const sorted = shuffle(applyQuestionFilters(allQuestions, filters, favorites, answeredNow, wrongNow));
     const filtered = Number.isInteger(filters.quantidade) ? sorted.slice(0, filters.quantidade) : sorted;
     // Garante os textos (enunciado/comentários) das questões escolhidas: espera o
     // download em segundo plano e baixa na hora só o que ainda faltar.
@@ -1055,6 +1065,7 @@ export function EstudaApp({ userId, userEmail, access, paymentReturn, openPlans 
           allQuestions={allQuestions}
           favorites={favorites}
           answeredIds={answeredIds}
+          wrongIds={wrongIds}
           filters={filters}
           setFilters={setFilters}
           onSetFontSize={saveQuestionFontSize}

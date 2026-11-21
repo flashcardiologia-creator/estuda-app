@@ -12,7 +12,8 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 export function QuizReward({ reward, onClose }) {
   const t = useT();
   const table = quizTable();
-  const mine = Math.min(reward.acertos, 3);
+  const semQuiz = reward.status === "ok_sem_quiz"; // conta criada sem o quiz: ganha o mínimo, sem acertos nem tabela
+  const mine = Math.min(reward.acertos ?? 0, 3);
 
   return (
     <div
@@ -37,20 +38,28 @@ export function QuizReward({ reward, onClose }) {
             </h2>
           </div>
           <p style={{ fontSize: 13.5, lineHeight: 1.6, color: t.textMuted, margin: 0 }}>
-            Você acertou <b style={{ color: t.text }}>{reward.acertos} de 3</b> questões do quiz de boas-vindas. Seu acesso completo a Questões e Flashcards vale até{" "}
-            <b style={{ color: t.text }}>{fmtDate(reward.until)}</b>. Não precisa de cupom.
+            {semQuiz ? (
+              <>Presente de boas-vindas! </>
+            ) : (
+              <>
+                Você acertou <b style={{ color: t.text }}>{reward.acertos} de 3</b> questões do quiz de boas-vindas.{" "}
+              </>
+            )}
+            Seu acesso completo a Questões e Flashcards vale até <b style={{ color: t.text }}>{fmtDate(reward.until)}</b>. Não precisa de cupom.
           </p>
-          <div style={{ marginTop: 14, border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden" }}>
-            {table.map((row) => {
-              const isMine = row.acertos === mine;
-              return (
-                <div key={row.acertos} style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", fontSize: 13, background: isMine ? t.primarySoft : "transparent", color: isMine ? t.text : t.textMuted, fontWeight: isMine ? 700 : 500, borderTop: row.acertos ? `1px solid ${t.border}` : "none" }}>
-                  <span>{plural(row.acertos, "acerto", "acertos")}</span>
-                  <span>{plural(row.dias, "dia", "dias")}</span>
-                </div>
-              );
-            })}
-          </div>
+          {!semQuiz && (
+            <div style={{ marginTop: 14, border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden" }}>
+              {table.map((row) => {
+                const isMine = row.acertos === mine;
+                return (
+                  <div key={row.acertos} style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", fontSize: 13, background: isMine ? t.primarySoft : "transparent", color: isMine ? t.text : t.textMuted, fontWeight: isMine ? 700 : 500, borderTop: row.acertos ? `1px solid ${t.border}` : "none" }}>
+                    <span>{plural(row.acertos, "acerto", "acertos")}</span>
+                    <span>{plural(row.dias, "dia", "dias")}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <div style={{ marginTop: 18 }}>
             <PrimaryButton full onClick={onClose}>
               Começar a estudar

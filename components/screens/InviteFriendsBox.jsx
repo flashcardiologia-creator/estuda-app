@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Copy, Gift, MessageCircle, Share2 } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Copy, Gift, MessageCircle, Share2 } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ExpandBox, PrimaryButton } from "@/components/ui/Primitives";
 import {
@@ -33,6 +33,7 @@ export function InviteFriendsBox({ supabase, userId, onRequestPayout }) {
   const [gone, setGone] = useState(false); // recurso inexistente ou falha sem nada guardado: a caixa some
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [details, setDetails] = useState(false); // menu "Mais Detalhes" (explicação, pontos, saldo, lista); começa fechado
 
   useEffect(() => {
     let cancelled = false;
@@ -119,9 +120,45 @@ export function InviteFriendsBox({ supabase, userId, onRequestPayout }) {
 
   return (
     <ExpandBox title="Convidar amigos" icon={<Gift size={17} color={t.primary} />} open={open} onToggle={() => setOpen((o) => !o)} badge={data.rewarded}>
-      <p style={{ margin: "0 0 12px", fontSize: 13.5, lineHeight: 1.55, color: t.text }}>
-        Convide um amigo pelo seu link. Quando ele <strong>assinar um plano</strong>, você <strong>ganha pontos que valem dinheiro</strong> (<strong>1 ponto = R$ 1,00</strong>). Seu amigo também ganha <strong>{REFERRAL_INVITEE_DAYS} dias</strong> de acesso.
-      </p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: `1.5px dashed ${t.primary}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 8.5, color: t.primary, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Seu link de convite</div>
+          <div style={{ fontSize: 12.5, color: t.text, fontWeight: 700, wordBreak: "break-all", lineHeight: 1.35 }}>{url.replace(/^https?:\/\//, "")}</div>
+        </div>
+        <button
+          type="button"
+          onClick={copy}
+          title="Copiar link"
+          style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, background: copied ? "transparent" : t.surface, border: `1px solid ${copied ? t.green : t.border}`, borderRadius: 10, padding: "8px 12px", color: copied ? t.green : t.text, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all .15s ease" }}
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? "Copiado" : "Copiar"}
+        </button>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <a href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer" style={action}>
+          <MessageCircle size={15} color={t.green} />
+          WhatsApp
+        </a>
+        {canShare && (
+          <button type="button" onClick={share} style={action}>
+            <Share2 size={15} color={t.primary} />
+            Compartilhar
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <div style={tile}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: t.text }}>{data.invited}</div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>convidados</div>
+        </div>
+        <div style={tile}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: t.text }}>{data.rewarded}</div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>assinaram</div>
+        </div>
+      </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         <div style={{ ...tile, textAlign: "left", padding: "10px 12px" }}>
@@ -164,84 +201,62 @@ export function InviteFriendsBox({ supabase, userId, onRequestPayout }) {
         {canRedeem && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, textAlign: "center" }}>O pedido é feito na aba Contato, com a sua chave PIX.</div>}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: `1.5px dashed ${t.primary}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 8.5, color: t.primary, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Seu link de convite</div>
-          <div style={{ fontSize: 12.5, color: t.text, fontWeight: 700, wordBreak: "break-all", lineHeight: 1.35 }}>{url.replace(/^https?:\/\//, "")}</div>
-        </div>
-        <button
-          type="button"
-          onClick={copy}
-          title="Copiar link"
-          style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, background: copied ? "transparent" : t.surface, border: `1px solid ${copied ? t.green : t.border}`, borderRadius: 10, padding: "8px 12px", color: copied ? t.green : t.text, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all .15s ease" }}
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? "Copiado" : "Copiar"}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setDetails((d) => !d)}
+        aria-expanded={details}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "9px 12px", borderRadius: 10, border: `1px solid ${t.border}`, background: "transparent", color: t.textMuted, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+      >
+        Mais Detalhes
+        {details ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        <a href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer" style={action}>
-          <MessageCircle size={15} color={t.green} />
-          WhatsApp
-        </a>
-        {canShare && (
-          <button type="button" onClick={share} style={action}>
-            <Share2 size={15} color={t.primary} />
-            Compartilhar
-          </button>
-        )}
-      </div>
+      {details && (
+        <div style={{ marginTop: 14 }}>
+          <p style={{ margin: "0 0 12px", fontSize: 13.5, lineHeight: 1.55, color: t.text }}>
+            Convide um amigo pelo seu link. Quando ele <strong>assinar um plano</strong>, você <strong>ganha pontos que valem dinheiro</strong> (<strong>1 ponto = R$ 1,00</strong>). Seu amigo também ganha <strong>{REFERRAL_INVITEE_DAYS} dias</strong> de acesso.
+          </p>
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <div style={tile}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: t.text }}>{data.invited}</div>
-          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>convidados</div>
-        </div>
-        <div style={tile}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: t.text }}>{data.rewarded}</div>
-          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>assinaram</div>
-        </div>
-      </div>
+          {entries.length > 0 && (
+            <>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", margin: "2px 0 10px", fontSize: 11, color: t.textMuted }}>
+                <span>{dot(t.amber)}aguardando {REFERRAL_HOLD_DAYS} dias</span>
+                <span>{dot(t.green)}liberado</span>
+                <span>{dot(t.red)}saque</span>
+              </div>
+              <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                {entries.map((e, i) => {
+                  if (e.kind === "saque") {
+                    return (
+                      <li key={`saque-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: t.red }}>Saque</div>
+                          <div style={{ fontSize: 12, color: t.textMuted, marginTop: 1 }}>pago em {dayMonth(e.w.at)}</div>
+                        </div>
+                        <span style={{ fontSize: 13.5, fontWeight: 800, color: t.red, flexShrink: 0 }}>-{e.w.points} pontos</span>
+                      </li>
+                    );
+                  }
+                  const look = inviteeLook(e.item);
+                  return (
+                    <li key={`${e.item.name}-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: look.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.item.name}</div>
+                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 1 }}>{look.sub}</div>
+                      </div>
+                      {look.right && <span style={{ fontSize: 13.5, fontWeight: 800, color: look.color, flexShrink: 0 }}>{look.right}</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
 
-      {entries.length > 0 && (
-        <>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", margin: "14px 0 10px", fontSize: 11, color: t.textMuted }}>
-            <span>{dot(t.amber)}aguardando {REFERRAL_HOLD_DAYS} dias</span>
-            <span>{dot(t.green)}liberado</span>
-            <span>{dot(t.red)}saque</span>
-          </div>
-          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-            {entries.map((e, i) => {
-              if (e.kind === "saque") {
-                return (
-                  <li key={`saque-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: t.red }}>Saque</div>
-                      <div style={{ fontSize: 12, color: t.textMuted, marginTop: 1 }}>pago em {dayMonth(e.w.at)}</div>
-                    </div>
-                    <span style={{ fontSize: 13.5, fontWeight: 800, color: t.red, flexShrink: 0 }}>-{e.w.points} pontos</span>
-                  </li>
-                );
-              }
-              const look = inviteeLook(e.item);
-              return (
-                <li key={`${e.item.name}-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: look.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.item.name}</div>
-                    <div style={{ fontSize: 12, color: t.textMuted, marginTop: 1 }}>{look.sub}</div>
-                  </div>
-                  {look.right && <span style={{ fontSize: 13.5, fontWeight: 800, color: look.color, flexShrink: 0 }}>{look.right}</span>}
-                </li>
-              );
-            })}
-          </ul>
-        </>
+          <p style={{ margin: "14px 0 0", fontSize: 11.5, lineHeight: 1.5, color: t.textMuted }}>
+            Vale para quem criar a conta pelo seu link e fechar o primeiro plano pago. Os pontos de cada amigo ficam aguardando {REFERRAL_HOLD_DAYS} dias, o prazo de estorno, e depois são liberados. Se o plano do amigo for estornado nesse prazo, os pontos são desfeitos.
+          </p>
+        </div>
       )}
-
-      <p style={{ margin: "14px 0 0", fontSize: 11.5, lineHeight: 1.5, color: t.textMuted }}>
-        Vale para quem criar a conta pelo seu link e fechar o primeiro plano pago. Os pontos de cada amigo ficam aguardando {REFERRAL_HOLD_DAYS} dias, o prazo de estorno, e depois são liberados. Se o plano do amigo for estornado nesse prazo, os pontos são desfeitos.
-      </p>
     </ExpandBox>
   );
 }

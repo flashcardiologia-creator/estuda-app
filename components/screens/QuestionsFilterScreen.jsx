@@ -46,6 +46,7 @@ export function QuestionsFilterScreen({
   allQuestions,
   favorites,
   answeredIds = null,
+  wrongIds = null,
   filters,
   setFilters,
   onSetFontSize,
@@ -151,23 +152,28 @@ export function QuestionsFilterScreen({
   ].filter(Boolean);
 
   const previewCount = useMemo(
-    () => applyQuestionFilters(allQuestions, filters, favorites, answeredIds).length,
-    [allQuestions, filters, favorites, answeredIds]
+    () => applyQuestionFilters(allQuestions, filters, favorites, answeredIds, wrongIds).length,
+    [allQuestions, filters, favorites, answeredIds, wrongIds]
   );
 
-  // "Apenas resolvidas / inéditas": quantas questões, dentro dos temas, provas e anos escolhidos, a pessoa já respondeu e quantas nunca respondeu.
-  const { resolvidasCount, ineditasCount } = useMemo(() => {
-    if (!answeredIds) return { resolvidasCount: null, ineditasCount: null };
-    const base = applyQuestionFilters(allQuestions, { ...filters, somente: "" }, favorites);
+  // "Apenas resolvidas / inéditas / que errei": quantas questões, dentro dos temas, provas e anos escolhidos, a pessoa já respondeu,
+  // quantas nunca respondeu e quantas errou na última vez.
+  const { resolvidasCount, ineditasCount, erradasCount } = useMemo(() => {
+    if (!answeredIds) return { resolvidasCount: null, ineditasCount: null, erradasCount: null };
+    const base = applyQuestionFilters(allQuestions, { ...filters, somente: "", apenasErradas: false }, favorites);
     let resolvidas = 0;
-    for (const q of base) if (answeredIds.has(q.id)) resolvidas++;
-    return { resolvidasCount: resolvidas, ineditasCount: base.length - resolvidas };
-  }, [allQuestions, filters, favorites, answeredIds]);
-  const historicoPronto = !filters.somente || !!answeredIds;
+    let erradas = 0;
+    for (const q of base) {
+      if (answeredIds.has(q.id)) resolvidas++;
+      if (wrongIds?.has(q.id)) erradas++;
+    }
+    return { resolvidasCount: resolvidas, ineditasCount: base.length - resolvidas, erradasCount: wrongIds ? erradas : null };
+  }, [allQuestions, filters, favorites, answeredIds, wrongIds]);
+  const historicoPronto = (!filters.somente && !filters.apenasErradas) || (!!answeredIds && !!wrongIds);
   // Quantas questões entram de fato na sessão (limitada pela quantidade escolhida).
   const sessionCount = Number.isInteger(filters.quantidade) ? Math.min(filters.quantidade, previewCount) : previewCount;
 
-  const subSomente = (descricao, n) => (!answeredIds ? "Carregando o seu histórico…" : faltando.length ? descricao : `${descricao} · ${n} agora`);
+  const subSomente = (descricao, n) => (!answeredIds || n == null ? "Carregando o seu histórico…" : faltando.length ? descricao : `${descricao} · ${n} agora`);
 
   const iniciar = async () => {
     setStartError("");
@@ -251,6 +257,12 @@ export function QuestionsFilterScreen({
               />
             </div>
           )}
+          <Toggle
+            checked={!!filters.esconderTemas}
+            onChange={(v) => setFilters((f) => ({ ...f, esconderTemas: v }))}
+            label="Esconder Temas"
+            sub="O tema não aparece enquanto você resolve, para não sugerir a resposta. Ele é mostrado depois que você responde"
+          />
           <FontSizePicker value={filters.fontSize} onChange={onSetFontSize} withXL />
         </ExpandBox>
 
@@ -262,20 +274,20 @@ export function QuestionsFilterScreen({
             sub="Respostas só aparecem ao final, em uma revisão completa"
           />
           <Toggle
-            checked={!!filters.esconderTemas}
-            onChange={(v) => setFilters((f) => ({ ...f, esconderTemas: v }))}
-            label="Esconder Temas"
-            sub="O tema não aparece enquanto você resolve, para não sugerir a resposta. Ele é mostrado depois que você responde"
-          />
-          <Toggle
             checked={filters.somente === "resolvidas"}
-            onChange={(v) => setFilters((f) => ({ ...f, somente: v ? "resolvidas" : "" }))}
+            onChange={(v) => setFilters((f) => ({ ...f, somente: v ? "resolvidas" : "", apenasErradas: v ? f.apenasErradas : false }))}
             label="Apenas questões já resolvidas"
             sub={subSomente("Só questões que você já respondeu, dentro dos filtros escolhidos", resolvidasCount)}
           />
           <Toggle
+            checked={!!filters.apenasErradas}
+            onChange={(v) => setFilters((f) => ({ ...f, apenasErradas: v, somente: v ? "resolvidas" : f.somente }))}
+            label="Apenas questões que errei"
+            sub={subSomente("Só as que a sua última resposta foi errada; liga junto as já resolvidas", erradasCount)}
+          />
+          <Toggle
             checked={filters.somente === "ineditas"}
-            onChange={(v) => setFilters((f) => ({ ...f, somente: v ? "ineditas" : "" }))}
+            onChange={(v) => setFilters((f) => ({ ...f, somente: v ? "ineditas" : "", apenasErradas: false }))}
             label="Apenas questões inéditas"
             sub={subSomente("Só questões que você ainda não respondeu, dentro dos filtros escolhidos", ineditasCount)}
           />
@@ -416,10 +428,12 @@ export function QuestionsFilterScreen({
               ? `Selecione ao menos ${juntarFaltando(faltando)}`
               : !historicoPronto
                 ? "Carregando o seu histórico de questões…"
-                : previewCount === 0 && filters.somente
-                  ? filters.somente === "resolvidas"
-                    ? "Você ainda não respondeu nenhuma questão com esses filtros"
-                    : "Não há questões inéditas com esses filtros: você já respondeu todas"
+                : previewCount === 0 && (filters.somente || filters.apenasErradas)
+                  ? filters.apenasErradas
+                    ? "Nenhuma questão errada com esses filtros: a sua última resposta foi certa em todas"
+                    : filters.somente === "resolvidas"
+                      ? "Você ainda não respondeu nenhuma questão com esses filtros"
+                      : "Não há questões inéditas com esses filtros: você já respondeu todas"
                   : sessionCount < previewCount
                 ? `${sessionCount} questões nesta sessão (de ${previewCount} encontradas)`
                 : `${previewCount} questões encontradas`}
