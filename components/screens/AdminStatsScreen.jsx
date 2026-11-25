@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { ScreenHeader, PrimaryButton } from "@/components/ui/Primitives";
-import { fetchAdminStats, fetchAdminExtra, fetchAdminAcessos, fetchAdminComissoes } from "@/lib/data/adminStats";
+import { fetchAdminStats, fetchAdminExtra, fetchAdminAcessos, fetchAdminComissoes, fetchAdminNovosUsuarios, fetchAdminTempoUso, fetchAdminComprasResumo, fetchAdminAcessosConvites } from "@/lib/data/adminStats";
 import { formatBRL } from "@/lib/billing";
 
 const nf = (n, digits = 0) => Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -70,19 +70,23 @@ function Kpi({ label, value, sub, color, wide = false }) {
   );
 }
 
-function ChartCard({ title, children, note }) {
+function ChartCard({ title, children, note, right = null }) {
   const t = useT();
   return (
     <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "14px 14px 10px", marginTop: 10 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 8 }}>{title}</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{title}</div>
+        {right}
+      </div>
       {children}
       {note && <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 6, lineHeight: 1.4 }}>{note}</div>}
     </div>
   );
 }
 
-// Barras dos últimos 14 dias (o dia de hoje fica mais forte). data = [{ d: "2026-10-18", n: 12 }].
-function BarChart({ data, color, label }) {
+// Barras (o último dia ou mês fica mais forte). data = [{ d: "2026-10-18", n: 12 }]. A legenda de baixo é o dia do mês, ou
+// p.label quando existir (p.label = "" esconde a legenda daquela barra; usado nos 30 dias e nos meses do gráfico de 365 dias).
+function BarChart({ data, color, label, format = compact }) {
   const t = useT();
   const W = 340;
   const H = 150;
@@ -92,6 +96,7 @@ function BarChart({ data, color, label }) {
   const max = Math.max(1, ...data.map((p) => p.n));
   const slot = W / n;
   const plotH = H - padTop - padBottom;
+  const dense = slot < 18; // 30 barras ou mais: números menores e só nos picos
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={label} style={{ display: "block" }}>
       <line x1="0" x2={W} y1={H - padBottom} y2={H - padBottom} stroke={t.border} strokeWidth="1" />
@@ -100,21 +105,138 @@ function BarChart({ data, color, label }) {
         const x = i * slot + slot * 0.16;
         const y = H - padBottom - h;
         const isToday = i === n - 1;
+        const legend = p.label ?? p.d.slice(8);
         return (
           <g key={p.d}>
             <rect x={x} y={y} width={slot * 0.68} height={Math.max(h, p.n > 0 ? 2 : 0)} rx="3" fill={color} opacity={isToday ? 1 : 0.55} />
-            {p.n > 0 && (
-              <text x={i * slot + slot / 2} y={y - 4} textAnchor="middle" fontSize="9.5" fontWeight="700" fill={isToday ? t.text : t.textMuted}>
-                {compact(p.n)}
+            {p.n > 0 && (!dense || p.n === max || isToday) && (
+              <text x={i * slot + slot / 2} y={y - 4} textAnchor="middle" fontSize={dense ? "8.5" : "9.5"} fontWeight="700" fill={isToday ? t.text : t.textMuted}>
+                {format(p.n)}
               </text>
             )}
-            <text x={i * slot + slot / 2} y={H - 7} textAnchor="middle" fontSize="9.5" fill={isToday ? t.text : t.textMuted} fontWeight={isToday ? 700 : 400}>
-              {p.d.slice(8)}
-            </text>
+            {legend !== "" && (
+              // legenda comprida (ex.: "23/11") na última barra: alinhada à direita para não sair do gráfico
+              <text x={isToday && legend.length > 3 ? W : i * slot + slot / 2} y={H - 7} textAnchor={isToday && legend.length > 3 ? "end" : "middle"} fontSize={dense ? "8.5" : "9.5"} fill={isToday ? t.text : t.textMuted} fontWeight={isToday ? 700 : 400}>
+                {legend}
+              </text>
+            )}
           </g>
         );
       })}
     </svg>
+  );
+}
+
+const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+// Botões de período do gráfico (14, 30 e 365 dias).
+function PeriodChips({ value, onChange, options, label }) {
+  const t = useT();
+  return (
+    <div role="group" aria-label={label} style={{ display: "flex", gap: 6 }}>
+      {options.map((n) => {
+        const on = value === n;
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            aria-pressed={on}
+            style={{ height: 26, padding: "0 10px", borderRadius: 999, cursor: "pointer", fontSize: 11.5, fontWeight: 700, background: on ? t.primarySoft : "transparent", border: `1px solid ${on ? t.primary : t.border}`, color: on ? (t.name === "dark" ? "#C4B5FF" : t.primary) : t.textMuted }}
+          >
+            {n} dias
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Botões para escolher uma de duas ou mais visões da mesma lista. options = [{ id, label }].
+function OptionChips({ value, onChange, options, label }) {
+  const t = useT();
+  return (
+    <div role="group" aria-label={label} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+      {options.map((o) => {
+        const on = value === o.id;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => onChange(o.id)}
+            aria-pressed={on}
+            style={{ height: 30, padding: "0 12px", borderRadius: 999, cursor: "pointer", fontSize: 12.5, fontWeight: 700, background: on ? t.primarySoft : "transparent", border: `1px solid ${on ? t.primary : t.border}`, color: on ? (t.name === "dark" ? "#C4B5FF" : t.primary) : t.textMuted }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Novos usuários por dia. 14 dias vêm junto com os dados do painel (serie14); 30 e 365 dias vêm da função admin_novos_usuarios
+// (supabase/painel_novos_usuarios.sql), buscada uma vez ao escolher 30 ou 365 e de novo a cada "Atualizar" (refreshKey).
+// 30 dias = uma barra por dia; 365 dias = uma barra por mês (365 barras não cabem), sendo o primeiro e o último mês parciais.
+function NovosUsuariosChart({ supabase, serie14, color, refreshKey }) {
+  const t = useT();
+  const [dias, setDias] = useState(14);
+  const key = String(refreshKey);
+  const [res, setRes] = useState({ key: "", status: "loading", data: null });
+  const need = dias !== 14 && res.key !== key;
+
+  useEffect(() => {
+    if (!need) return undefined;
+    let cancelled = false;
+    fetchAdminNovosUsuarios(supabase, 365).then(
+      (data) => !cancelled && setRes({ key, status: data ? "ok" : "missing", data }),
+      () => !cancelled && setRes({ key, status: "error", data: null })
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, need, key]);
+
+  const daily = dias !== 14 && res.key === key && res.status === "ok" && Array.isArray(res.data?.serie) ? res.data.serie : null;
+  let bars = null;
+  let title = "Novos usuários por dia (14 dias)";
+  let note;
+  if (dias === 14) {
+    bars = serie14;
+  } else if (daily && dias === 30) {
+    const last = daily.slice(-30);
+    // legenda "dd/mm" a cada 5 dias, contando de hoje para trás (hoje sempre aparece)
+    bars = last.map((p, i) => ({ d: p.d, n: p.n, label: (last.length - 1 - i) % 5 === 0 ? `${p.d.slice(8)}/${p.d.slice(5, 7)}` : "" }));
+    title = "Novos usuários por dia (30 dias)";
+  } else if (daily && dias === 365) {
+    const byMonth = new Map();
+    for (const p of daily) byMonth.set(p.d.slice(0, 7), (byMonth.get(p.d.slice(0, 7)) || 0) + p.n);
+    bars = [...byMonth].map(([m, n]) => ({ d: m, n, label: MESES_CURTOS[Number(m.slice(5, 7)) - 1] }));
+    title = "Novos usuários por mês (365 dias)";
+    const first = bars[0].d;
+    const lastM = bars[bars.length - 1].d;
+    note = `De ${MESES_CURTOS[Number(first.slice(5, 7)) - 1]}/${first.slice(0, 4)} a ${MESES_CURTOS[Number(lastM.slice(5, 7)) - 1]}/${lastM.slice(0, 4)}. O primeiro e o último mês estão incompletos.`;
+  }
+  const total = bars ? bars.reduce((s, p) => s + p.n, 0) : 0;
+  const chips = <PeriodChips value={dias} onChange={setDias} options={[14, 30, 365]} label="Período do gráfico" />;
+
+  const message = (text, color2 = t.textMuted) => <div style={{ fontSize: 13, lineHeight: 1.5, color: color2, padding: "34px 4px 40px", textAlign: "center" }}>{text}</div>;
+
+  if (dias !== 14 && !daily) {
+    return (
+      <ChartCard title="Novos usuários" right={chips}>
+        {res.key !== key && message("Carregando…")}
+        {res.key === key && res.status === "missing" && message("Para ver 30 e 365 dias, rode o SQL painel_novos_usuarios.sql no Supabase e toque em Atualizar.")}
+        {res.key === key && res.status === "error" && message("Não foi possível carregar agora. Toque em Atualizar para tentar de novo.", t.red)}
+        {res.key === key && res.status === "ok" && message("Sem dados para este período.")}
+      </ChartCard>
+    );
+  }
+
+  return (
+    <ChartCard title={title} right={chips} note={`${dias === 14 ? "Total nos 14 dias" : `Total nos ${dias} dias`}: ${nf(total)}${note ? `. ${note}` : ""}`}>
+      <BarChart data={bars} color={color} label={title} />
+    </ChartCard>
   );
 }
 
@@ -191,6 +313,7 @@ const TABS = [
   { id: "flashcards", label: "Flashcards" },
   { id: "desafios", label: "Desafios" },
   { id: "missao", label: "Revisão diária" },
+  { id: "tempo", label: "Tempo de uso" },
   { id: "acessos", label: "Acessos" },
 ];
 
@@ -542,6 +665,7 @@ export function ComissaoTab({ supabase, refreshKey }) {
             </div>
             <input
               type="search"
+              className="friend-search-input"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar por nome ou e-mail"
@@ -665,6 +789,220 @@ export function ComissaoTab({ supabase, refreshKey }) {
   );
 }
 
+// Compras e receita no topo da aba Assinantes (função admin_compras_resumo, supabase/painel_compras.sql): 24 h, 72 h, 30 dias, 365 dias e
+// totais. Sem o SQL novo no banco, mostra os quatro números de antes (que vêm junto com os dados do painel) e avisa.
+function ComprasResumo({ supabase, refreshKey, legado }) {
+  const t = useT();
+  const key = String(refreshKey);
+  const [res, setRes] = useState({ key: "", status: "loading", data: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdminComprasResumo(supabase).then(
+      (data) => !cancelled && setRes({ key, status: data ? "ok" : "missing", data }),
+      () => !cancelled && setRes({ key, status: "error", data: null })
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, key]);
+
+  const loading = res.key !== key;
+  const c = !loading && res.status === "ok" ? res.data : null;
+  const nota = { fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 };
+  const titulo = { fontSize: 12.5, fontWeight: 700, color: t.text, margin: "16px 0 8px" };
+
+  if (!loading && !c) {
+    return (
+      <>
+        <Grid>
+          <Kpi label="Compras nas últimas 48 h" value={show(legado.compras_48h)} />
+          <Kpi label="Compras nos últimos 7 dias" value={nf(legado.compras_7d)} />
+          <Kpi label="Compras nos últimos 30 dias" value={nf(legado.compras_30d)} />
+          <Kpi label="Receita dos últimos 30 dias" value={formatBRL(legado.receita_30d_centavos)} sub={`Total: ${formatBRL(legado.receita_total_centavos)}`} />
+        </Grid>
+        <div style={{ ...nota, color: res.status === "error" ? t.red : t.textMuted }}>
+          {res.status === "missing"
+            ? "Para ver compras e receita das últimas 24 h, 72 h e 365 dias e os totais, rode o SQL painel_compras.sql no Supabase e toque em Atualizar."
+            : "Não foi possível carregar as compras agora. Toque em Atualizar para tentar de novo."}
+        </div>
+      </>
+    );
+  }
+
+  const n = (x) => (c ? nf(x) : "—");
+  const brl = (x) => (c ? formatBRL(x) : "—");
+  return (
+    <>
+      <div style={{ ...titulo, marginTop: 2 }}>Compras</div>
+      <Grid>
+        <Kpi label="Nas últimas 24 h" value={n(c?.compras.h24)} />
+        <Kpi label="Nas últimas 72 h" value={n(c?.compras.h72)} />
+        <Kpi label="Nos últimos 30 dias" value={n(c?.compras.d30)} />
+        <Kpi label="Nos últimos 365 dias" value={n(c?.compras.d365)} />
+        <Kpi label="Totais" value={n(c?.compras.total)} wide />
+      </Grid>
+      <div style={titulo}>Receita</div>
+      <Grid>
+        <Kpi label="Nas últimas 24 h" value={brl(c?.receita_centavos.h24)} />
+        <Kpi label="Nos últimos 30 dias" value={brl(c?.receita_centavos.d30)} />
+        <Kpi label="Nos últimos 365 dias" value={brl(c?.receita_centavos.d365)} />
+        <Kpi label="Totais" value={brl(c?.receita_centavos.total)} />
+      </Grid>
+      <div style={nota}>Só pagamentos aprovados de mensal e anual; cortesia e estornados não entram.</div>
+    </>
+  );
+}
+
+// Minutos em texto: "2,8 min" (abaixo de 10), "42 min", "1 h 05 min". Nulo vira "—".
+function fmtMin(min) {
+  if (min == null) return "—";
+  const v = Number(min);
+  if (v <= 0) return "0 min";
+  if (v < 10) return `${nf(v, 1)} min`;
+  const total = Math.round(v);
+  if (total < 60) return `${total} min`;
+  return `${Math.floor(total / 60)} h ${String(total % 60).padStart(2, "0")} min`;
+}
+
+// Aba Tempo de uso (supabase/painel_tempo_uso.sql). O app não mede o tempo de tela: o tempo é ESTIMADO pelas ações registradas
+// (questão, flashcard, desafio, revisão diária), somando os intervalos entre ações seguidas; pausas longas não contam.
+function TempoUsoTab({ supabase, refreshKey }) {
+  const t = useT();
+  const key = String(refreshKey);
+  const [res, setRes] = useState({ key: "", status: "loading", data: null, error: "" });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdminTempoUso(supabase).then(
+      (data) => !cancelled && setRes({ key, status: data ? "ok" : "missing", data, error: "" }),
+      (err) => !cancelled && setRes({ key, status: "error", data: null, error: err.message })
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, key]);
+
+  const loading = res.key !== key;
+  const a = !loading && res.status === "ok" ? res.data : null;
+  const box = { background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14 };
+  const usuariosTxt = (n) => `${nf(n)} ${n === 1 ? "usuário" : "usuários"}`;
+
+  // uma pessoa com mais uso: e-mail em cima, números embaixo
+  const person = (email, big, lines) => (
+    <div style={{ ...box, padding: "13px 14px" }}>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email || "(sem e-mail)"}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: t.green, marginTop: 6, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{big}</div>
+      {lines.map((l) => (
+        <div key={l} style={{ fontSize: 12, color: t.textMuted, marginTop: 4, lineHeight: 1.4 }}>
+          {l}
+        </div>
+      ))}
+    </div>
+  );
+
+  const mesesBars = a ? a.meses.map((m) => ({ d: m.m, n: m.media_min, label: MESES_CURTOS[Number(m.m.slice(5, 7)) - 1] })) : [];
+
+  return (
+    <>
+      {loading && <div style={{ fontSize: 13, color: t.textMuted, padding: "16px 2px" }}>Carregando…</div>}
+
+      {!loading && res.status === "missing" && (
+        <div style={{ ...box, padding: 16, marginTop: 22, fontSize: 13.5, lineHeight: 1.5, color: t.textMuted }}>
+          Esta aba precisa do SQL painel_tempo_uso.sql rodado no Supabase. Rode-o e toque em Atualizar.
+        </div>
+      )}
+      {!loading && res.status === "error" && <div style={{ ...box, padding: 16, marginTop: 22, fontSize: 13.5, lineHeight: 1.5, color: t.red }}>{res.error}</div>}
+
+      {a && (
+        <>
+          <Section title="Média diária de uso por usuário">
+            <Grid cols={3}>
+              <Kpi label="Hoje" value={fmtMin(a.hoje.media_min)} sub={a.hoje.usuarios > 0 ? `${usuariosTxt(a.hoje.usuarios)} hoje` : "Ninguém usou ainda"} color={t.green} />
+              <Kpi label="No mês" value={fmtMin(a.mes.media_min)} sub={a.mes.usuarios > 0 ? usuariosTxt(a.mes.usuarios) : "Sem uso"} color={t.green} />
+              <Kpi label="No ano" value={fmtMin(a.ano.media_min)} sub={a.ano.usuarios > 0 ? usuariosTxt(a.ano.usuarios) : "Sem uso"} color={t.green} />
+            </Grid>
+            <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+              Tempo médio por usuário que usou o app no dia (quem não usou não entra na conta). No mês e no ano, a média é por dia de uso de cada pessoa.
+            </div>
+            <ChartCard title="Média diária por mês (minutos por usuário)">
+              <BarChart data={mesesBars} color={t.green} label="Média diária de uso por mês" format={(n) => nf(n, n < 10 ? 1 : 0)} />
+            </ChartCard>
+          </Section>
+
+          <Section title="Usuário com mais uso hoje">
+            {a.top_hoje ? person(a.top_hoje.email, fmtMin(a.top_hoje.minutos), ["Tempo de uso hoje"]) : <div style={{ ...box, padding: 14, fontSize: 13, color: t.textMuted }}>Ninguém usou o app hoje ainda.</div>}
+          </Section>
+
+          <Section title="Usuário com mais uso no mês">
+            {a.top_mes ? (
+              person(a.top_mes.email, fmtMin(a.top_mes.media_dia_mes_min), [
+                `Média diária no mês: total de ${fmtMin(a.top_mes.minutos)} em ${nf(a.top_mes.dias_decorridos)} ${a.top_mes.dias_decorridos === 1 ? "dia" : "dias"} do mês.`,
+                `Só nos dias em que usou (${nf(a.top_mes.dias_ativos)}): ${fmtMin(a.top_mes.media_dia_ativo_min)} por dia.`,
+              ])
+            ) : (
+              <div style={{ ...box, padding: 14, fontSize: 13, color: t.textMuted }}>Ninguém usou o app neste mês ainda.</div>
+            )}
+          </Section>
+
+          <div style={{ ...box, padding: "12px 14px", marginTop: 22, fontSize: 11.5, color: t.textMuted, lineHeight: 1.5 }}>
+            <b style={{ color: t.text }}>Como o tempo é calculado.</b> O app não mede o tempo de tela. O tempo é estimado pelas ações registradas (questões respondidas, flashcards vistos, desafios e revisão diária): o intervalo entre duas ações seguidas conta quando é de até {nf(a.regras.pausa_min)} minutos; pausas maiores não contam, e uma ação sozinha vale {nf(a.regras.acao_isolada_seg)} segundos. Ler sem tocar em nada por mais tempo não aparece. Contas administradoras e bots ficam de fora. Dias no horário de Brasília.
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+// "De onde vêm" > Links de convite: por pessoa que convidou, as visitas que abriram o link dela e as contas criadas por ele.
+function ConvitesOrigem({ state, loading }) {
+  const t = useT();
+  const box = { background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14 };
+  const nota = { fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 };
+  if (loading) return <div style={{ fontSize: 13, color: t.textMuted, padding: "6px 2px" }}>Carregando…</div>;
+  if (state.status === "missing") {
+    return <div style={{ ...box, padding: 14, fontSize: 13, lineHeight: 1.5, color: t.textMuted }}>Para ver os links de convite, rode o SQL acessos_convites.sql no Supabase e toque em Atualizar.</div>;
+  }
+  if (state.status === "error") {
+    return <div style={{ ...box, padding: 14, fontSize: 13, lineHeight: 1.5, color: t.red }}>Não foi possível carregar os links de convite agora. Toque em Atualizar para tentar de novo.</div>;
+  }
+  const c = state.data;
+  const lista = c.lista || [];
+  return (
+    <>
+      <div style={{ fontSize: 12.5, color: t.text, lineHeight: 1.5, marginBottom: 10 }}>
+        <b>{nf(c.visitas_convite)}</b> de {nf(c.visitas_total)} {c.visitas_total === 1 ? "visita veio" : "visitas vieram"} por link de convite ({pct(c.visitas_convite, c.visitas_total)}) e <b>{nf(c.contas_convite)}</b>{" "}
+        {c.contas_convite === 1 ? "conta foi criada" : "contas foram criadas"} por convite no período.
+      </div>
+      {lista.length === 0 ? (
+        <div style={{ fontSize: 13, color: t.textMuted, padding: "4px 2px" }}>Nenhum link de convite trouxe visitas nem contas neste período.</div>
+      ) : (
+        <ol style={{ listStyle: "none", margin: 0, padding: 0, ...box, overflow: "hidden" }}>
+          {lista.map((r, i) => (
+            <li key={r.codigo} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderTop: i ? `1px solid ${t.border}` : "none" }}>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.email ? r.nome : "Código sem dono"}</span>
+                <span style={{ display: "block", fontSize: 11.5, color: t.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.email || `código ${r.codigo}`}</span>
+              </span>
+              <span style={{ textAlign: "right", flexShrink: 0 }}>
+                <span style={{ display: "block", fontSize: 14, fontWeight: 800, color: t.text, fontVariantNumeric: "tabular-nums" }}>
+                  {nf(r.visitas)} {r.visitas === 1 ? "visita" : "visitas"}
+                </span>
+                <span style={{ display: "block", fontSize: 11.5, color: t.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                  {nf(r.contas)} {r.contas === 1 ? "conta" : "contas"}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div style={nota}>
+        Visitas: quem abriu o link de convite da pessoa; a contagem por link começa quando o app com essa novidade entra no ar. Contas: criadas pelo link da pessoa, vindas do cadastro (valem desde o começo dos convites). Para pontos e saques de cada pessoa, veja a aba Comissão.
+      </div>
+    </>
+  );
+}
+
 // Aba Acessos: quem abre a tela de entrada e o quiz (contagem anônima, supabase/acessos_visitantes.sql).
 function AcessosTab({ supabase, refreshKey }) {
   const t = useT();
@@ -682,6 +1020,22 @@ function AcessosTab({ supabase, refreshKey }) {
       cancelled = true;
     };
   }, [supabase, dias, key]);
+
+  // "De onde vêm": sites e campanhas (padrão) ou links de convite de outros usuários (supabase/acessos_convites.sql), buscados ao escolher.
+  const [vista, setVista] = useState("sites");
+  const [conv, setConv] = useState({ key: "", status: "loading", data: null });
+  const needConv = vista === "convites" && conv.key !== key;
+  useEffect(() => {
+    if (!needConv) return undefined;
+    let cancelled = false;
+    fetchAdminAcessosConvites(supabase, dias).then(
+      (data) => !cancelled && setConv({ key, status: data ? "ok" : "missing", data }),
+      () => !cancelled && setConv({ key, status: "error", data: null })
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, dias, key, needConv]);
 
   const loading = res.key !== key;
   const a = !loading && res.status === "ok" ? res.data : null;
@@ -793,10 +1147,25 @@ function AcessosTab({ supabase, refreshKey }) {
           )}
 
           <Section title="De onde vêm">
-            <SourceRows rows={a.origens} label={(r) => (r.origem === "direto" ? "Direto (sem origem)" : r.origem)} />
-            <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
-              O site de onde a pessoa chegou, ou o utm_source do link. Para separar campanhas, acrescente ao link do site algo como ?utm_source=instagram.
-            </div>
+            <OptionChips
+              value={vista}
+              onChange={setVista}
+              label="Tipo de origem"
+              options={[
+                { id: "sites", label: "Sites e campanhas" },
+                { id: "convites", label: "Links de convite" },
+              ]}
+            />
+            {vista === "sites" ? (
+              <>
+                <SourceRows rows={a.origens} label={(r) => (r.origem === "direto" ? "Direto (sem origem)" : r.origem)} />
+                <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
+                  O site de onde a pessoa chegou, ou o utm_source do link. Para separar campanhas, acrescente ao link do site algo como ?utm_source=instagram.
+                </div>
+              </>
+            ) : (
+              <ConvitesOrigem state={conv} loading={conv.key !== key} />
+            )}
           </Section>
 
           <Section title="Aparelho">
@@ -827,7 +1196,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
   const [extra, setExtra] = useState({ status: "loading", data: null });
   const [busyQuestion, setBusyQuestion] = useState(null);
   const [openError, setOpenError] = useState("");
-  // Sobe a cada "Atualizar" para a aba Acessos (que busca os próprios dados) carregar de novo.
+  // Sobe a cada "Atualizar" para a aba Acessos e o gráfico de novos usuários (que buscam os próprios dados) carregarem de novo.
   const [acessosKey, setAcessosKey] = useState(0);
 
   const load = useCallback(async () => {
@@ -915,9 +1284,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                 <Kpi label="Novos nos últimos 7 dias" value={nf(d.usuarios.novos_7d)} color={t.green} />
                 <Kpi label="Novos no último mês" value={show(d.usuarios.novos_30d)} color={t.green} />
               </Grid>
-              <ChartCard title="Novos usuários por dia (14 dias)">
-                <BarChart data={d.series.novos} color={t.green} label="Novos usuários por dia" />
-              </ChartCard>
+              <NovosUsuariosChart supabase={supabase} serie14={d.series.novos} color={t.green} refreshKey={acessosKey} />
             </Section>
 
             <Section title="Últimos 5 usuários cadastrados">
@@ -942,24 +1309,11 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                   <Grid cols={3}>
                     <Kpi label="Fundo escuro" value={nf(ex.temas.escuro)} sub={pct(ex.temas.escuro, ex.temas.escuro + ex.temas.claro + ex.temas.sem_registro)} />
                     <Kpi label="Fundo claro" value={nf(ex.temas.claro)} sub={pct(ex.temas.claro, ex.temas.escuro + ex.temas.claro + ex.temas.sem_registro)} />
-                    <Kpi label="Sem registro" value={nf(ex.temas.sem_registro)} sub="usam o padrão (escuro)" />
+                    <Kpi label="Já usaram os dois" value={show(ex.temas.os_dois)} sub={ex.temas.os_dois == null ? undefined : pct(ex.temas.os_dois, d.usuarios.total)} />
                   </Grid>
                   <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
-                    O tema é gravado na conta quando a pessoa abre o app e a cada troca no botão de sol/lua. Quem ainda não abriu o app depois da atualização aparece em &quot;Sem registro&quot;.
+                    Fundo escuro e claro: o tema que a conta usa hoje. &quot;Já usaram os dois&quot;: contas que já tiveram os dois fundos; o histórico começa quando o SQL foi rodado, então esse número tende a crescer.
                   </div>
-                  {ex.temas.os_dois != null && (
-                    <>
-                      <div style={{ fontSize: 12.5, fontWeight: 700, color: t.text, margin: "16px 0 8px" }}>Quem já experimentou</div>
-                      <Grid cols={3}>
-                        <Kpi label="Já usaram o escuro" value={nf(ex.temas.ja_usaram_escuro)} sub={pct(ex.temas.ja_usaram_escuro, d.usuarios.total)} />
-                        <Kpi label="Já usaram o claro" value={nf(ex.temas.ja_usaram_claro)} sub={pct(ex.temas.ja_usaram_claro, d.usuarios.total)} />
-                        <Kpi label="Experimentaram os dois" value={nf(ex.temas.os_dois)} sub={pct(ex.temas.os_dois, d.usuarios.total)} />
-                      </Grid>
-                      <div style={{ fontSize: 11.5, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
-                        Conta quem já teve cada fundo na conta. O histórico começa quando o SQL foi rodado: quem trocou de tema antes disso aparece só com o tema que usa hoje, então &quot;os dois&quot; tende a crescer com o tempo.
-                      </div>
-                    </>
-                  )}
                 </>
               ) : (
                 <ExtraNotice extra={ex ? { status: "missing" } : extra} />
@@ -1015,12 +1369,7 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
                 const semPlano = Math.max(0, d.usuarios.total - a.ativos);
                 return (
                   <>
-                    <Grid>
-                      <Kpi label="Compras nas últimas 48 h" value={show(a.compras_48h)} />
-                      <Kpi label="Compras nos últimos 7 dias" value={nf(a.compras_7d)} />
-                      <Kpi label="Compras nos últimos 30 dias" value={nf(a.compras_30d)} />
-                      <Kpi label="Receita dos últimos 30 dias" value={formatBRL(a.receita_30d_centavos)} sub={`Total: ${formatBRL(a.receita_total_centavos)}`} />
-                    </Grid>
+                    <ComprasResumo supabase={supabase} refreshKey={acessosKey} legado={a} />
                     <ChartCard title="Usuários por plano" note="Cortesia = acesso gratuito (30 dias dados a todos, cupom). Não inclui as contas administradoras.">
                       <Donut
                         centerLabel="usuários"
@@ -1214,6 +1563,8 @@ export function AdminStatsScreen({ supabase, onBack, tab: tabProp, onTab, onOpen
             )}
 
             {tab === "comissao" && <ComissaoTab supabase={supabase} refreshKey={acessosKey} />}
+
+            {tab === "tempo" && <TempoUsoTab supabase={supabase} refreshKey={acessosKey} />}
 
             {tab === "acessos" && <AcessosTab supabase={supabase} refreshKey={acessosKey} />}
           </>
