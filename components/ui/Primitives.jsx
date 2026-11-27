@@ -504,14 +504,16 @@ export function ScreenHeader({ title, onBack, label = "Voltar", right = null }) 
 
 // locked = bloqueado e esmaecido (sem clique). showLock = só o cadeado, o clique continua valendo
 // (usado para conteúdo de assinantes: o clique leva à tela de assinatura).
-export function HomeBox({ icon, title, onClick, accentColor, locked, showLock, loading, heroBg, statusText, statusColor }) {
+// inactive: aparência normal, sem cadeado, mas não responde ao toque (recurso ainda não liberado)
+export function HomeBox({ icon, title, onClick, accentColor, locked, showLock, loading, inactive, heroBg, statusText, statusColor }) {
   const t = useT();
   const grayBorder = t.name === "light" && !heroBg;
   const darkTitleOnHero = heroBg && t.name === "light";
-  const disabled = locked || loading;
+  const disabled = locked || loading || inactive;
   return (
     <button
       onClick={disabled ? undefined : onClick}
+      aria-disabled={inactive || undefined}
       style={{
         width: "100%",
         // As variáveis vêm de .home-fit (globals.css): altura igual para todos os cartões, mais compacta em celular baixo.

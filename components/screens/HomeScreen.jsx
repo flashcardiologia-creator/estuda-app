@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, BookOpen, Rocket, Trophy, Swords } from "lucide-react";
+import { Flame, BookOpen, Rocket, CalendarDays, Swords } from "lucide-react";
 import { useT } from "@/components/theme/ThemeProvider";
 import { HomeBox } from "@/components/ui/Primitives";
 
@@ -58,11 +58,11 @@ export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily, pending
         />
         <HomeBox icon={<BookOpen />} title="Questões" showLock={locked} onClick={() => onNavigate("questions-filters")} accentColor="#3B82F6" />
         <HomeBox icon={<Rocket />} title="Flashcards" showLock={locked} onClick={() => onNavigate("flashcards-select")} accentColor={t.amber} />
-        <HomeBox icon={<Trophy />} title="Trials" locked accentColor="#C1443A" />
         <div style={{ position: "relative" }}>
           <HomeBox icon={<Swords />} title="Desafios" onClick={() => onNavigate("challenges")} accentColor="#9B6BFF" />
           {pendingChallengesCount > 0 && <PendingChallengesBadge count={pendingChallengesCount} bg={t.bg} />}
         </div>
+        <HomeBox icon={<CalendarDays />} title="Cronograma" inactive accentColor="#22C55E" />
       </div>
     </div>
   );
