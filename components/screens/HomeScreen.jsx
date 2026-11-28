@@ -62,7 +62,7 @@ export function HomeScreen({ name, onNavigate, missionDone, onOpenDaily, pending
           <HomeBox icon={<Swords />} title="Desafios" onClick={() => onNavigate("challenges")} accentColor="#9B6BFF" />
           {pendingChallengesCount > 0 && <PendingChallengesBadge count={pendingChallengesCount} bg={t.bg} />}
         </div>
-        <HomeBox icon={<CalendarDays />} title="Cronograma" inactive accentColor="#22C55E" />
+        <HomeBox icon={<CalendarDays />} title="Cronograma" locked lockLabel="Em breve" accentColor="#22C55E" />
       </div>
     </div>
   );

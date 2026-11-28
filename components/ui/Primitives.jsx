@@ -504,8 +504,9 @@ export function ScreenHeader({ title, onBack, label = "Voltar", right = null }) 
 
 // locked = bloqueado e esmaecido (sem clique). showLock = só o cadeado, o clique continua valendo
 // (usado para conteúdo de assinantes: o clique leva à tela de assinatura).
+// lockLabel: texto ao lado do cadeado (ex.: "Em breve").
 // inactive: aparência normal, sem cadeado, mas não responde ao toque (recurso ainda não liberado)
-export function HomeBox({ icon, title, onClick, accentColor, locked, showLock, loading, inactive, heroBg, statusText, statusColor }) {
+export function HomeBox({ icon, title, onClick, accentColor, locked, showLock, lockLabel, loading, inactive, heroBg, statusText, statusColor }) {
   const t = useT();
   const grayBorder = t.name === "light" && !heroBg;
   const darkTitleOnHero = heroBg && t.name === "light";
@@ -539,7 +540,8 @@ export function HomeBox({ icon, title, onClick, accentColor, locked, showLock, l
       onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
     >
       {(locked || showLock) && (
-        <div style={{ position: "absolute", top: 14, right: 16 }}>
+        <div style={{ position: "absolute", top: 14, right: 16, display: "flex", alignItems: "center", gap: 5 }}>
+          {lockLabel && <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, letterSpacing: 0.3 }}>{lockLabel}</span>}
           <Lock size={14} color={t.textMuted} />
         </div>
       )}
